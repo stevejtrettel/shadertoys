@@ -25,9 +25,9 @@ async function main() {
 
     //call the fixed starting and ending code that goes around the shadertoy
     const shaderStart = `
-  #include <common>
   uniform vec3 iResolution;
   uniform float iTime;
+uniform vec4 iMouse;
   `;
 
     const shaderEnd = `

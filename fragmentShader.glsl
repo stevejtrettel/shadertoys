@@ -1,460 +1,283 @@
+//BUILT FROM THE VOLUMETRIC RAYMARCHER BY FLYGUY //https://www.shadertoy.com/view/XtsGRf
+
+#define RotateX(v,a) v.yz *= mat2(cos(a),sin(a),-sin(a),cos(a))
+#define RotateY(v,a) v.xz *= mat2(cos(a),sin(a),-sin(a),cos(a))
+#define RotateZ(v,a) v.xy *= mat2(cos(a),sin(a),-sin(a),cos(a))
+
+#define MIN_MARCH_DIST 0.001
+#define MAX_MARCH_STEPS 48
+#define MAX_VOLUME_STEPS 500
+#define VOLUME_STEP_SIZE 0.02
+
+#define MAX_POLYNOMIAL_ORDER 5
+
+// XY range of the display.
+#define DISP_SCALE 130.0 
+
+#define PI 3.14159265359
+
+// Kronecker delta
+#define kd(n, k) ((n == k) ? 1.0 : 0.0)
 
 
-//======== TRACING THE XY PLANE ================
-//==================================================
-
-//parameter in the geodesic flow
-float xi=1.;
-float fov=120.;
-
-
-//flow by nil geodesics towards the xy plane.
-vec3 flow(vec3 eye, vec3 dir,float t){
-    
-    //get a and c and alpha:
-    float c=dir.z;
-    float a=length(dir.xy);
-    float alpha=atan(dir.y,dir.x);
-    
-    //give geodesic
-    float x=(a*sin(c*t*xi+alpha)-a*sin(alpha))/(c*xi);
-        
-    float y=(a*cos(c*t*xi+alpha)-a*cos(alpha))/(c*xi);
-    float z=((a*a*c+2.*c*c*c)*t*xi-a*a*sin(c*xi*t))/(2.*c*c*xi);
-    
-    return eye+vec3(x,y,z);
-}
-
-
-vec3 flow2(vec3 eye, vec3 dir,float t){
-    
-    //get a and c and alpha:
-    float c=dir.z;
-    float a=length(dir.xy);
-    float alpha=atan(dir.y,dir.x);
-    
-    //give geodesic
-    float x=2.*a/c*sin(c*t/2.)*cos(c*t/2.+alpha);
-    float y=2.*a/c*sin(c*t/2.)*sin(c*t/2.+alpha);
-    float z=c*t+0.5*a*a*(c*t-sin(c*t))/(c*c);
-    
-    return eye+vec3(x,y,z);
+float factorial(int n){
+    int k=1;
+    for(int i=1;i<n+1;i++){
+        k*=i;
+    }
+    return float(k);
 }
 
 
 
-//are you above the plane?
-bool abovePlane(vec3 pos){
-    if(pos.z>0.){return true;}
-    else{return false;}
+//Color Palettes from https://www.shadertoy.com/view/ll2GD3
+vec3 pal( in float t, in vec3 a, in vec3 b, in vec3 c, in vec3 d )
+{
+    return a + b*cos((c*t+d) );
 }
 
-//given the initial conditions AND a distance just before
-//impacting the plane, do a binary search to find the plane:
-vec3 findPlane(vec3 eye, vec3 dir, inout float dist,float stp){
 
-    //flowing dist doesnt hit the plane, dist+step does:
-    float testDist=stp;
+//Algorithms for Polynomials from tpfto:
+//https://www.shadertoy.com/view/tlX3WN
+// Clenshaw's algorithm for the Laguerre polynomial
+float laguerre(int n, int aa, float x)
+{
+	float a = float(aa);
+    float u = 0.0, v = 0.0, w = 0.0;
     
-    for(int i=0;i<8;i++){
-        
-        //divide the step size in half
-         testDist=testDist/2.;
-
-        //if you are still above the plane, add to distance.
-        if(abovePlane(flow(eye,dir,dist+testDist))){
-            dist+=testDist;
-        }
-        //if not, then don't add: divide in half and try again
-    
+    for (int k = MAX_POLYNOMIAL_ORDER; k > 0; k--)
+    {
+        float kk = float(k);
+        w = v; v = u;
+        u = kd(n, k) + (2.0 * kk + a + 1.0 - x)/(kk + 1.0) * v - (kk + a + 1.0) * w/(kk + 2.0);
     }
     
-    return flow(eye,dir,dist);
-    
-    
+    return kd(n, 0) + (a - x + 1.0) * u - 0.5 * (a + 1.0) * v;
 }
+
+// Clenshaw's algorithm for the normalized associated Legendre polynomial (spherical harmonics)
+float alegp(int n, int m, float x)
+{
+    int am = abs(m);
+    float u = 0.0, v = 0.0, w = 0.0;
     
-vec3 trace(vec3 eye, vec3 dir,inout float totalDist){
-  
-    float stp=1.;
-    float dist=0.;
+    for (int k = MAX_POLYNOMIAL_ORDER; k >= 0; k--)
+    {
+        float kp = float(k + 1);
+        float mk1 = float(2 * am) + kp, mk2 = float(2 * (am + k) + 1);
+        w = v; v = u;
+        u = kd(n, am + k) + sqrt((mk2 * (mk2 + 2.0))/(kp * mk1)) * x * v - sqrt((kp * mk1 * (mk2 + 4.0))/((kp + 1.0) * (mk1 + 1.0) * mk2)) * w;
+    }
+
+    for (int k = 1; k <= am; k++)
+    {
+        u *= sqrt((1.0 - 0.5/float(k)) * (1.0 - x) * (1.0 + x));
+    }
     
-    vec3 endPt=eye;
-    
-	//keep flowing along at fixed step size till you hit the plane.
-    for(int count=0;count<50;count++){
+    return (((m > 0) && ((am & 1) == 1)) ? -1.0 : 1.0) * u * sqrt((0.5 * float(am) + 0.25)/PI);
+}
+
+
+
+
+
+
+ // calculating the wave function Psi with quantum numbers n,l,m
+
+vec4 amplitude(ivec3 qNum, vec3 pos)
+{
       
-        dist+=stp;
-        endPt=flow(eye,dir,dist);
-        //check if you hit the plane
-        if(!abovePlane(endPt)){
+   	  int n=qNum.x;
+      int l=qNum.y;
+      int m=qNum.z;
+    
+    
+      float r = length(pos);
+      float rho = 2. * r/float(n);
+    
+    //independent of m
+      float radialComp = exp(1.0 * float(l + 1) * log(0.5*rho) - rho/2.)*
+          					laguerre(n - l - 1, 2 * l + 1, rho);
+    
+     //depends only on abs(m)
+      float harmonicComp= alegp(l, m, pos.z/r);//pos.z/r=cosLat
+    
+          float harmonicComp2= alegp(l, m, pos.x/r);//pos.z/r=cosLat
+    
+    
+    //makes total density =1
+      float normalization=1.;
+          //5.*sqrt(factorial(n - l - 1)/factorial(n + l));
+          //normalization=sqrt((2.*float(l)+1.)*factorial(l-m)/(4.*PI*factorial(l+m)));
+      
+   
+      float psi=normalization*radialComp*harmonicComp;//real part of Psi
+    
+    float psi2=normalization*radialComp*harmonicComp2;//real part of Psi
+    
+    //superposition
+      float theta=atan(pos.y,pos.x);
+      float cs=cos(float(m)*theta);
+      float sn=sin(float(m)*theta);
+ 	
+      float real =2.*psi*(cs*cos(iTime/6.));
+   	  float imaginary=psi*(sn*sin(iTime/6.));
+    
+    real=psi*cos(iTime/6.);
+        imaginary=psi2*sin(iTime/6.);
+      
+    //this is the magnitude of Psi*Psi
+    float mag=psi*psi;
+   
+    float globalPhase=15.*iTime/(float(n*n));
+    float localPhase= atan((sn*sin(iTime/6.)),(cs*cos(iTime/6.)));
+    float phase =localPhase+globalPhase;
+   
+   
+    
+
+    
+    return  vec4(mag,phase,real,imaginary);
+}
+
+
+
+//getting the associated probability density, and phase information
+
+vec2 probDensity(ivec3 qNum, vec3 pos){
+    
+   float n=float(qNum.x);
+   float viewRadius=80.;//constant to show true orbital sizes
+   float densityMultiplier=0.001;//adjusts the brightness
+    
+    vec4 amp=amplitude(qNum, viewRadius*pos);
+    float prob = amp.z*amp.z+amp.w*amp.w;
+ 
+  return vec2(densityMultiplier*prob,amp.y);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+vec4 Volume(ivec3 qNum,vec3 pos)
+{
+    //rotate starting position
+    RotateY(pos,iTime/10.);
+    RotateZ(pos,-0.25);
+    
+ 
+    //calculate the light intensity;
+    vec2 amp=probDensity(qNum,pos);
+    float prob=amp.x;
+    float phase=amp.y;
+    
+    
+    
+    
+    
+    vec3 col1 = pal( PI/2.+phase, vec3(0.5,0.5,0.5),vec3(0.5,0.5,0.5),vec3(2.0,1.0,0.0),vec3(0.5,0.20,0.25) );
+        //pal(phase, vec3(0.8,0.5,0.4),vec3(0.2,0.4,0.2),vec3(2.0,1.0,1.0),vec3(0.0,0.25,0.25) );
+    vec3 col2 =pal(3.*PI/2.+ phase, vec3(0.5,0.5,0.5),vec3(0.5,0.5,0.5),vec3(2.0,1.0,0.0),vec3(0.5,0.20,0.25) );
+        //red yellow palette
+        //pal( phase+PI, vec3(0.8,0.5,0.4),vec3(0.2,0.4,0.2),vec3(2.0,1.0,1.0),vec3(0.0,0.25,0.25) );
+    
+    //mix two colors together: first is for lower intensity second is high intensity
+    vec3 col = mix(col1,col2,smoothstep(2.5,3.,prob));
+    //vec3(0.85,0.45,0.2)vec3(1.,1.,0.6)
+    
+    //slowly ramp up until 0.4 prob density, then between 0.4 and 0.9 draw densely
+    prob = 0.2*smoothstep(0.,0.4,abs(prob))+0.8*smoothstep(0.4,0.9,abs(prob));
+    //+1.*smoothstep(2.5,3.,abs(prob));
+    
+	return vec4(col, max(0.0,prob)*0.01);  
+}
+
+
+
+
+vec3 MarchVolume(ivec3 qNum,vec3 orig, vec3 dir)
+{
+    //Ray march to find the cube surface.
+    float t = 0.0;
+    vec3 pos = orig;
+    float radius=1.5;
+    float opacity=2.;
+    
+    for(int i = 0;i < MAX_MARCH_STEPS;i++)
+    {
+        pos = orig + dir * t;
+        float dist = 100.0;
+        
+        
+        //dist = min(dist, 8.0-length(pos));
+        dist=min(dist,length(pos)-radius);
+       // dist = min(dist, max(max(abs(pos.x),abs(pos.y)),abs(pos.z))-1.0);//length(pos)-1.0);
+        
+        t += dist;
+        
+        if(dist < MIN_MARCH_DIST){//you made it to the region!
+            orig=pos;//reset the origin to your new point
+           	t=0.;//reset the marching counter
             break;}
     }
     
-    
-    //if you return here, that means dist is set to be right after you step past the plane:
-   	dist=dist-stp;//right before you hit the plane.
-    
-    //now do binary search to find the plane.
-    endPt=findPlane(eye,dir,dist,stp);
-    
+    //Step though the volume and add up the opacity.
+    vec4 col = vec4(0.0);
+    for(int i = 0;i < MAX_VOLUME_STEPS;i++)
+    {
+    	t += VOLUME_STEP_SIZE;
+        
+    	pos = orig + dir * t;
+        
+        //Stop if the sample leaves the volume.
+        //if(max(max(abs(pos.x),abs(pos.y)),abs(pos.z))-radius > 0.0) {break;}//cube
+        if(length(pos)>radius) {break;}//sphere
 
-    //return the point which actually lies on the plane.
-    totalDist=dist;
-    return endPt;
-}
-
-
-
-
-//======== COLORING THE PLANE ================
-//==================================================
-
-
-vec3 checkerboard(vec3 p,vec2 offset,float size){
-    float x=mod(size*p.x+offset.x,2.);
-    float y=mod(size*p.y+offset.y,2.);
-    
-    vec3 color=vec3(0.);
-    
-    //what to do if we hit the plane in the at z=0
-    if(abs(p.z)<0.5){
-    if(y<1.&&x<1.||y>1.&&x>1.)
-    {color=vec3(1.);}
-    }
-
-    return color;
-}
-
-
-
-
-//adjust the color computed at p by a fog:
-vec3 fog(vec3 p,vec3 color){
-    float r=length(p.xy);
-    
-	float s=1./50.;
-    float fogginess=exp(-r*r*s);
-    return fogginess*color;
-}
-
-
-
-//======== SETTING UP THE VIEW ETC ================
-//==================================================
-
-
-/**
- * Return the normalized direction to march in from the eye point for a single pixel.
- * 
- * fieldOfView: vertical field of view in degrees
- * size: resolution of the output image
- * fragCoord: the x,y coordinate of the pixel in the output image
- */
-vec3 rayDirection(float fieldOfView, vec2 size, vec2 fragCoord) {
-    vec2 xy = fragCoord - size / 2.0;
-    float z = size.y / tan(radians(fieldOfView) / 2.0);
-    return normalize(vec3(xy, -z));
-}
-
-
-
-
-
-//viewDir is based around looking down the z-axis: this rotates coordinates 
-//so the screen center is instead facing forwardVec
-vec3 rotateView(vec2 sphCoords,vec3 dir){
-
-    float theta=sphCoords.x;
-    float phi=sphCoords.y;
-
- 
-    vec3 tempDir;
-    //first, rotate up in the phi direction, fixing the x axis:
-    tempDir.x=dir.x;
-    
-    tempDir.z= cos(phi)*dir.z-sin(phi)*dir.y;
-    tempDir.y= sin(phi)*dir.z+cos(phi)*dir.y;
-    
-    
-    vec3 newDir;
-    //now rotate about the z-axis
-    newDir.z=tempDir.z;
-    newDir.x=cos(theta)*tempDir.x-sin(theta)*tempDir.y;
-    newDir.y=sin(theta)*tempDir.x+cos(theta)*tempDir.y;
-    
-    return newDir;
-}
-
-
-//mostly linear but zero deriv at beginning and end
-
-float smoothTransition(float x){
-    if(x<0.){return 0.;}
-    else if(x>1.){return 1.;}
-    else{
-        return 3.*x*x-2.*x*x*x;
-    }
-}
-
-
-
-
-//======== TIMING FOR THE ANIMATION ================
-//==================================================
-
-//setting time intervals:
-float totalTime=7.;
-float time1;
-float time2;
-float time3;
-float time4;
-
-void setTimes(){
-    time1=0.25*totalTime;
-    time2=0.5*totalTime;
-    time3=0.75*totalTime;
-    time4=totalTime;
-}
-
-
-
-//intial starting location of your eye (should be along z axis).
-vec3 eyePosition(float time){
-    
-    //can only move your eye up and down on the z-axis so that 
-    //everything is Euc translations and the geodesics are right.
-
-    float h,x;
-    
-    float eucHeight=3.;
-    float deltaHeight=8.;
-
-    
-    time=mod(time,totalTime);
-    
-    //start at a constant height while you turn your head up
-    if(time<time1){
-        h=eucHeight;
+        
+        //if you are rendering a shell: add up zero intensity when you are inside the shell
+        //if(length(pos)>radius-0.2)//uncomment to make the below only apply in the shell
+        {
+            vec4 vol = Volume(qNum,pos);
+             //add distance fog!
+            vol.rgb*=5.*exp(-2.*t/radius);
+        	vol.rgb *= vol.w;
+            col += vol;}
     }
     
-    //then move upwards as you distort the metric, and turn your head back down
-    else if(time<time3){
-        x=(time-time1)/(time3-time1);
-        h=eucHeight+deltaHeight*pow(smoothTransition(x),4.);
-    
-    }
-
-    //then move back downwards to the origin height.
-    else{
-        x=(time-time3)/(time4-time3);
-       h=eucHeight+deltaHeight-deltaHeight*smoothTransition(x);
-    }
-    
-    
-    return vec3(0.,0.,h);
-    
+    return col.rgb;
 }
 
-
-
-//initial starting direction in spherical coordinates in your tangent space:
-vec2 eyeDirection(float time){
-    
-    //no rotation in the xy plane: the twisting geodesics does enough of that!
-    float theta=0.;
-    //just raise our head up and down.
-    float phi;
-    
-    time=mod(time,totalTime);
-    
-    //turn your head up
-    if(time<time1){
-        phi=-smoothTransition(time/time1)*3.14/3.;
-    }
-    
-    //lower your head as you change the metric
-    else if(time<time3){
-        float x=(time3-time)/(time3-time1);
-        phi=-3.14/3.*smoothTransition(x);
-    }
-    
-    //be looking straight down for the descent
-    else{
-    phi=0.;
-    }
-    
-  
-    return vec2(theta,phi);
-}
-
-
-float nilify(float time){
-    //change the metric parameter between 0 and 1
-    float xi;
-
-    
-    time=mod(time,totalTime);
-    
-    if(time<time1){
-        //euclidean space (don't divide by zero!)
-        xi=0.0001;
-    }
-    
-    else if(time>time1 &&time<time2){
-        //smoothly interpolate until nil
-        xi=smoothTransition((time-time1)/(time2-time1));
-    }
-    
-    else if(time>time2&&time<time3){
-        //stay nil
-        xi=1.;
-    }
-    
-    else{
-        //smoothly interpolate back to euclidean
-        xi=smoothTransition(((time4-time)/(time4-time3)));
-    }
-    
-    
-    return xi;
-}
-
-
-
-//adjust the color computed at p by a fog:
-vec3 animateFog(vec3 p,vec3 color,float time){
-    float r=length(p.xy);
-    
-    time=mod(time,totalTime);
-    float s=(time/totalTime)*(1.-time/totalTime);
-    s=s/30.;
-    
-    float fogginess=exp(-r*r*s);
-    return fogginess*color;
-}
-
-
-
-
-//======== ANTI-ALIASING ================
-//==================================================
-
-
-//given eye position, direction and distance, get checker color
-vec3 getChecker(vec3 eye, vec3 dir, float dist){
-    float size=2.;
-    vec2 offset=vec2(0.1,0.2);
-    vec3 p=flow(eye, dir, dist);
-    return checkerboard(p,offset,size);
-}
-
-
-//set the initial direction from fragCoord
-vec3 tVector(vec2 fragCoord,float time){
-    
-	vec3 dir = rayDirection(fov, iResolution.xy, fragCoord);
-    //give the initial direciton you look in as a funciton of theta/phi
-    //in the spherical coords on your tangent space. 
-   	vec2 eyeDir=eyeDirection(time);
-    dir=rotateView(eyeDir,dir);
-
-    return dir;
-}
-
-
-
-vec3 getColor(vec2 fragCoord,float time){
-    
-    float dist;
-    
-    //set the geometry
-    xi=nilify(time);
-    
-    //do the original tracing to get the distance:
-    vec3 eye=eyePosition(time);
-    vec3 dir=tVector(fragCoord,time);
-
-    //find the point on the plane you reach after raytracing
-    vec3 endPt=trace(eye,dir,dist);
-    
-    //offset to the checkerboard pattern to adjust
-    vec3 color=getChecker(eye,dir,dist);
-    
-    //fog is off at beginning and end, on in middle
-    color=animateFog(endPt,color,time);
-    
-  	return color;
-}
-
-
-
-
-
-vec3 timeAA(vec2 fragCoord,float time,int T){
-       
-    
-    float t=float(T);//T=length of time to sample over
-    //size of a timestep (should be related to frames...)
-    //make the step size increase over the time interval = more blur at the end
-    float stp=0.000+0.002*mod(time,totalTime)/totalTime;
-
-    
-    float newTime;
-    vec3 color=vec3(0.);
-    vec3 newDir;
-    float dist;
-    
-    //set the geometry
-    xi=nilify(time);
-    
-    //do the original tracing to get the distance:
-    vec3 eye=eyePosition(time);
-    vec3 dir=tVector(fragCoord,time);
-    vec3 endPt=trace(eye,dir,dist);
-    //now distance is saved:
-
-    //now iterate over a time interval, and take the average color
-    for(int k=-T;k<T+1;k++){
-        	newTime=time+stp*float(k);
-         	xi=nilify(newTime);
-        	eye=eyePosition(newTime);
-            newDir=tVector(fragCoord,newTime);
-            color+=getChecker(eye,newDir,dist);
-    }
-    
-   	color=color/(2.*t+1.);
-    
-    color=animateFog(endPt,color,time);
-    
-  	return color;
-    
-}
-
-
-
-
-//======== MAKING THE IMAGE ================
-//==================================================
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     
-    //set the animation time cutoffs
-    setTimes();
-    fov=120.;
+    //choose quantum numbers;
+	ivec3 qNum=ivec3(7,6,3);
     
-    vec3 color;
-
-    //get the color of the pixel at fragCoord at the time iTime.
-	color=timeAA(fragCoord,iTime,5);
+    vec2 res = iResolution.xy / iResolution.y;
+	vec2 uv = fragCoord.xy / iResolution.y;
     
-    fragColor = vec4(color,1.);
+    vec3 dir = normalize(vec3(uv-res/2.0,1.0));
+    vec3 orig = vec3(0,0,-3.);
+      
+    RotateX(dir,radians(iMouse.y));
+    RotateX(orig,radians(iMouse.y));
+    RotateY(dir,radians(-iMouse.x));
+    RotateY(orig,radians(-iMouse.x));
+    
+    
+    vec3 color = MarchVolume(qNum,orig,dir);
+    
+	fragColor = vec4(color, 1.0);
 }
-
-
-
-
-
-
-
