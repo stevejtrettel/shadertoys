@@ -1,283 +1,179 @@
-//BUILT FROM THE VOLUMETRIC RAYMARCHER BY FLYGUY //https://www.shadertoy.com/view/XtsGRf
-
-#define RotateX(v,a) v.yz *= mat2(cos(a),sin(a),-sin(a),cos(a))
-#define RotateY(v,a) v.xz *= mat2(cos(a),sin(a),-sin(a),cos(a))
-#define RotateZ(v,a) v.xy *= mat2(cos(a),sin(a),-sin(a),cos(a))
-
-#define MIN_MARCH_DIST 0.001
-#define MAX_MARCH_STEPS 48
-#define MAX_VOLUME_STEPS 500
-#define VOLUME_STEP_SIZE 0.02
-
-#define MAX_POLYNOMIAL_ORDER 5
-
-// XY range of the display.
-#define DISP_SCALE 130.0 
-
-#define PI 3.14159265359
-
-// Kronecker delta
-#define kd(n, k) ((n == k) ? 1.0 : 0.0)
+#define L2(x)           dot(x, x)
+#define MAX_ITER        3000
 
 
-float factorial(int n){
-    int k=1;
-    for(int i=1;i<n+1;i++){
-        k*=i;
+bool doHalfPlane = true;
+
+const vec2[] PARAMS = vec2[] (
+vec2(1.8462756, 0.09627581),
+vec2(1.958591, 0.011278),
+vec2(1.857382, 0.076258),
+vec2(1.64213876, 0.76658841),
+vec2(1.658312, 0.5),
+vec2(1.926434053, 0.027381792),
+vec2(2, 0)
+);
+
+const int NUM_PARAMS = PARAMS.length();
+
+float wrap(in float x, in float a, in float s) {
+    return mod(x - s, a) + s;
+}
+
+vec2 transA(in vec2 z, float a, float b, inout float scale) {
+    float k = 1. / dot(z, z);
+    z *= k;
+    scale *= k;
+    z.x -= b;
+    z.y = a - z.y;
+    return z;
+}
+
+bool separation(in vec2 z, in float a, in float b) {
+    float f = (z.x >= -b/2.0) ? 1.0 : -1.0;
+    float K = sign(b) * (2.0*a - 1.95) / 4.3;
+    float M = 7.2 - (1.95 - a) * 18.0;
+    return z.y >= 0.5*a + K*f*(1.0 - exp(-M*abs(z.x + b * 0.5)));
+}
+
+float kleinian(in vec2 z, vec2 pattern, float scale) {
+    float a = pattern.x, b = pattern.y;
+    float f = sign(b);
+    vec2 lz = z + vec2(1), llz = z - vec2(1);
+    for (int i = 0; i < MAX_ITER; i++) {
+        z.x = z.x + f * b / a * z.y;
+        z.x = wrap(z.x, 2.0, -1.0);
+        z.x = z.x - f * b / a * z.y;
+
+        if (separation(z, a, b)) {
+            z = vec2(-b, a) - z;
+        }
+
+        z = transA(z, a, b, scale);
+
+        // If the iterated points enters a 2-cycle, bail out.
+        if (dot(z-llz, z-llz) < 1e-6) {
+            return abs(z.y)  / scale;
+        }
+
+        // If the iterated point gets outside z.y=0 and z.y=a, bail out.
+        if (z.y < 0.0)
+        return -z.y/scale;
+        if (z.y > a)
+        return (z.y - a)/scale;
+
+        llz=lz; lz=z;
     }
-    return float(k);
+    return 1e3;
 }
 
 
+vec3 hsv2rgb(vec3 c) {
+    const vec4 K = vec4(1.0, 2.0/3.0, 1.0/3.0, 3.0);
+    vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+    return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+}
 
-//Color Palettes from https://www.shadertoy.com/view/ll2GD3
+vec3 postprocess(vec3 col, vec2 q) {
+    col = pow(clamp(col, 0.0, 1.0), vec3(1.0/2.2));
+    col = col*0.6 + 0.4*col*col*(3.0 - 2.0*col);
+    col = mix(col, vec3(dot(col, vec3(0.33))), -0.4);
+    col *= 0.5 + 0.5*pow(19.0*q.x*q.y*(1.0-q.x)*(1.0-q.y), 0.7);
+    return col;
+}
+
 vec3 pal( in float t, in vec3 a, in vec3 b, in vec3 c, in vec3 d )
 {
-    return a + b*cos((c*t+d) );
+    return a + b*cos( 6.28318*(c*t+d) );
 }
 
-
-//Algorithms for Polynomials from tpfto:
-//https://www.shadertoy.com/view/tlX3WN
-// Clenshaw's algorithm for the Laguerre polynomial
-float laguerre(int n, int aa, float x)
-{
-	float a = float(aa);
-    float u = 0.0, v = 0.0, w = 0.0;
-    
-    for (int k = MAX_POLYNOMIAL_ORDER; k > 0; k--)
-    {
-        float kk = float(k);
-        w = v; v = u;
-        u = kd(n, k) + (2.0 * kk + a + 1.0 - x)/(kk + 1.0) * v - (kk + a + 1.0) * w/(kk + 2.0);
-    }
-    
-    return kd(n, 0) + (a - x + 1.0) * u - 0.5 * (a + 1.0) * v;
-}
-
-// Clenshaw's algorithm for the normalized associated Legendre polynomial (spherical harmonics)
-float alegp(int n, int m, float x)
-{
-    int am = abs(m);
-    float u = 0.0, v = 0.0, w = 0.0;
-    
-    for (int k = MAX_POLYNOMIAL_ORDER; k >= 0; k--)
-    {
-        float kp = float(k + 1);
-        float mk1 = float(2 * am) + kp, mk2 = float(2 * (am + k) + 1);
-        w = v; v = u;
-        u = kd(n, am + k) + sqrt((mk2 * (mk2 + 2.0))/(kp * mk1)) * x * v - sqrt((kp * mk1 * (mk2 + 4.0))/((kp + 1.0) * (mk1 + 1.0) * mk2)) * w;
-    }
-
-    for (int k = 1; k <= am; k++)
-    {
-        u *= sqrt((1.0 - 0.5/float(k)) * (1.0 - x) * (1.0 + x));
-    }
-    
-    return (((m > 0) && ((am & 1) == 1)) ? -1.0 : 1.0) * u * sqrt((0.5 * float(am) + 0.25)/PI);
-}
-
-
-
-
-
-
- // calculating the wave function Psi with quantum numbers n,l,m
-
-vec4 amplitude(ivec3 qNum, vec3 pos)
-{
-      
-   	  int n=qNum.x;
-      int l=qNum.y;
-      int m=qNum.z;
-    
-    
-      float r = length(pos);
-      float rho = 2. * r/float(n);
-    
-    //independent of m
-      float radialComp = exp(1.0 * float(l + 1) * log(0.5*rho) - rho/2.)*
-          					laguerre(n - l - 1, 2 * l + 1, rho);
-    
-     //depends only on abs(m)
-      float harmonicComp= alegp(l, m, pos.z/r);//pos.z/r=cosLat
-    
-          float harmonicComp2= alegp(l, m, pos.x/r);//pos.z/r=cosLat
-    
-    
-    //makes total density =1
-      float normalization=1.;
-          //5.*sqrt(factorial(n - l - 1)/factorial(n + l));
-          //normalization=sqrt((2.*float(l)+1.)*factorial(l-m)/(4.*PI*factorial(l+m)));
-      
-   
-      float psi=normalization*radialComp*harmonicComp;//real part of Psi
-    
-    float psi2=normalization*radialComp*harmonicComp2;//real part of Psi
-    
-    //superposition
-      float theta=atan(pos.y,pos.x);
-      float cs=cos(float(m)*theta);
-      float sn=sin(float(m)*theta);
- 	
-      float real =2.*psi*(cs*cos(iTime/6.));
-   	  float imaginary=psi*(sn*sin(iTime/6.));
-    
-    real=psi*cos(iTime/6.);
-        imaginary=psi2*sin(iTime/6.);
-      
-    //this is the magnitude of Psi*Psi
-    float mag=psi*psi;
-   
-    float globalPhase=15.*iTime/(float(n*n));
-    float localPhase= atan((sn*sin(iTime/6.)),(cs*cos(iTime/6.)));
-    float phase =localPhase+globalPhase;
-   
-   
-    
-
-    
-    return  vec4(mag,phase,real,imaginary);
-}
-
-
-
-//getting the associated probability density, and phase information
-
-vec2 probDensity(ivec3 qNum, vec3 pos){
-    
-   float n=float(qNum.x);
-   float viewRadius=80.;//constant to show true orbital sizes
-   float densityMultiplier=0.001;//adjusts the brightness
-    
-    vec4 amp=amplitude(qNum, viewRadius*pos);
-    float prob = amp.z*amp.z+amp.w*amp.w;
- 
-  return vec2(densityMultiplier*prob,amp.y);
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-vec4 Volume(ivec3 qNum,vec3 pos)
-{
-    //rotate starting position
-    RotateY(pos,iTime/10.);
-    RotateZ(pos,-0.25);
-    
- 
-    //calculate the light intensity;
-    vec2 amp=probDensity(qNum,pos);
-    float prob=amp.x;
-    float phase=amp.y;
-    
-    
-    
-    
-    
-    vec3 col1 = pal( PI/2.+phase, vec3(0.5,0.5,0.5),vec3(0.5,0.5,0.5),vec3(2.0,1.0,0.0),vec3(0.5,0.20,0.25) );
-        //pal(phase, vec3(0.8,0.5,0.4),vec3(0.2,0.4,0.2),vec3(2.0,1.0,1.0),vec3(0.0,0.25,0.25) );
-    vec3 col2 =pal(3.*PI/2.+ phase, vec3(0.5,0.5,0.5),vec3(0.5,0.5,0.5),vec3(2.0,1.0,0.0),vec3(0.5,0.20,0.25) );
-        //red yellow palette
-        //pal( phase+PI, vec3(0.8,0.5,0.4),vec3(0.2,0.4,0.2),vec3(2.0,1.0,1.0),vec3(0.0,0.25,0.25) );
-    
-    //mix two colors together: first is for lower intensity second is high intensity
-    vec3 col = mix(col1,col2,smoothstep(2.5,3.,prob));
-    //vec3(0.85,0.45,0.2)vec3(1.,1.,0.6)
-    
-    //slowly ramp up until 0.4 prob density, then between 0.4 and 0.9 draw densely
-    prob = 0.2*smoothstep(0.,0.4,abs(prob))+0.8*smoothstep(0.4,0.9,abs(prob));
-    //+1.*smoothstep(2.5,3.,abs(prob));
-    
-	return vec4(col, max(0.0,prob)*0.01);  
-}
-
-
-
-
-vec3 MarchVolume(ivec3 qNum,vec3 orig, vec3 dir)
-{
-    //Ray march to find the cube surface.
-    float t = 0.0;
-    vec3 pos = orig;
-    float radius=1.5;
-    float opacity=2.;
-    
-    for(int i = 0;i < MAX_MARCH_STEPS;i++)
-    {
-        pos = orig + dir * t;
-        float dist = 100.0;
-        
-        
-        //dist = min(dist, 8.0-length(pos));
-        dist=min(dist,length(pos)-radius);
-       // dist = min(dist, max(max(abs(pos.x),abs(pos.y)),abs(pos.z))-1.0);//length(pos)-1.0);
-        
-        t += dist;
-        
-        if(dist < MIN_MARCH_DIST){//you made it to the region!
-            orig=pos;//reset the origin to your new point
-           	t=0.;//reset the marching counter
-            break;}
-    }
-    
-    //Step though the volume and add up the opacity.
-    vec4 col = vec4(0.0);
-    for(int i = 0;i < MAX_VOLUME_STEPS;i++)
-    {
-    	t += VOLUME_STEP_SIZE;
-        
-    	pos = orig + dir * t;
-        
-        //Stop if the sample leaves the volume.
-        //if(max(max(abs(pos.x),abs(pos.y)),abs(pos.z))-radius > 0.0) {break;}//cube
-        if(length(pos)>radius) {break;}//sphere
-
-        
-        //if you are rendering a shell: add up zero intensity when you are inside the shell
-        //if(length(pos)>radius-0.2)//uncomment to make the below only apply in the shell
-        {
-            vec4 vol = Volume(qNum,pos);
-             //add distance fog!
-            vol.rgb*=5.*exp(-2.*t/radius);
-        	vol.rgb *= vol.w;
-            col += vol;}
-    }
-    
-    return col.rgb;
-}
 
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
-    
-    //choose quantum numbers;
-	ivec3 qNum=ivec3(7,6,3);
-    
-    vec2 res = iResolution.xy / iResolution.y;
-	vec2 uv = fragCoord.xy / iResolution.y;
-    
-    vec3 dir = normalize(vec3(uv-res/2.0,1.0));
-    vec3 orig = vec3(0,0,-3.);
-      
-    RotateX(dir,radians(iMouse.y));
-    RotateX(orig,radians(iMouse.y));
-    RotateY(dir,radians(-iMouse.x));
-    RotateY(orig,radians(-iMouse.x));
-    
-    
-    vec3 color = MarchVolume(qNum,orig,dir);
-    
-	fragColor = vec4(color, 1.0);
+    vec2 uv = (2. * fragCoord - iResolution.xy) / iResolution.y;
+
+    const float zoom = 1.;
+    //3.;
+
+   // float time = mod(0.2*iTime, float(NUM_PARAMS));
+    float time = 6.3;
+    //6.+mod(0.1*iTime,1.);
+    int it = int(floor(time));
+    float ft = fract(time);
+    vec2 pattern = mix(PARAMS[it], PARAMS[(it+1) % NUM_PARAMS], smoothstep(0., 1., ft));
+    float scale = 1.2;
+    vec2 p = uv * 1.1;
+
+    if (doHalfPlane) {
+        p.y += 1.0;
+        p *= 0.5*pattern.x;
+    }
+    else {
+        p -= vec2(0, -1);
+        float r2 = 2. / dot(p, p);
+        p *= r2;
+        scale *= r2;
+        p += vec2(0, -1);
+    }
+    float aa = 2. / iResolution.y;
+
+    float d = zoom * kleinian(p, pattern, scale);
+
+    float b = -0.125;
+    float t = 1.0;
+    const float lh = 1.25;
+    const vec3 lp1 = vec3(.5, .5, lh);
+    const vec3 lp2 = vec3(-0.5, .5, lh);
+
+    vec3 ro = vec3(0, 0, t);
+    vec3 pp = vec3(p, 0);
+
+    vec3 rd = normalize(pp - ro);
+
+    vec3 ld1 = normalize(lp1 - pp);
+    vec3 ld2 = normalize(lp2 - pp);
+
+    float bt = -(t-b)/rd.z;
+
+    vec3  bp   = ro + bt*rd;
+    vec3  srd1 = normalize(lp1 - bp);
+    vec3  srd2 = normalize(lp2 - bp);
+    float bl21 = L2(lp1 - bp);
+    float bl22 = L2(lp2 - bp);
+
+    float st1 = (0.0-b)/srd1.z;
+    float st2 = (0.0-b)/srd2.z;
+    vec3  sp1 = bp + srd1*st1;
+    vec3  sp2 = bp + srd2*st1;
+
+    float bd = zoom * kleinian(bp.xy, pattern, scale);
+    float sd1= zoom * kleinian(sp1.xy, pattern, scale);
+    float sd2= zoom * kleinian(sp2.xy, pattern, scale);
+
+    vec3 col = vec3(0.0);
+    //a parameter controlling softness of shadows
+    const float ss = 50.0;
+
+    //the two shadows: and the brightness from light source in background
+    col       += vec3(1)  * (1.0 - exp(-ss*(max(sd1, 0.0)))) / bl21;
+    col       += vec3(.5) * (1.0 - exp(-ss*(max(sd2, 0.0)))) / bl22;
+
+    float l   = length(p);
+    float hue = fract(0.75*l-0.3*iTime) + .5;
+    float sat = tanh(2.*l);
+    vec3 hsv  = vec3(hue, sat, 0.5);
+    vec3 bcol = hsv2rgb(hsv);
+    //pal( p.x, vec3(0.5,0.5,0.5),vec3(0.5,0.5,0.5),vec3(1.0,1.0,0.5),vec3(0.8,0.90,0.30) );
+   // hsv2rgb(hsv);
+
+
+    col       *= (1.0-tanh(0.5*l))*0.5;
+    col       = mix(col, bcol, smoothstep(-aa, aa, -d));
+
+    //adding the brightness glow
+    col       += 0.5*sqrt(bcol.zxy)*(exp(-(10.0+100.0*tanh(l))*max(d, 0.0)));
+
+    col = postprocess(col, fragCoord/iResolution.xy);
+    fragColor = vec4(col,1.0);
 }
