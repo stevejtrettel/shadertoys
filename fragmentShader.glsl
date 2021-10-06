@@ -1,283 +1,511 @@
-//BUILT FROM THE VOLUMETRIC RAYMARCHER BY FLYGUY //https://www.shadertoy.com/view/XtsGRf
-
-#define RotateX(v,a) v.yz *= mat2(cos(a),sin(a),-sin(a),cos(a))
-#define RotateY(v,a) v.xz *= mat2(cos(a),sin(a),-sin(a),cos(a))
-#define RotateZ(v,a) v.xy *= mat2(cos(a),sin(a),-sin(a),cos(a))
-
-#define MIN_MARCH_DIST 0.001
-#define MAX_MARCH_STEPS 48
-#define MAX_VOLUME_STEPS 500
-#define VOLUME_STEP_SIZE 0.02
-
-#define MAX_POLYNOMIAL_ORDER 5
-
-// XY range of the display.
-#define DISP_SCALE 130.0 
-
-#define PI 3.14159265359
-
-// Kronecker delta
-#define kd(n, k) ((n == k) ? 1.0 : 0.0)
+//A tiling of the hyperbolic plane by right angled hexagons determines a genus 2 surface
+//doubling such a hexagon along a triplet of alternating sides gives a pair of pants,
+//and doubling that pair of pants across its boundary gives a genus 2 surface
 
 
-float factorial(int n){
-    int k=1;
-    for(int i=1;i<n+1;i++){
-        k*=i;
+
+float PI=3.14159;
+
+//------------------------------------------
+//Define hyperbolic half spaces, reflections
+//------------------------------------------
+
+//vertical line to reflect in
+//side=+1 means the half space contains points to the right, -1 to the left
+struct Line{
+    float pos;
+    float side;
+};
+
+
+//semicircle centered on real line to reflect in
+//side =+1 means the halfspace contains points below, -1 means above
+struct Circle{
+    float center;
+    float radius;
+    float side;
+};
+
+
+
+//reflection in vertical line defining a half space
+//this is done by conjugating reflection in the line x=0
+//by the translation taking this line there
+void invert(inout vec2 p, Line line){
+
+    p.x -= line.pos;
+    p.x *= -1.;
+    p.x += line.pos;
+
+}
+
+//reflection in a circle defining a half space
+//this is done by conjugating inversion in the unit circle
+//with a similarity transformation taking the given circle to the unit circle
+void invert(inout vec2 p, Circle circle){
+
+    p.x -= circle.center;
+    p /= circle.radius;
+    p /= dot(p,p);
+    p *= circle.radius;
+    p.x += circle.center;
+
+}
+
+//check if inside a half space bounded by a line:
+bool inside(vec2 p, Line line){
+    if(line.side>0.){//check if we are on the right side
+        return p.x>line.pos;
     }
-    return float(k);
-}
-
-
-
-//Color Palettes from https://www.shadertoy.com/view/ll2GD3
-vec3 pal( in float t, in vec3 a, in vec3 b, in vec3 c, in vec3 d )
-{
-    return a + b*cos((c*t+d) );
-}
-
-
-//Algorithms for Polynomials from tpfto:
-//https://www.shadertoy.com/view/tlX3WN
-// Clenshaw's algorithm for the Laguerre polynomial
-float laguerre(int n, int aa, float x)
-{
-	float a = float(aa);
-    float u = 0.0, v = 0.0, w = 0.0;
-    
-    for (int k = MAX_POLYNOMIAL_ORDER; k > 0; k--)
-    {
-        float kk = float(k);
-        w = v; v = u;
-        u = kd(n, k) + (2.0 * kk + a + 1.0 - x)/(kk + 1.0) * v - (kk + a + 1.0) * w/(kk + 2.0);
+    else{//check if we are on the left side
+        return p.x<line.pos;
     }
-    
-    return kd(n, 0) + (a - x + 1.0) * u - 0.5 * (a + 1.0) * v;
 }
 
-// Clenshaw's algorithm for the normalized associated Legendre polynomial (spherical harmonics)
-float alegp(int n, int m, float x)
-{
-    int am = abs(m);
-    float u = 0.0, v = 0.0, w = 0.0;
-    
-    for (int k = MAX_POLYNOMIAL_ORDER; k >= 0; k--)
-    {
-        float kp = float(k + 1);
-        float mk1 = float(2 * am) + kp, mk2 = float(2 * (am + k) + 1);
-        w = v; v = u;
-        u = kd(n, am + k) + sqrt((mk2 * (mk2 + 2.0))/(kp * mk1)) * x * v - sqrt((kp * mk1 * (mk2 + 4.0))/((kp + 1.0) * (mk1 + 1.0) * mk2)) * w;
+//check if inside a half space bounded by a circle
+bool inside(vec2 p, Circle circle){
+    if(circle.side>0.){//check if we are inside the semicircle
+        return length(p-vec2(circle.center,0))<circle.radius;
+    }
+    else{//check if we are outside the semicircle
+        return length(p-vec2(circle.center,0))>circle.radius;
+    }
+}
+
+
+//check if we are inside
+void reflectIn(inout vec2 p, Circle circle, inout float invCount){
+    if(!inside(p,circle)){
+        invert(p,circle);
+        invCount+=1.;
+    }
+}
+
+void reflectIn(inout vec2 p, Line line, inout float invCount){
+    if(!inside(p,line)){
+        invert(p,line);
+        invCount+=1.;
+    }
+}
+
+
+
+//------------------------------------------
+//some hyperbolic geometry
+//------------------------------------------
+
+//do a rotation in the upper half plane of angle theta about i
+float rot(float x, float theta){
+    float c=cos(theta/2.);
+    float s=sin(theta/2.);
+    mat2 mat=mat2(c,s,-s,c);
+    vec2 p=mat*vec2(x,1.);
+    return p.x/p.y;
+}
+
+
+//the above is only a rotational mobius transformation applied to the real line
+//this is a general mobius transformation applied to points in upper half space
+//do the mobius transformation ((a,b),(c,d)).z
+vec2 mobiusTransf(vec4 mob, vec2 z){
+    float a=mob.x;
+    float b=mob.y;
+    float c=mob.z;
+    float d=mob.w;
+    float Z2=length(z)*length(z);
+    float term1=c*z.x+d;
+    float term2=c*z.y;
+    float denom=term1*term1+term2*term2;
+
+    term1=a*c*Z2+b*d+(a*d+b*c)*z.x;
+    term2=(a*d-b*c)*z.y;
+
+    return vec2(term1,term2)/denom;
+}
+
+
+//measure the distance to a vertical line geodesic
+float dist(vec2 p, Line line){
+    //translate line to oriign
+    p.x-=line.pos;
+    float secTheta=length(p)/abs(p.y);
+    return acosh(secTheta);
+}
+
+//measure the distance to a circle geodesic
+float dist(vec2 p, Circle circle){
+    float end1=circle.center-circle.radius;
+    float end2=circle.center+circle.radius;
+    vec4 mob=vec4(1.,-end1,1.,-end2);
+
+    //do the mobius transformation making this segment vertical:
+    vec2 z=mobiusTransf(mob, p);
+
+    //now measure the distance to this vertical line
+    return dist(z,Line(0.,1.));
+}
+
+
+
+
+//------------------------------------------
+//set up the fundamental domain
+//------------------------------------------
+
+
+//Give names to the sides of the shape
+Circle C0,C1,C2,L12,L20;
+Line L01;
+
+//function that defines these sides
+//a right angled hexagon is determined by three moduli
+//here we list them as a,b,h: these directly specify the "C-Circles"
+//then we build the "L-Circles" from them
+void setUpFD(float a, float b, float h){
+
+    C0=Circle(0.,1.,1.);
+    C1=Circle(0.,a,-1.);
+    C2=Circle(h,b,-1.);
+
+    //the radius of the short circles depends on these as calculated:
+    //Lij is the circle intersecting Ci and Cj orthogonally
+
+    float u=(h*h+a*a-b*b)/(2.*h);
+    float r=sqrt(u*u-a*a);
+    float v=(h*h+1.-b*b)/(2.*h);
+    float R=sqrt(v*v-1.);
+
+    L01=Line(0.,1.);
+    L12=Circle(u,r,-1.);
+    L20=Circle(v,R,-1.);
+}
+
+
+//takes in 3 floats all in (0,1) and puts them into an acceptable triple (a,b,h)
+//rules: x is in (0,1): this just becomes a.
+//given a, the value of h is constrained to lie in (a,1)
+//thus y is sent to h=a+(1-a)y
+//given a,h, the radius b is constrained so that the circle endpoints h-b, h+b lie in the
+//interval (a,1)
+//thus h-b>a, and h+b<1.  Re-arranging, b<h-a, and b<1-h.  Thus b<min(h-a,1-h)
+//so we send z to b=min(h-a,1-h)z
+vec3 parametersFD(float x, float y, float z){
+
+    float a=x;
+    float h=a+(1.-a)*y;
+    float b=min(h-a,1.-h)*z;
+
+    return vec3(a,b,h);
+}
+
+
+//measuring the distance tot edes which are exterior to the entire surface fundamental domain
+//not drawing the internal edges that we reflect in from the hexagon tile
+float edgeDistance(vec2 p){
+
+    float d1=dist(p,C1);
+    float d12=dist(p,L12);
+    float d2=dist(p,C2);
+    float d20=dist(p,L20);
+    float d01=dist(p,L01);
+
+    //this is the minimum distance away from any edge that we care about
+    float d=min(min(d1,d12),min(d2,d20));
+
+    return d;
+}
+
+
+
+//------------------------------------------
+//reflect points into fundamental domain
+//------------------------------------------
+
+
+//this function takes in a point p, and looks at each side of the fundamental domain
+//if p is not within the half space defined by that side, we reflect it
+//if p is already in that half space, we leave it alone
+void reflectInFD(inout vec2 p,inout float invCount){
+
+    reflectIn(p,C0,invCount);
+    reflectIn(p,C1,invCount);
+    reflectIn(p,C2,invCount);
+    reflectIn(p,L01,invCount);
+    reflectIn(p,L12,invCount);
+    reflectIn(p,L20,invCount);
+
+}
+
+
+//while the program's reflection group algorithm will use just the right angled hexagon
+//throughout most computation, we will at times want to draw a fundamental domain for the surface
+//which consists of 4 hexagons.
+//this function reflects in the two internal walls, to help with that
+void reflectInternally(inout vec2 p){
+
+    if(!inside(p,C0)){
+        invert(p,C0);
     }
 
-    for (int k = 1; k <= am; k++)
-    {
-        u *= sqrt((1.0 - 0.5/float(k)) * (1.0 - x) * (1.0 + x));
+    if(!inside(p,L01)){
+        invert(p,L01);
     }
-    
-    return (((m > 0) && ((am & 1) == 1)) ? -1.0 : 1.0) * u * sqrt((0.5 * float(am) + 0.25)/PI);
+}
+
+
+
+//this function checks if p is inside our fundamental domain or not
+bool insideFD(vec2 p){
+    bool within=inside(p,C0);
+    within=within&&inside(p,C1);
+    within=within&&inside(p,C2);
+    within=within&&inside(p,L01);
+    within=within&&inside(p,L12);
+    within=within&&inside(p,L20);
+    return within;
 }
 
 
 
 
+//move into the fundamental domain
+//this combines the two functions above: it iteratively reflects in the sides,
+//then checks if you ended up inside the FD
+//if you do, it stops.
+void moveToFD(inout vec2 p,inout float invCount){
 
 
- // calculating the wave function Psi with quantum numbers n,l,m
+    for(int i=0;i<25;i++){
 
-vec4 amplitude(ivec3 qNum, vec3 pos)
-{
-      
-   	  int n=qNum.x;
-      int l=qNum.y;
-      int m=qNum.z;
-    
-    
-      float r = length(pos);
-      float rho = 2. * r/float(n);
-    
-    //independent of m
-      float radialComp = exp(1.0 * float(l + 1) * log(0.5*rho) - rho/2.)*
-          					laguerre(n - l - 1, 2 * l + 1, rho);
-    
-     //depends only on abs(m)
-      float harmonicComp= alegp(l, m, pos.z/r);//pos.z/r=cosLat
-    
-          float harmonicComp2= alegp(l, m, pos.x/r);//pos.z/r=cosLat
-    
-    
-    //makes total density =1
-      float normalization=1.;
-          //5.*sqrt(factorial(n - l - 1)/factorial(n + l));
-          //normalization=sqrt((2.*float(l)+1.)*factorial(l-m)/(4.*PI*factorial(l+m)));
-      
-   
-      float psi=normalization*radialComp*harmonicComp;//real part of Psi
-    
-    float psi2=normalization*radialComp*harmonicComp2;//real part of Psi
-    
-    //superposition
-      float theta=atan(pos.y,pos.x);
-      float cs=cos(float(m)*theta);
-      float sn=sin(float(m)*theta);
- 	
-      float real =2.*psi*(cs*cos(iTime/6.));
-   	  float imaginary=psi*(sn*sin(iTime/6.));
-    
-    real=psi*cos(iTime/6.);
-        imaginary=psi2*sin(iTime/6.);
-      
-    //this is the magnitude of Psi*Psi
-    float mag=psi*psi;
-   
-    float globalPhase=15.*iTime/(float(n*n));
-    float localPhase= atan((sn*sin(iTime/6.)),(cs*cos(iTime/6.)));
-    float phase =localPhase+globalPhase;
-   
-   
-    
+        reflectInFD(p,invCount);
 
-    
-    return  vec4(mag,phase,real,imaginary);
-}
+        if(insideFD(p)){
+            return;
+        }
 
-
-
-//getting the associated probability density, and phase information
-
-vec2 probDensity(ivec3 qNum, vec3 pos){
-    
-   float n=float(qNum.x);
-   float viewRadius=80.;//constant to show true orbital sizes
-   float densityMultiplier=0.001;//adjusts the brightness
-    
-    vec4 amp=amplitude(qNum, viewRadius*pos);
-    float prob = amp.z*amp.z+amp.w*amp.w;
- 
-  return vec2(densityMultiplier*prob,amp.y);
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-vec4 Volume(ivec3 qNum,vec3 pos)
-{
-    //rotate starting position
-    RotateY(pos,iTime/10.);
-    RotateZ(pos,-0.25);
-    
- 
-    //calculate the light intensity;
-    vec2 amp=probDensity(qNum,pos);
-    float prob=amp.x;
-    float phase=amp.y;
-    
-    
-    
-    
-    
-    vec3 col1 = pal( PI/2.+phase, vec3(0.5,0.5,0.5),vec3(0.5,0.5,0.5),vec3(2.0,1.0,0.0),vec3(0.5,0.20,0.25) );
-        //pal(phase, vec3(0.8,0.5,0.4),vec3(0.2,0.4,0.2),vec3(2.0,1.0,1.0),vec3(0.0,0.25,0.25) );
-    vec3 col2 =pal(3.*PI/2.+ phase, vec3(0.5,0.5,0.5),vec3(0.5,0.5,0.5),vec3(2.0,1.0,0.0),vec3(0.5,0.20,0.25) );
-        //red yellow palette
-        //pal( phase+PI, vec3(0.8,0.5,0.4),vec3(0.2,0.4,0.2),vec3(2.0,1.0,1.0),vec3(0.0,0.25,0.25) );
-    
-    //mix two colors together: first is for lower intensity second is high intensity
-    vec3 col = mix(col1,col2,smoothstep(2.5,3.,prob));
-    //vec3(0.85,0.45,0.2)vec3(1.,1.,0.6)
-    
-    //slowly ramp up until 0.4 prob density, then between 0.4 and 0.9 draw densely
-    prob = 0.2*smoothstep(0.,0.4,abs(prob))+0.8*smoothstep(0.4,0.9,abs(prob));
-    //+1.*smoothstep(2.5,3.,abs(prob));
-    
-	return vec4(col, max(0.0,prob)*0.01);  
-}
-
-
-
-
-vec3 MarchVolume(ivec3 qNum,vec3 orig, vec3 dir)
-{
-    //Ray march to find the cube surface.
-    float t = 0.0;
-    vec3 pos = orig;
-    float radius=1.5;
-    float opacity=2.;
-    
-    for(int i = 0;i < MAX_MARCH_STEPS;i++)
-    {
-        pos = orig + dir * t;
-        float dist = 100.0;
-        
-        
-        //dist = min(dist, 8.0-length(pos));
-        dist=min(dist,length(pos)-radius);
-       // dist = min(dist, max(max(abs(pos.x),abs(pos.y)),abs(pos.z))-1.0);//length(pos)-1.0);
-        
-        t += dist;
-        
-        if(dist < MIN_MARCH_DIST){//you made it to the region!
-            orig=pos;//reset the origin to your new point
-           	t=0.;//reset the marching counter
-            break;}
     }
-    
-    //Step though the volume and add up the opacity.
-    vec4 col = vec4(0.0);
-    for(int i = 0;i < MAX_VOLUME_STEPS;i++)
-    {
-    	t += VOLUME_STEP_SIZE;
-        
-    	pos = orig + dir * t;
-        
-        //Stop if the sample leaves the volume.
-        //if(max(max(abs(pos.x),abs(pos.y)),abs(pos.z))-radius > 0.0) {break;}//cube
-        if(length(pos)>radius) {break;}//sphere
 
-        
-        //if you are rendering a shell: add up zero intensity when you are inside the shell
-        //if(length(pos)>radius-0.2)//uncomment to make the below only apply in the shell
-        {
-            vec4 vol = Volume(qNum,pos);
-             //add distance fog!
-            vol.rgb*=5.*exp(-2.*t/radius);
-        	vol.rgb *= vol.w;
-            col += vol;}
-    }
-    
-    return col.rgb;
+    invCount=-1.;
+
 }
 
+
+
+
+
+//------------------------------------------
+//prepare the screen pixels for computation
+//------------------------------------------
+
+
+
+//just packing the sinusoidal oscillation which oscillates between a and b into its own function
+float osc(float a,float b, float t){
+    return abs(b-a)/2.*(1.+sin(t))+a;
+}
+
+
+
+//this takes in the pixel coordinates on the screen (fragCoord) and rescales
+//them to show the appropriate region of the plane
+vec2 normalizedFragCoord(vec2 fragCoord){
+
+    // Normalized the pixel coordinates (from -0.5 to 0.5)
+    vec2 uv =(fragCoord/iResolution.xy-vec2(0.5));
+
+    //rescale this how you like
+    uv = 4.*vec2(1,iResolution.y/iResolution.x)*uv;
+
+    return uv;
+}
+
+
+//starting from Poincare Disk:
+vec2 toUHP(vec2 uv){
+
+    //move to half plane
+    float Re = 2.*uv.x;
+    float Im = 1.-dot(uv,uv);
+    vec2 temp=vec2(1.-uv.y,uv.x);
+    float Scale = dot(temp,temp);
+    vec2 p = 1./Scale*vec2(Re,Im);
+
+    return p;
+
+}
+
+
+//this function takes coordinates in poincare disk,
+//uses mouse position to make a mobius transformation
+vec2 mouseTransform(vec2 z){
+    if (iMouse.x > 10.0) {
+        vec2 m = (2.0*iMouse.xy-iResolution.xy)/iResolution.y;
+        // Unit disc inversion
+        m /= dot(m,m);
+        z -= m;
+        float k = (dot(m,m)-1.0)/dot(z,z);
+        z *= k;
+        z += m;
+    }
+    return z;
+}
+
+
+//transformations done at setup in the Poincare Disk model
+vec2 transformPD(vec2 z){
+
+    //if (iMouse.z > 0.) {
+        z=mouseTransform(z);
+   // }
+//    else{
+//        //do a rotation slowly
+//        float c=cos(iTime/6.);
+//        float s=sin(iTime/6.);
+//        z=mat2(c,s,-s,c)*z;
+//    }
+
+    return z;
+}
+
+
+
+//transformations done in setup to the Upper Half Plane Model
+vec2 transformUHP(vec2 p){
+
+    //if there is no mouse press
+    if (iMouse.z < 0.) {
+        //apply a hyperbolic
+        p*=osc(0.4,0.8,iTime/2.);
+
+        //reflect up to the upper half plane:
+        p.y=abs(p.y);
+    }
+
+    return p;
+
+}
+
+
+
+//------------------------------------------
+//assigning color to points in the fundamental domain
+//------------------------------------------
+
+
+//get the color of the edges
+vec3 edgeColor(vec2 p, bool insideDisk){
+
+    if(insideDisk) return vec3(170,210,255)/255.;
+    if(!insideDisk) return 0.35*vec3(140,60,40)/255.;
+
+    return vec3(0.);
+}
+
+
+
+//get the color for the interior tiles
+vec3 tilingColor(float invCount,bool insideDisk){
+
+    vec3 tilingColor;
+
+    if(invCount<0.){
+        //if we didnt get into the fundamental domain
+        //color it black//BETTER: A DEBUG COLOR
+        tilingColor=vec3(0,0,0);
+    }
+
+    else {
+        //we did get into the fundamental domain:
+        float parity=mod(invCount, 2.);
+
+        if (insideDisk){
+            if (parity==0.){
+                tilingColor=vec3(116, 161, 250)/255.;
+            }
+            else { //parity=1.
+                tilingColor=vec3(120, 170, 250)/255.;
+            }
+        }
+
+        //if we are outside, make complementary colored.
+        else {
+            if (parity==0.){
+                tilingColor=0.25*vec3(230,129,56)/255.;
+            }
+            else { //parity=1.
+                tilingColor=0.25*vec3(230,99,90)/255.;
+            }
+        }
+    }
+
+    return tilingColor;
+
+}
+
+
+
+//get a color for a point in the fundamental domain
+vec3 getColor(vec2 p,float invCount,bool insideDisk,bool insideDomain){
+
+    bool onEdge=(edgeDistance(p)<0.05);
+
+    if(onEdge){
+        return edgeColor(p, insideDisk);
+    }
+    else if(insideDomain){
+        return tilingColor(invCount,insideDisk)+vec3(0.3,0,0);
+    }
+    else{
+        return tilingColor(invCount,insideDisk);
+    }
+
+    return vec3(0.);
+}
+
+
+//------------------------------------------
+//making the main image
+//------------------------------------------
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
-    
-    //choose quantum numbers;
-	ivec3 qNum=ivec3(7,6,3);
-    
-    vec2 res = iResolution.xy / iResolution.y;
-	vec2 uv = fragCoord.xy / iResolution.y;
-    
-    vec3 dir = normalize(vec3(uv-res/2.0,1.0));
-    vec3 orig = vec3(0,0,-3.);
-      
-    RotateX(dir,radians(iMouse.y));
-    RotateX(orig,radians(iMouse.y));
-    RotateY(dir,radians(-iMouse.x));
-    RotateY(orig,radians(-iMouse.x));
-    
-    
-    vec3 color = MarchVolume(qNum,orig,dir);
-    
-	fragColor = vec4(color, 1.0);
+
+    //set up the input
+    vec2 uv = normalizedFragCoord(fragCoord);
+
+    //keep track of if we start outside the poincare disk
+    bool insideDisk=(length(uv)<1.);
+
+    //apply a mobius transformation from mouse position
+    //this is done in disk model still
+    uv=transformPD(uv);
+
+    //map to upper half plane for computation:
+    vec2 p = toUHP(uv);
+
+    //apply some transformations in the UHP model
+    p=transformUHP(p);
+
+    //setup the fundamental domain we are working with
+    float x=osc(0.1,0.9,iTime/3.);
+    float y=osc(0.2,0.8,iTime);
+    float z=osc(0.2,0.8,iTime/2.);
+    vec3 params=parametersFD(x,y,z);
+    setUpFD(params.x,params.y,params.z);
+
+
+    //before changing p around, separately make a copy to color the original fundamental domain
+    vec2 q=p;
+    //reflect in the two internal walls: this gets one full copy of the fundamnetal domain
+    reflectInternally(q);
+    bool insideDomain=insideFD(q)&&insideDisk&&(edgeDistance(q)>0.05);
+
+    //reflect into the fundamental domain
+    float invCount=0.;
+    moveToFD(p,invCount);
+
+    // color the pixel based on this
+    vec3 col=getColor(p,invCount,insideDisk,insideDomain);
+
+    fragColor=vec4(col,1.);
 }

@@ -19,6 +19,19 @@ async function main() {
     const plane = new THREE.PlaneBufferGeometry(2, 2);
 
 
+
+//get the mouse
+    let mouseX = 0;
+    let mouseY = 0;
+    canvas.addEventListener('mousemove', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        mouseX = e.clientX - rect.left;
+        mouseY = rect.height - (e.clientY - rect.top) - 1;  // bottom is 0 in WebGL
+    });
+
+
+
+
     //load the fragment shader file
     const response = await fetch('./fragmentShader.glsl');
     const shaderToy = await response.text();
@@ -45,6 +58,9 @@ uniform vec4 iMouse;
         iResolution: {
             value: new THREE.Vector3()
         },
+        iMouse: {
+            value: new THREE.Vector4()
+        },
     };
     const material = new THREE.ShaderMaterial({
         fragmentShader: fShader,
@@ -69,8 +85,9 @@ uniform vec4 iMouse;
         resizeRendererToDisplaySize(renderer);
 
         const canvas = renderer.domElement;
-        uniforms.iResolution.value.set(canvas.width, canvas.height, 1);
-        uniforms.iTime.value = time;
+        material.uniforms.iResolution.value.set(canvas.width, canvas.height, 1);
+        material.uniforms.iTime.value = time;
+        material.uniforms.iMouse.value=new THREE.Vector4(mouseX,mouseY,0,0);
 
         renderer.render(scene, camera);
 
@@ -79,5 +96,6 @@ uniform vec4 iMouse;
 
     requestAnimationFrame(render);
 }
+
 
 main();
