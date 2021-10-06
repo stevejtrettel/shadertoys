@@ -351,6 +351,16 @@ vec2 mouseTransform(vec2 z){
 }
 
 
+vec2 translatePD(vec2 z,vec2 m){
+            // Unit disc inversion
+            m /= dot(m,m);
+            z -= m;
+            float k = (dot(m,m)-1.0)/dot(z,z);
+            z *= k;
+            z += m;
+        return z;
+}
+
 //transformations done at setup in the Poincare Disk model
 vec2 transformPD(vec2 z){
 
@@ -480,6 +490,23 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     //this is done in disk model still
     uv=transformPD(uv);
 
+    if(iMouse.z<1.){
+        uv=translatePD(uv, 0.5*vec2(sin(iTime/2.), sin(iTime)));
+    }
+
+    //if you lie in the domain where I want to draw the picture; look up the color
+    vec4 picColor;
+    bool inPic=false;
+    float relX,relY;
+    if(abs(uv.x)<0.5&&abs(uv.y)<0.5){
+        relX=(uv.x+0.5);
+        relY=uv.y+0.5;
+        picColor=texture2D(image,vec2(relX,relY));
+        inPic=true;
+    }
+
+
+
     //map to upper half plane for computation:
     vec2 p = toUHP(uv);
 
@@ -487,9 +514,9 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     p=transformUHP(p);
 
     //setup the fundamental domain we are working with
-    float x=osc(0.1,0.9,iTime/3.);
-    float y=osc(0.2,0.8,iTime);
-    float z=osc(0.2,0.8,iTime/2.);
+    float x=0.5;
+    float y=0.5;
+    float z=0.5;
     vec3 params=parametersFD(x,y,z);
     setUpFD(params.x,params.y,params.z);
 
@@ -504,8 +531,12 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     float invCount=0.;
     moveToFD(p,invCount);
 
-    // color the pixel based on this
-    vec3 col=getColor(p,invCount,insideDisk,insideDomain);
 
-    fragColor=vec4(col,1.);
+
+        if(inPic){
+            fragColor=picColor;
+        }
+        else {
+            fragColor=vec4(tilingColor(invCount,insideDisk), 1.);
+        }
 }

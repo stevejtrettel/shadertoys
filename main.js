@@ -47,6 +47,7 @@ async function main() {
   uniform vec3 iResolution;
   uniform float iTime;
 uniform vec4 iMouse;
+uniform sampler2D image;
   `;
 
     const shaderEnd = `
@@ -56,6 +57,9 @@ uniform vec4 iMouse;
   `;
 
     const fShader = shaderStart.concat(shaderToy.concat(shaderEnd));
+
+
+    const texture = new THREE.TextureLoader().load( 'embarassing.jpg' );
 
     const uniforms = {
         iTime: {
@@ -67,6 +71,9 @@ uniform vec4 iMouse;
         iMouse: {
             value: new THREE.Vector4()
         },
+        image:{
+            value: texture
+        }
     };
     const material = new THREE.ShaderMaterial({
         fragmentShader: fShader,
