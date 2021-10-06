@@ -28,7 +28,13 @@ async function main() {
         mouseX = e.clientX - rect.left;
         mouseY = rect.height - (e.clientY - rect.top) - 1;  // bottom is 0 in WebGL
     });
-
+    var mouseDown = 0;
+    document.body.onmousedown = function() {
+        ++mouseDown;
+    }
+    document.body.onmouseup = function() {
+        --mouseDown;
+    }
 
 
 
@@ -87,7 +93,7 @@ uniform vec4 iMouse;
         const canvas = renderer.domElement;
         material.uniforms.iResolution.value.set(canvas.width, canvas.height, 1);
         material.uniforms.iTime.value = time;
-        material.uniforms.iMouse.value=new THREE.Vector4(mouseX,mouseY,0,0);
+        material.uniforms.iMouse.value=new THREE.Vector4(mouseX,mouseY,mouseDown,0);
 
         renderer.render(scene, camera);
 

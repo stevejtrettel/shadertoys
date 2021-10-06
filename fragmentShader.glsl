@@ -354,15 +354,15 @@ vec2 mouseTransform(vec2 z){
 //transformations done at setup in the Poincare Disk model
 vec2 transformPD(vec2 z){
 
-    //if (iMouse.z > 0.) {
+    if (iMouse.z > 0.) {
         z=mouseTransform(z);
-   // }
-//    else{
-//        //do a rotation slowly
-//        float c=cos(iTime/6.);
-//        float s=sin(iTime/6.);
-//        z=mat2(c,s,-s,c)*z;
-//    }
+    }
+    else{
+        //do a rotation slowly
+        float c=cos(iTime/6.);
+        float s=sin(iTime/6.);
+        z=mat2(c,s,-s,c)*z;
+    }
 
     return z;
 }
