@@ -334,12 +334,31 @@ vec2 toUHP(vec2 uv){
 
 }
 
+vec2 toPD(vec2 uv){
+    float x=uv.x;
+    float y=uv.y;
+    float z2=x*x+y*y;
+    float Re=2.*x;
+    float Im=z2-1.;
+    float denom=z2+1.;
+    return vec2(Re,Im)/denom;
+}
+
 
 //this function takes coordinates in poincare disk,
 //uses mouse position to make a mobius transformation
 vec2 mouseTransform(vec2 z){
     if (iMouse.x > 10.0) {
         vec2 m = (2.0*iMouse.xy-iResolution.xy)/iResolution.y;
+
+
+
+
+        //m=toPD(m);
+
+
+
+
         // Unit disc inversion
         m /= dot(m,m);
         z -= m;
@@ -482,6 +501,11 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     //set up the input
     vec2 uv = normalizedFragCoord(fragCoord);
+
+
+    //move from upper half plane into the unit disk
+    uv+=vec2(0.,1.);
+    uv=toPD(uv);
 
     //keep track of if we start outside the poincare disk
     bool insideDisk=(length(uv)<1.);
