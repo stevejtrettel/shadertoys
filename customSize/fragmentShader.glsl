@@ -132,7 +132,13 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ) {
     float res = 50.;
     vec2 uv =  ratio*res*aspect * fragment;
     vec2 center = nearestHexCell(uv)/res;
-    vec2 rel =1.25*relPosHex(uv);
+
+
+    //what is the number in front? Should go from 1.25 to 2.5?
+    float l = length(fragment-vec2(0.,0.));
+    float scale = 1.25*(1.+3.*l*l);
+    //float scale=1.25;
+    vec2 rel =scale*relPosHex(uv);
 
 
     // vec2 uv = 4.*aspect*fragment;
@@ -141,4 +147,5 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ) {
     //vec2 center = coords.zw;
 
     fragColor = mapColor(testJulia(rel,center));
+
 }
