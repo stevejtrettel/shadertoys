@@ -67,7 +67,7 @@ float testJulia(vec2 coord) {
 }
 
 
-float testJulia(vec2 coord, vec2 center) {
+float smoothJulia(vec2 coord, vec2 center) {
     const int iterations = 100;
     vec2 testPoint = coord;
     for (int i = 0; i < iterations; i++){
@@ -78,20 +78,48 @@ float testJulia(vec2 coord, vec2 center) {
             return sl/float(iterations);
         }
     }
-    return 0.0;
+
+    //inside the set
+    return 1.0;
+}
+
+
+vec4 colorFromInterval(float val) {
+    //color set black, background white:
+    return vec4(1.-vec3(val),1.);
 }
 
 
 
-vec4 mapColor(float mcol) {
-    if(mcol==0.){
-        return vec4(0,0,0,1);
+
+//--- Mandelbrot Distance
+float mandelbrotDist(vec2 c)
+{
+    vec2 z = vec2(0.);
+    vec2 dz = vec2(0.);
+    float lz2 = 0.;
+    int i = 0;
+    while (i < 1024 && lz2 < 1024.)
+    {
+        dz = vec2(1., 0.) + 2. * vec2(z.x * dz.x - z.y * dz.y, z.x * dz.y + dz.x * z.y);
+        z = vec2(z.x * z.x - z.y * z.y, 2. * z.x * z.y) + c;
+        lz2 = dot(z, z);
+        i++;
     }
-    else{
-        return vec4(1.-vec3(mcol),1.);
+
+    if (lz2 >= 1024.)
+    {
+        float lz = sqrt(lz2);
+        //return sqrt(dot(z, z) / dot(dz, dz)) * log(sqrt(dot(z,z)));
+        float pow2 = pow(2., 1. - float(i));
+        return (1. - pow(lz, -pow2)) / (pow2 * length(dz) / lz);
     }
-    //return vec4(0.5 + 0.5*cos(2.7+mcol*30.0 + vec3(0.0,.6,1.0)),1.0);
+    else
+    {
+        return -1.;
+    }
 }
+
 
 
 
@@ -129,15 +157,25 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ) {
 
 
     float ratio =3.;
-    float res = 50.;
+    float res = 300.;
     vec2 uv =  ratio*res*aspect * fragment;
     vec2 center = nearestHexCell(uv)/res;
 
+    //SCALING CHOICE 0: CONSTANT
+    float scale=1.15;
 
+    //SCALING CHOICE 1:
     //what is the number in front? Should go from 1.25 to 2.5?
-    float l = length(fragment-vec2(0.,0.));
-    float scale = 1.25*(1.+3.*l*l);
-    //float scale=1.25;
+//    float l = length(fragment/vec2(1.5,1)-vec2(-0.,0.));
+//    float scale = 1.25*(1.+3.*l*l-fragment.x/3.);
+//    vec2 rel =scale*relPosHex(uv);
+//
+    //SCALING CHOICE 2: MANDELBROT DISTANCE
+   // float d = mandelbrotDist(center);
+   // float scale = 1.4+5.*max(d,0.);
+
+
+    //in any case: rescale the relPos in hex coordinates to get your point:
     vec2 rel =scale*relPosHex(uv);
 
 
@@ -146,6 +184,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ) {
     // vec2 rel = 1.5*coords.xy;
     //vec2 center = coords.zw;
 
-    fragColor = mapColor(testJulia(rel,center));
+
+    fragColor = colorFromInterval(smoothJulia(rel,center));
 
 }

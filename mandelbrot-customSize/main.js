@@ -2,8 +2,8 @@ import * as THREE from 'https://threejsfundamentals.org/threejs/resources/threej
 
 
 
-let xRes = 8400;
-let yRes = 6600;
+let xRes = 12000;
+let yRes = 9600;
 
 
 async function main() {
