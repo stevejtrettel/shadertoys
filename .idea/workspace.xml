@@ -2,15 +2,30 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="a6f331fa-4577-4e68-b029-b20e4f3a301b" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/orbitals/fragmentShader.glsl" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/orbitals/index.html" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/orbitals/main.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/orbitals/style.css" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scenes/mandelbrot/main.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scenes/orbitals/main.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scenes/orbitals/shadertoy.glsl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scenes/test/main.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scenes/test/shadertoy.glsl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/ShaderDisplay.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/style.css" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/customSize/fragmentShader.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/mandelbrot-customSize/fragmentShader.glsl" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/customSize/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/mandelbrot-customSize/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/customSize/main.js" beforeDir="false" afterPath="$PROJECT_DIR$/mandelbrot-customSize/main.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/customSize/style.css" beforeDir="false" afterPath="$PROJECT_DIR$/mandelbrot-customSize/style.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/fragmentShader.glsl" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/index.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/main.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mandelbrot-customSize/fragmentShader.glsl" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mandelbrot-customSize/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mandelbrot-customSize/main.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mandelbrot-customSize/style.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/orbitals/fragmentShader.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/scenes/mandelbrot/shadertoy.glsl" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/orbitals/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/orbitals/main.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/orbitals/style.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/screenSize/fragmentShader.glsl" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/screenSize/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/screenSize/main.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/screenSize/style.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/style.css" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -28,22 +43,28 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;WebServerToolWindowFactoryState&quot;: &quot;false&quot;,
-    &quot;last_opened_file_path&quot;: &quot;/Users/strettel/Code/shadertoys&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "WebServerToolWindowFactoryState": "false",
+    "last_opened_file_path": "/Users/strettel/Code/shadertoys/scenes",
+    "nodejs_package_manager_path": "npm",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/scenes" />
       <recent name="$PROJECT_DIR$" />
+      <recent name="$PROJECT_DIR$/orbitals" />
+      <recent name="$PROJECT_DIR$/mandelbrot-customSize" />
       <recent name="C:\Users\steve\Documents\GitHub\shadertoys\screenSize" />
-      <recent name="C:\Users\steve\Documents\GitHub\shadertoys\customSize" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/scenes" />
+      <recent name="$PROJECT_DIR$/src" />
+      <recent name="$PROJECT_DIR$" />
       <recent name="C:\Users\steve\Documents\GitHub\shadertoys" />
     </key>
   </component>
@@ -60,7 +81,10 @@
       <workItem from="1730964825098" duration="1404000" />
       <workItem from="1731212207349" duration="598000" />
       <workItem from="1733513507245" duration="3265000" />
-      <workItem from="1733610610050" duration="1995000" />
+      <workItem from="1733610610050" duration="3796000" />
+      <workItem from="1733982175954" duration="22000" />
+      <workItem from="1762629469775" duration="143000" />
+      <workItem from="1762629793670" duration="1248000" />
     </task>
     <servers />
   </component>
