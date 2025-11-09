@@ -1,11 +1,11 @@
 // main.js
 import '../../src/style.css';
-import ShaderDisplay from '../../src/ShaderDisplay.js';
+import ShaderDisplayThree from '../../src/ShaderDisplay.js';
 
 // Import shader as raw text using Vite's ?raw suffix
 import plasmaShader from './shadertoy.glsl?raw';
 
-const display = new ShaderDisplay(plasmaShader, {
+const display = new ShaderDisplayThree(plasmaShader, {
     containerId: 'World',
     createUI: true,  // Enable lil-gui
 });

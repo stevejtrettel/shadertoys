@@ -2,30 +2,71 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="a6f331fa-4577-4e68-b029-b20e4f3a301b" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/scenes/mandelbrot/main.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/scenes/orbitals/main.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/scenes/orbitals/shadertoy.glsl" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/scenes/test/main.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/scenes/test/shadertoy.glsl" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/ShaderDisplay.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/style.css" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scenes/237-band/main.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scenes/237-band/shadertoy.glsl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scenes/237-disk/main.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scenes/237-disk/shadertoy.glsl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scenes/3-inf-tiling/main.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scenes/3-inf-tiling/shadertoy.glsl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scenes/334-band/main.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scenes/334-band/shadertoy.glsl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scenes/334-disk/main.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scenes/334-disk/shadertoy.glsl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scenes/blackhole-grid/main.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scenes/blackhole-grid/shadertoy.glsl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scenes/blackhole-rainbow/main.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scenes/blackhole-rainbow/shadertoy.glsl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scenes/circle-inversion/main.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scenes/circle-inversion/shadertoy.glsl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scenes/convex-rp-tiling/main.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scenes/convex-rp-tiling/shadertoy.glsl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scenes/cubic-eqn/main.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scenes/cubic-eqn/shadertoy.glsl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scenes/genus-2-moduli/main.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scenes/genus-2-moduli/shadertoy.glsl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scenes/hyperbolic-sdsu/main.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scenes/hyperbolic-sdsu/shadertoy.glsl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scenes/light-intensity-3d/main.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scenes/light-intensity-3d/shadertoy.glsl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scenes/mandelbrot-cartioid/main.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scenes/mandelbrot-cartioid/shadertoy.glsl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scenes/mandelbrot-hexGrid/main.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scenes/mandelbrot-hexGrid/shadertoy.glsl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scenes/mandelbrot-julia-animate/main.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scenes/mandelbrot-julia-animate/shadertoy.glsl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scenes/mandelbrot-tau/main.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scenes/mandelbrot-tau/shadertoy.glsl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scenes/newton-fractal/main.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scenes/newton-fractal/shadertoy.glsl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scenes/nil-checkerboard/main.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scenes/nil-checkerboard/shadertoy.glsl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scenes/nil-euc-interpolate/main.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scenes/nil-euc-interpolate/shadertoy.glsl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scenes/orbitals-2/main.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scenes/orbitals-2/shadertoy.glsl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scenes/punctured-torus-moduli/main.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scenes/punctured-torus-moduli/shadertoy.glsl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scenes/ra-hexagon-moduli/main.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scenes/ra-hexagon-moduli/shadertoy.glsl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scenes/ra-pentagon-moduli/main.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scenes/ra-pentagon-moduli/shadertoy.glsl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scenes/taylor-center-animate/main.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scenes/taylor-center-animate/shadertoy.glsl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scenes/taylor-center-simple/main.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scenes/taylor-center-simple/shadertoy.glsl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scenes/taylor-convergence/main.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scenes/taylor-convergence/shadertoy.glsl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/ShaderDisplay-Three.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/fragmentShader.glsl" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/main.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/mandelbrot-customSize/fragmentShader.glsl" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/mandelbrot-customSize/index.html" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/mandelbrot-customSize/main.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/mandelbrot-customSize/style.css" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/orbitals/fragmentShader.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/scenes/mandelbrot/shadertoy.glsl" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/orbitals/index.html" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/orbitals/main.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/orbitals/style.css" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/screenSize/fragmentShader.glsl" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/screenSize/index.html" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/screenSize/main.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/screenSize/style.css" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/style.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/node_modules/.package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/node_modules/.package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/node_modules/.vite/deps/_metadata.json" beforeDir="false" afterPath="$PROJECT_DIR$/node_modules/.vite/deps/_metadata.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scenes/mandelbrot/main.js" beforeDir="false" afterPath="$PROJECT_DIR$/scenes/mandelbrot/main.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scenes/orbitals/main.js" beforeDir="false" afterPath="$PROJECT_DIR$/scenes/orbitals/main.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scenes/test/main.js" beforeDir="false" afterPath="$PROJECT_DIR$/scenes/test/main.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/ShaderDisplay.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/ShaderDisplay.js" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -84,7 +125,7 @@
       <workItem from="1733610610050" duration="3796000" />
       <workItem from="1733982175954" duration="22000" />
       <workItem from="1762629469775" duration="143000" />
-      <workItem from="1762629793670" duration="1248000" />
+      <workItem from="1762629793670" duration="9017000" />
     </task>
     <servers />
   </component>
