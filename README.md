@@ -33,7 +33,7 @@ src/
 ├── app/             # Browser runtime and animation loop
 └── main.ts          # Entry point
 
-projects/            # Example shaders
+demos/               # Example shaders
 ├── simple-gradient/
 ├── ping-pong-test/
 └── multi-buffer-test/
@@ -41,16 +41,51 @@ projects/            # Example shaders
 
 ## Usage
 
-Edit `src/main.ts` to change the shader. Just copy/paste the GLSL code from any Shadertoy into the `simpleGradientShader` constant!
+### Quick Start
+
+Change the demo in `src/main.ts`:
 
 ```typescript
-const myShader = `
-void mainImage(out vec4 fragColor, in vec2 fragCoord) {
-    vec2 uv = fragCoord / iResolution.xy;
-    vec3 col = 0.5 + 0.5 * cos(iTime + uv.xyx + vec3(0, 2, 4));
-    fragColor = vec4(col, 1.0);
+const DEMO_NAME = 'simple-gradient';
+// Try: 'simple-gradient', 'ping-pong-test', 'multi-buffer-test'
+```
+
+### Creating Your Own Demos
+
+**Option 1: Single-pass shader** (simplest)
+```bash
+mkdir demos/my-shader
+# Create demos/my-shader/image.glsl
+# That's it! Just one file needed.
+```
+
+**Option 2: Multi-pass shader** (advanced)
+```bash
+mkdir demos/my-complex-shader
+# Create demos/my-complex-shader/shadertoy.config.json
+# Create demos/my-complex-shader/bufferA.glsl
+# Create demos/my-complex-shader/image.glsl
+```
+
+Example config:
+```json
+{
+  "meta": {
+    "title": "My Shader"
+  },
+  "passes": {
+    "BufferA": {
+      "channels": {
+        "iChannel0": { "buffer": "BufferA", "previous": true }
+      }
+    },
+    "Image": {
+      "channels": {
+        "iChannel0": { "buffer": "BufferA" }
+      }
+    }
+  }
 }
-`;
 ```
 
 ## Architecture

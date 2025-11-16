@@ -1,59 +1,29 @@
 /**
  * Main Entry Point
  *
- * Creates a Shadertoy project and starts the App.
+ * Loads a demo project from the demos/ folder and starts the App.
  *
- * NOTE: For the browser version, we inline the project definition.
- * The loadProject function is for Node.js environments (testing, build tools, etc.)
+ * Students can create their own demos by:
+ * 1. Creating a new folder in demos/ (e.g., demos/my-shader/)
+ * 2. Adding an image.glsl file with their shader code
+ * 3. Changing DEMO_NAME below to load their shader
  */
 
 import { App } from './app/App';
-import { ShadertoyProject } from './project/types';
+import { loadDemoProject } from './project/loadDemo';
 
-// Simple gradient shader (can be copy/pasted from Shadertoy!)
-const simpleGradientShader = `
-// Simple gradient shader - single pass, no config needed
-// This can be copy/pasted from Shadertoy
-
-void mainImage(out vec4 fragColor, in vec2 fragCoord) {
-    // Normalized pixel coordinates (from 0 to 1)
-    vec2 uv = fragCoord / iResolution.xy;
-
-    // Animated color gradient
-    vec3 col = 0.5 + 0.5 * cos(iTime + uv.xyx + vec3(0, 2, 4));
-
-    // Output to screen
-    fragColor = vec4(col, 1.0);
-}
-`;
-
-// Create project definition directly
-const project: ShadertoyProject = {
-  root: '.',
-  meta: {
-    title: 'Simple Gradient',
-    author: null,
-    description: 'A simple animated gradient shader',
-  },
-  commonSource: null,
-  passes: {
-    Image: {
-      name: 'Image',
-      glslSource: simpleGradientShader,
-      channels: [
-        { kind: 'none' },
-        { kind: 'none' },
-        { kind: 'none' },
-        { kind: 'none' },
-      ],
-    },
-  },
-  textures: [],
-};
+// Change this to load different demos!
+// Try: 'simple-gradient', 'ping-pong-test', 'multi-buffer-test'
+const DEMO_NAME = 'simple-gradient';
 
 async function main() {
   try {
-    console.log(`Loading project: ${project.meta.title}`);
+    console.log(`Loading demo: ${DEMO_NAME}`);
+
+    // Load the demo project from demos/ folder
+    const project = await loadDemoProject(DEMO_NAME);
+
+    console.log(`Loaded project: ${project.meta.title}`);
     console.log(`Passes:`, Object.keys(project.passes).filter(k => project.passes[k as keyof typeof project.passes]));
 
     // Get container element
