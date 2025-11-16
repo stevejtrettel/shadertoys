@@ -1,0 +1,76 @@
+/**
+ * PerformancePanel Styles
+ */
+
+.performance-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #1e1e1e;
+  font-family: system-ui, -apple-system, sans-serif;
+  color: #e0e0e0;
+}
+
+.performance-header {
+  padding: 12px 16px;
+  background: #2d2d2d;
+  border-bottom: 1px solid #3e3e3e;
+}
+
+.performance-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #e0e0e0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.performance-stats {
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-bottom: 1px solid #3e3e3e;
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+}
+
+.stat-label {
+  color: #999;
+  font-weight: 500;
+}
+
+.stat-value {
+  font-family: 'Courier New', Monaco, monospace;
+  color: #e0e0e0;
+  font-weight: 600;
+}
+
+.fps-display {
+  color: #0066cc;
+  font-size: 16px;
+}
+
+.graph-container {
+  flex: 1;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+}
+
+.graph-canvas {
+  width: 100%;
+  max-width: 300px;
+  height: 100px;
+  border: 1px solid #3e3e3e;
+  border-radius: 4px;
+  background: #1e1e1e;
+}
