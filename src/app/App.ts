@@ -9,7 +9,6 @@
  *  - Present Image pass output to screen
  */
 
-import { ShadertoyProject } from '../project/types';
 import { ShadertoyEngine } from '../engine/ShadertoyEngine';
 import { AppOptions, MouseState } from './types';
 

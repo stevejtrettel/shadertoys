@@ -32,7 +32,6 @@ import {
   createRenderTargetTexture,
   createFramebufferWithColorAttachment,
   createBlackTexture,
-  createTextureFromImage,
 } from './glHelpers';
 
 // =============================================================================

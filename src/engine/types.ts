@@ -9,7 +9,6 @@ import type {
   ShadertoyProject,
   PassName,
   ChannelSource,
-  ShadertoyTexture2D,
 } from '../project/types';
 
 // =============================================================================
