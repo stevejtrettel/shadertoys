@@ -96,6 +96,13 @@ export interface ShadertoyConfig {
   layout?: 'fullscreen' | 'centered' | 'split';
 
   /**
+   * Optional controls for playback.
+   * If true, shows play/pause and reset buttons with keyboard shortcuts.
+   * If omitted, defaults to true.
+   */
+  controls?: boolean;
+
+  /**
    * Optional path to common GLSL code (shared across all passes).
    * If omitted, loader checks for 'common.glsl' automatically.
    */
@@ -198,6 +205,11 @@ export interface ShadertoyProject {
    * Layout mode for the shader viewer.
    */
   layout: 'fullscreen' | 'centered' | 'split';
+
+  /**
+   * Whether to show playback controls (play/pause, reset).
+   */
+  controls: boolean;
 
   /**
    * Common GLSL code (prepended to all shaders), or null if none.

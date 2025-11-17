@@ -33,6 +33,11 @@ export class App {
   private lastFpsUpdate: number = 0;
   private currentFps: number = 0;
 
+  // Playback controls
+  private controlsContainer: HTMLElement | null = null;
+  private playPauseButton: HTMLElement | null = null;
+  private isPaused: boolean = false;
+
   // Error overlay
   private errorOverlay: HTMLElement | null = null;
 
@@ -55,6 +60,11 @@ export class App {
     this.fpsDisplay.className = 'fps-counter';
     this.fpsDisplay.textContent = '0 FPS';
     this.container.appendChild(this.fpsDisplay);
+
+    // Create playback controls if enabled
+    if (opts.project.controls) {
+      this.createControls();
+    }
 
     // Get WebGL2 context
     const gl = this.canvas.getContext('webgl2', {
@@ -95,6 +105,11 @@ export class App {
 
     // Set up mouse tracking
     this.setupMouseTracking();
+
+    // Set up keyboard shortcuts if controls are enabled
+    if (opts.project.controls) {
+      this.setupKeyboardShortcuts();
+    }
   }
 
   // ===========================================================================
@@ -147,6 +162,14 @@ export class App {
   // ===========================================================================
 
   private animate = (currentTimeMs: number): void => {
+    // Schedule next frame first (even if paused)
+    this.animationId = requestAnimationFrame(this.animate);
+
+    // Skip rendering if paused
+    if (this.isPaused) {
+      return;
+    }
+
     const currentTimeSec = currentTimeMs / 1000;
     const elapsedTime = currentTimeSec - this.startTime;
 
@@ -158,9 +181,6 @@ export class App {
 
     // Present Image pass output to screen
     this.presentToScreen();
-
-    // Schedule next frame
-    this.animationId = requestAnimationFrame(this.animate);
   };
 
   /**
@@ -262,6 +282,106 @@ export class App {
 
     this.canvas.addEventListener('mousemove', updateMouse);
     this.canvas.addEventListener('click', handleClick);
+  }
+
+  // ===========================================================================
+  // Playback Controls
+  // ===========================================================================
+
+  /**
+   * Create playback control buttons (play/pause and reset).
+   */
+  private createControls(): void {
+    // Create container
+    this.controlsContainer = document.createElement('div');
+    this.controlsContainer.className = 'playback-controls';
+
+    // Play/Pause button (starts showing pause icon since we're playing)
+    this.playPauseButton = document.createElement('button');
+    this.playPauseButton.className = 'control-button';
+    this.playPauseButton.title = 'Play/Pause (Space)';
+    this.playPauseButton.innerHTML = `
+      <svg viewBox="0 0 16 16">
+        <path d="M5 3h2v10H5V3zm4 0h2v10H9V3z"/>
+      </svg>
+    `;
+    this.playPauseButton.addEventListener('click', () => this.togglePlayPause());
+
+    // Reset button
+    const resetButton = document.createElement('button');
+    resetButton.className = 'control-button';
+    resetButton.title = 'Reset (R)';
+    resetButton.innerHTML = `
+      <svg viewBox="0 0 16 16">
+        <path d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
+        <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
+      </svg>
+    `;
+    resetButton.addEventListener('click', () => this.reset());
+
+    // Add to container
+    this.controlsContainer.appendChild(this.playPauseButton);
+    this.controlsContainer.appendChild(resetButton);
+    this.container.appendChild(this.controlsContainer);
+  }
+
+  /**
+   * Set up keyboard shortcuts for playback control.
+   */
+  private setupKeyboardShortcuts(): void {
+    document.addEventListener('keydown', (e: KeyboardEvent) => {
+      // Space - Play/Pause
+      if (e.code === 'Space' && !e.repeat) {
+        e.preventDefault();
+        this.togglePlayPause();
+      }
+
+      // R - Reset
+      if (e.code === 'KeyR' && !e.repeat) {
+        e.preventDefault();
+        this.reset();
+      }
+    });
+  }
+
+  /**
+   * Toggle between play and pause states.
+   */
+  private togglePlayPause(): void {
+    this.isPaused = !this.isPaused;
+    this.updatePlayPauseButton();
+  }
+
+  /**
+   * Reset the shader to frame 0.
+   */
+  private reset(): void {
+    this.startTime = performance.now() / 1000;
+    this.frameCount = 0;
+    this.lastFpsUpdate = 0;
+  }
+
+  /**
+   * Update play/pause button icon based on current state.
+   */
+  private updatePlayPauseButton(): void {
+    if (!this.playPauseButton) return;
+
+    if (this.isPaused) {
+      // Show play icon
+      this.playPauseButton.innerHTML = `
+        <svg viewBox="0 0 16 16">
+          <path d="M4 3v10l8-5-8-5z"/>
+        </svg>
+      `;
+    } else {
+      // Show pause icon
+      this.playPauseButton.innerHTML = `
+        <svg viewBox="0 0 16 16">
+          <path d="M5 3h2v10H5V3zm4 0h2v10H9V3z"/>
+        </svg>
+      `;
+    }
   }
 
   // ===========================================================================
