@@ -25,6 +25,12 @@ export class App {
   // Mouse state for iMouse uniform
   private mouse: MouseState = [0, 0, -1, -1];
 
+  // FPS tracking
+  private fpsDisplay: HTMLElement;
+  private frameCount: number = 0;
+  private lastFpsUpdate: number = 0;
+  private currentFps: number = 0;
+
   // Resize observer
   private resizeObserver: ResizeObserver;
 
@@ -38,6 +44,12 @@ export class App {
     this.canvas.style.height = '100%';
     this.canvas.style.display = 'block';
     this.container.appendChild(this.canvas);
+
+    // Create FPS display overlay
+    this.fpsDisplay = document.createElement('div');
+    this.fpsDisplay.className = 'fps-counter';
+    this.fpsDisplay.textContent = '0 FPS';
+    this.container.appendChild(this.fpsDisplay);
 
     // Get WebGL2 context
     const gl = this.canvas.getContext('webgl2', {
@@ -109,6 +121,7 @@ export class App {
     this.resizeObserver.disconnect();
     this.engine.dispose();
     this.container.removeChild(this.canvas);
+    this.container.removeChild(this.fpsDisplay);
   }
 
   // ===========================================================================
@@ -119,6 +132,9 @@ export class App {
     const currentTimeSec = currentTimeMs / 1000;
     const elapsedTime = currentTimeSec - this.startTime;
 
+    // Update FPS counter
+    this.updateFps(currentTimeSec);
+
     // Run engine step
     this.engine.step(elapsedTime, this.mouse);
 
@@ -128,6 +144,22 @@ export class App {
     // Schedule next frame
     this.animationId = requestAnimationFrame(this.animate);
   };
+
+  /**
+   * Update FPS counter.
+   * Updates the display roughly once per second.
+   */
+  private updateFps(currentTimeSec: number): void {
+    this.frameCount++;
+
+    // Update FPS display once per second
+    if (currentTimeSec - this.lastFpsUpdate >= 1.0) {
+      this.currentFps = this.frameCount / (currentTimeSec - this.lastFpsUpdate);
+      this.fpsDisplay.textContent = `${Math.round(this.currentFps)} FPS`;
+      this.frameCount = 0;
+      this.lastFpsUpdate = currentTimeSec;
+    }
+  }
 
   /**
    * Present the Image pass output to the screen.
