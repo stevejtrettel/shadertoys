@@ -12,6 +12,8 @@ export default defineConfig({
     open: true,
   },
   build: {
+    // Inline CSS into JS instead of extracting
+    cssCodeSplit: false,
     rollupOptions: {
       output: {
         // Single JS bundle - inline all dynamic imports
@@ -24,6 +26,7 @@ export default defineConfig({
           if (/\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(name)) {
             return 'assets/[name][extname]';
           }
+          // CSS gets inlined, so this shouldn't be hit for CSS
           // Everything else uses content hash
           return 'assets/[name]-[hash][extname]';
         },
