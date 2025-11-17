@@ -35,8 +35,10 @@ src/
 
 **Key code**:
 ```typescript
-const DEMO_NAME = 'simple-gradient';  // Change this to load different demos
-const project = await loadDemoProject(DEMO_NAME);
+// Demo name comes from generated loader (set via npm run dev:demo <name>)
+import { loadDemoProject, DEMO_NAME } from './project/generatedLoader';
+
+const project = await loadDemoProject();
 const layout = createLayout(project.layout, { container, project });
 const app = new App({ container, project, pixelRatio });
 app.start();
@@ -479,7 +481,7 @@ Every module has a `types.ts` with clear interfaces and types.
 
 1. Create folder: `demos/my-shader/`
 2. Add files: `image.glsl` (+ optional config/buffers)
-3. Update `main.ts`: `const DEMO_NAME = 'my-shader'`
+3. Run: `npm run dev:demo my-shader`
 
 ### New Layout
 

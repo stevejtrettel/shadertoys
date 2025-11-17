@@ -27,14 +27,10 @@ npm install
 npm run dev:demo keyboard-test
 
 # Build a specific demo for production
-npm run build:demo keyboard-test
-
-# Or use the default demo
-npm run dev
-npm run build
+npm run build:demo simple-gradient
 ```
 
-Open your browser to `http://localhost:5173` and you'll see the running demo!
+Open your browser to `http://localhost:3000` and you'll see the running demo!
 
 **Available demos**: `simple-gradient`, `ping-pong-test`, `multi-buffer-test`, `demofox-pt2`, `keyboard-test`
 
@@ -66,12 +62,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 }
 ```
 
-3. Change `src/main.ts`:
-```typescript
-const DEMO_NAME = 'my-shader';
+3. Run it:
+```bash
+npm run dev:demo my-shader
 ```
 
-4. Refresh your browser - done! 🎉
+Done! 🎉
 
 ### Multi-Pass Shader with Buffers
 
