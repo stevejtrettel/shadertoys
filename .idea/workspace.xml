@@ -2,13 +2,14 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="a6f331fa-4577-4e68-b029-b20e4f3a301b" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/demos/demofox-pt2/bufferA.glsl" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/demos/demofox-pt2/common.glsl" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/demos/demofox-pt2/image.glsl" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/demos/demofox-pt2/shadertoy.config.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/demos/demofox-pt2/textures/equirect.jpg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/demos/cloud-shapes/image.glsl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/demos/demofox-pt1/bufferA.glsl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/demos/demofox-pt1/image.glsl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/demos/demofox-pt1/shadertoy.config.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/demos/demofox-pt1/textures/equirect.jpg" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/main.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/demos/demofox-pt2/bufferA.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/demos/demofox-pt2/bufferA.glsl" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/demos/demofox-pt2/shadertoy.config.json" beforeDir="false" afterPath="$PROJECT_DIR$/demos/demofox-pt2/shadertoy.config.json" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -31,7 +32,7 @@
     "RunOnceActivity.OpenProjectViewOnStart": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "WebServerToolWindowFactoryState": "false",
-    "last_opened_file_path": "/Users/strettel/Code/shadertoys/docs/example-sytstem",
+    "last_opened_file_path": "/Users/strettel/Code/shadertoys/demos",
     "nodejs_package_manager_path": "npm",
     "ts.external.directory.path": "/Users/strettel/Code/shadertoys/node_modules/typescript/lib",
     "vue.rearranger.settings.migration": "true"
@@ -39,11 +40,11 @@
 }]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/demos" />
       <recent name="$PROJECT_DIR$/docs/example-sytstem" />
       <recent name="$PROJECT_DIR$/scenes" />
       <recent name="$PROJECT_DIR$" />
       <recent name="$PROJECT_DIR$/orbitals" />
-      <recent name="$PROJECT_DIR$/mandelbrot-customSize" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$/demos/demofox-pt2/textures" />

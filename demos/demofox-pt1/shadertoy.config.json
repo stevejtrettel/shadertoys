@@ -1,10 +1,8 @@
 {
   "meta": {
-    "title": "Path Tracing II",
+    "title": "Path Tracing I",
     "description": "From Demofox's Blog"
   },
-  "layout": "fullscreen",
-  "common": "common.glsl",
   "passes": {
     "BufferA": {
       "channels": {

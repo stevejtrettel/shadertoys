@@ -1,3 +1,26 @@
+// The minimunm distance a ray must travel before we consider an intersection.
+// This is to prevent a ray from intersecting a surface it just bounced off of.
+const float c_minimumRayHitTime = 0.01f;
+
+// after a hit, it moves the ray this far along the normal away from a surface.
+// Helps prevent incorrect intersections when rays bounce off of objects.
+const float c_rayPosNormalNudge = 0.01f;
+
+// the farthest we look for ray hits
+const float c_superFar = 10000.0f;
+
+// camera FOV
+const float c_FOVDegrees = 90.0f;
+
+// number of ray bounces allowed
+const int c_numBounces = 8;
+
+// how many renders per frame - to get around the vsync limitation.
+const int c_numRendersPerFrame = 1;
+
+const float c_pi = 3.14159265359f;
+const float c_twopi = 2.0f * c_pi;
+
 uint wang_hash(inout uint seed)
 {
     seed = uint(seed ^ uint(61)) ^ uint(seed >> uint(16));
@@ -23,20 +46,12 @@ vec3 RandomUnitVector(inout uint state)
     return vec3(x, y, z);
 }
 
-struct SMaterialInfo
-{
-    vec3 albedo;           // the color used for diffuse lighting
-    vec3 emissive;         // how much the surface glows
-    float percentSpecular; // percentage chance of doing specular instead of diffuse lighting
-    float roughness;       // how rough the specular reflections are
-    vec3 specularColor;    // the color tint of specular reflections
-};
-
 struct SRayHitInfo
 {
     float dist;
     vec3 normal;
-    SMaterialInfo material;
+    vec3 albedo;
+    vec3 emissive;
 };
 
 float ScalarTriple(vec3 u, vec3 v, vec3 w)
@@ -178,11 +193,8 @@ void TestSceneTrace(in vec3 rayPos, in vec3 rayDir, inout SRayHitInfo hitInfo)
         vec3 D = vec3(-12.6f,  12.6f, 25.0f) + sceneTranslation;
         if (TestQuadTrace(rayPos, rayDir, hitInfo, A, B, C, D))
         {
-            hitInfo.material.albedo = vec3(0.7f, 0.7f, 0.7f);
-            hitInfo.material.emissive = vec3(0.0f, 0.0f, 0.0f);
-            hitInfo.material.percentSpecular = 0.0f;
-            hitInfo.material.roughness = 0.0f;
-            hitInfo.material.specularColor = vec3(0.0f, 0.0f, 0.0f);
+            hitInfo.albedo = vec3(0.7f, 0.7f, 0.7f);
+            hitInfo.emissive = vec3(0.0f, 0.0f, 0.0f);
         }
     }
 
@@ -194,11 +206,8 @@ void TestSceneTrace(in vec3 rayPos, in vec3 rayDir, inout SRayHitInfo hitInfo)
         vec3 D = vec3(-12.6f, -12.45f, 15.0f) + sceneTranslation;
         if (TestQuadTrace(rayPos, rayDir, hitInfo, A, B, C, D))
         {
-            hitInfo.material.albedo = vec3(0.7f, 0.7f, 0.7f);
-            hitInfo.material.emissive = vec3(0.0f, 0.0f, 0.0f);
-            hitInfo.material.percentSpecular = 0.0f;
-            hitInfo.material.roughness = 0.0f;
-            hitInfo.material.specularColor = vec3(0.0f, 0.0f, 0.0f);
+            hitInfo.albedo = vec3(0.7f, 0.7f, 0.7f);
+            hitInfo.emissive = vec3(0.0f, 0.0f, 0.0f);
         }
     }
 
@@ -210,11 +219,8 @@ void TestSceneTrace(in vec3 rayPos, in vec3 rayDir, inout SRayHitInfo hitInfo)
         vec3 D = vec3(-12.6f, 12.5f, 15.0f) + sceneTranslation;
         if (TestQuadTrace(rayPos, rayDir, hitInfo, A, B, C, D))
         {
-            hitInfo.material.albedo = vec3(0.7f, 0.7f, 0.7f);
-            hitInfo.material.emissive = vec3(0.0f, 0.0f, 0.0f);
-            hitInfo.material.percentSpecular = 0.0f;
-            hitInfo.material.roughness = 0.0f;
-            hitInfo.material.specularColor = vec3(0.0f, 0.0f, 0.0f);
+            hitInfo.albedo = vec3(0.7f, 0.7f, 0.7f);
+            hitInfo.emissive = vec3(0.0f, 0.0f, 0.0f);
         }
     }
 
@@ -226,11 +232,8 @@ void TestSceneTrace(in vec3 rayPos, in vec3 rayDir, inout SRayHitInfo hitInfo)
         vec3 D = vec3(-12.5f,  12.6f, 25.0f) + sceneTranslation;
         if (TestQuadTrace(rayPos, rayDir, hitInfo, A, B, C, D))
         {
-            hitInfo.material.albedo = vec3(0.7f, 0.1f, 0.1f);
-            hitInfo.material.emissive = vec3(0.0f, 0.0f, 0.0f);
-            hitInfo.material.percentSpecular = 0.0f;
-            hitInfo.material.roughness = 0.0f;
-            hitInfo.material.specularColor = vec3(0.0f, 0.0f, 0.0f);
+            hitInfo.albedo = vec3(0.7f, 0.1f, 0.1f);
+            hitInfo.emissive = vec3(0.0f, 0.0f, 0.0f);
         }
     }
 
@@ -242,11 +245,8 @@ void TestSceneTrace(in vec3 rayPos, in vec3 rayDir, inout SRayHitInfo hitInfo)
         vec3 D = vec3( 12.5f,  12.6f, 25.0f) + sceneTranslation;
         if (TestQuadTrace(rayPos, rayDir, hitInfo, A, B, C, D))
         {
-            hitInfo.material.albedo = vec3(0.1f, 0.7f, 0.1f);
-            hitInfo.material.emissive = vec3(0.0f, 0.0f, 0.0f);
-            hitInfo.material.percentSpecular = 0.0f;
-            hitInfo.material.roughness = 0.0f;
-            hitInfo.material.specularColor = vec3(0.0f, 0.0f, 0.0f);
+            hitInfo.albedo = vec3(0.1f, 0.7f, 0.1f);
+            hitInfo.emissive = vec3(0.0f, 0.0f, 0.0f);
         }
     }
 
@@ -258,89 +258,27 @@ void TestSceneTrace(in vec3 rayPos, in vec3 rayDir, inout SRayHitInfo hitInfo)
         vec3 D = vec3(-5.0f, 12.4f,  17.5f) + sceneTranslation;
         if (TestQuadTrace(rayPos, rayDir, hitInfo, A, B, C, D))
         {
-            hitInfo.material.albedo = vec3(0.0f, 0.0f, 0.0f);
-            hitInfo.material.emissive = vec3(1.0f, 0.9f, 0.7f) * 20.0f;
-            hitInfo.material.percentSpecular = 0.0f;
-            hitInfo.material.roughness = 0.0f;
-            hitInfo.material.specularColor = vec3(0.0f, 0.0f, 0.0f);
+            hitInfo.albedo = vec3(0.0f, 0.0f, 0.0f);
+            hitInfo.emissive = vec3(1.0f, 0.9f, 0.7f) * 20.0f;
         }
     }
 
     if (TestSphereTrace(rayPos, rayDir, hitInfo, vec4(-9.0f, -9.5f, 20.0f, 3.0f)+sceneTranslation4))
     {
-        hitInfo.material.albedo = vec3(0.9f, 0.9f, 0.5f);
-        hitInfo.material.emissive = vec3(0.0f, 0.0f, 0.0f);
-        hitInfo.material.percentSpecular = 0.1f;
-        hitInfo.material.roughness = 0.2f;
-        hitInfo.material.specularColor = vec3(0.9f, 0.9f, 0.9f);
+        hitInfo.albedo = vec3(0.9f, 0.9f, 0.75f);
+        hitInfo.emissive = vec3(0.0f, 0.0f, 0.0f);
     }
 
     if (TestSphereTrace(rayPos, rayDir, hitInfo, vec4(0.0f, -9.5f, 20.0f, 3.0f)+sceneTranslation4))
     {
-        hitInfo.material.albedo = vec3(0.9f, 0.5f, 0.9f);
-        hitInfo.material.emissive = vec3(0.0f, 0.0f, 0.0f);
-        hitInfo.material.percentSpecular = 0.3f;
-        hitInfo.material.roughness = 0.2;
-        hitInfo.material.specularColor = vec3(0.9f, 0.9f, 0.9f);
+        hitInfo.albedo = vec3(0.9f, 0.75f, 0.9f);
+        hitInfo.emissive = vec3(0.0f, 0.0f, 0.0f);
     }
 
-    // a ball which has blue diffuse but red specular. an example of a "bad material".
-    // a better lighting model wouldn't let you do this sort of thing
     if (TestSphereTrace(rayPos, rayDir, hitInfo, vec4(9.0f, -9.5f, 20.0f, 3.0f)+sceneTranslation4))
     {
-        hitInfo.material.albedo = vec3(0.0f, 0.0f, 1.0f);
-        hitInfo.material.emissive = vec3(0.0f, 0.0f, 0.0f);
-        hitInfo.material.percentSpecular = 0.5f;
-        hitInfo.material.roughness = 0.4f;
-        hitInfo.material.specularColor = vec3(1.0f, 0.0f, 0.0f);
-    }
-
-    // shiny green balls of varying roughnesses
-    {
-        if (TestSphereTrace(rayPos, rayDir, hitInfo, vec4(-10.0f, 0.0f, 23.0f, 1.75f)+sceneTranslation4))
-        {
-            hitInfo.material.albedo = vec3(1.0f, 1.0f, 1.0f);
-            hitInfo.material.emissive = vec3(0.0f, 0.0f, 0.0f);
-            hitInfo.material.percentSpecular = 1.0f;
-            hitInfo.material.roughness = 0.0f;
-            hitInfo.material.specularColor = vec3(0.3f, 1.0f, 0.3f);
-        }
-
-        if (TestSphereTrace(rayPos, rayDir, hitInfo, vec4(-5.0f, 0.0f, 23.0f, 1.75f)+sceneTranslation4))
-        {
-            hitInfo.material.albedo = vec3(1.0f, 1.0f, 1.0f);
-            hitInfo.material.emissive = vec3(0.0f, 0.0f, 0.0f);
-            hitInfo.material.percentSpecular = 1.0f;
-            hitInfo.material.roughness = 0.25f;
-            hitInfo.material.specularColor = vec3(0.3f, 1.0f, 0.3f);
-        }
-
-        if (TestSphereTrace(rayPos, rayDir, hitInfo, vec4(0.0f, 0.0f, 23.0f, 1.75f)+sceneTranslation4))
-        {
-            hitInfo.material.albedo = vec3(1.0f, 1.0f, 1.0f);
-            hitInfo.material.emissive = vec3(0.0f, 0.0f, 0.0f);
-            hitInfo.material.percentSpecular = 1.0f;
-            hitInfo.material.roughness = 0.5f;
-            hitInfo.material.specularColor = vec3(0.3f, 1.0f, 0.3f);
-        }
-
-        if (TestSphereTrace(rayPos, rayDir, hitInfo, vec4(5.0f, 0.0f, 23.0f, 1.75f)+sceneTranslation4))
-        {
-            hitInfo.material.albedo = vec3(1.0f, 1.0f, 1.0f);
-            hitInfo.material.emissive = vec3(0.0f, 0.0f, 0.0f);
-            hitInfo.material.percentSpecular = 1.0f;
-            hitInfo.material.roughness = 0.75f;
-            hitInfo.material.specularColor = vec3(0.3f, 1.0f, 0.3f);
-        }
-
-        if (TestSphereTrace(rayPos, rayDir, hitInfo, vec4(10.0f, 0.0f, 23.0f, 1.75f)+sceneTranslation4))
-        {
-            hitInfo.material.albedo = vec3(1.0f, 1.0f, 1.0f);
-            hitInfo.material.emissive = vec3(0.0f, 0.0f, 0.0f);
-            hitInfo.material.percentSpecular = 1.0f;
-            hitInfo.material.roughness = 1.0f;
-            hitInfo.material.specularColor = vec3(0.3f, 1.0f, 0.3f);
-        }
+        hitInfo.albedo = vec3(0.75f, 0.9f, 0.9f);
+        hitInfo.emissive = vec3(0.0f, 0.0f, 0.0f);
     }
 }
 
@@ -362,43 +300,21 @@ vec3 GetColorForRay(in vec3 startRayPos, in vec3 startRayDir, inout uint rngStat
         // if the ray missed, we are done
         if (hitInfo.dist == c_superFar)
         {
-            ret += SRGBToLinear(texture(iChannel1, rayDir).rgb) * c_skyboxBrightnessMultiplier * throughput;
+            ret += texture(iChannel1, rayDir).rgb * throughput;
             break;
         }
 
         // update the ray position
         rayPos = (rayPos + rayDir * hitInfo.dist) + hitInfo.normal * c_rayPosNormalNudge;
 
-        // calculate whether we are going to do a diffuse or specular reflection ray
-        float doSpecular = (RandomFloat01(rngState) < hitInfo.material.percentSpecular) ? 1.0f : 0.0f;
-
-        // Calculate a new ray direction.
-        // Diffuse uses a normal oriented cosine weighted hemisphere sample.
-        // Perfectly smooth specular uses the reflection ray.
-        // Rough (glossy) specular lerps from the smooth specular to the rough diffuse by the material roughness squared
-        // Squaring the roughness is just a convention to make roughness feel more linear perceptually.
-        vec3 diffuseRayDir = normalize(hitInfo.normal + RandomUnitVector(rngState));
-        vec3 specularRayDir = reflect(rayDir, hitInfo.normal);
-        specularRayDir = normalize(mix(specularRayDir, diffuseRayDir, hitInfo.material.roughness * hitInfo.material.roughness));
-        rayDir = mix(diffuseRayDir, specularRayDir, doSpecular);
+        // calculate new ray direction, in a cosine weighted hemisphere oriented at normal
+        rayDir = normalize(hitInfo.normal + RandomUnitVector(rngState));
 
         // add in emissive lighting
-        ret += hitInfo.material.emissive * throughput;
+        ret += hitInfo.emissive * throughput;
 
         // update the colorMultiplier
-        throughput *= mix(hitInfo.material.albedo, hitInfo.material.specularColor, doSpecular);
-
-        // Russian Roulette
-        // As the throughput gets smaller, the ray is more likely to get terminated early.
-        // Survivors have their value boosted to make up for fewer samples being in the average.
-        {
-            float p = max(throughput.r, max(throughput.g, throughput.b));
-            if (RandomFloat01(rngState) > p)
-            break;
-
-            // Add the energy we 'lose' by randomly terminating paths
-            throughput *= 1.0f / p;
-        }
+        throughput *= hitInfo.albedo;
     }
 
     // return pixel color
@@ -416,12 +332,9 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     // calculate the camera distance
     float cameraDistance = 1.0f / tan(c_FOVDegrees * 0.5f * c_pi / 180.0f);
 
-    // calculate subpixel camera jitter for anti aliasing
-    vec2 jitter = vec2(RandomFloat01(rngState), RandomFloat01(rngState)) - 0.5f;
-
     // calculate coordinates of the ray target on the imaginary pixel plane.
     // -1 to +1 on x,y axis. 1 unit away on the z axis
-    vec3 rayTarget = vec3(((fragCoord+jitter)/iResolution.xy) * 2.0f - 1.0f, cameraDistance);
+    vec3 rayTarget = vec3((fragCoord/iResolution.xy) * 2.0f - 1.0f, cameraDistance);
 
     // correct for aspect ratio
     float aspectRatio = iResolution.x / iResolution.y;
@@ -436,15 +349,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     for (int index = 0; index < c_numRendersPerFrame; ++index)
     color += GetColorForRay(rayPosition, rayDir, rngState) / float(c_numRendersPerFrame);
 
-    // see if space was pressed. if so we want to restart our render.
-    // This is useful for when we go fullscreen for a bigger image.
-    bool spacePressed = (texture(iChannel2, vec2(KEY_SPACE,0.25)).x > 0.1);
-
     // average the frames together
-    vec4 lastFrameColor = texture(iChannel0, fragCoord / iResolution.xy);
-    float blend = (lastFrameColor.a == 0.0f || spacePressed) ? 1.0f : 1.0f / (1.0f + (1.0f / lastFrameColor.a));
-    color = mix(lastFrameColor.rgb, color, blend);
+    vec3 lastFrameColor = texture(iChannel0, fragCoord / iResolution.xy).rgb;
+    color = mix(lastFrameColor, color, 1.0f / float(iFrame+1));
 
     // show the result
-    fragColor = vec4(color, blend);
+    fragColor = vec4(color, 1.0f);
 }
