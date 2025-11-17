@@ -10,7 +10,7 @@
  */
 
 import { App } from './app/App';
-import { Layout } from './app/Layout';
+import { createLayout } from './layouts';
 import { loadDemoProject } from './project/loadDemo';
 
 // ===== Configuration =====
@@ -35,9 +35,8 @@ async function main() {
       throw new Error('Container element #app not found');
     }
 
-    // Create layout (async to support Prism.js dynamic import in split mode)
-    const layout = await Layout.create({
-      mode: project.layout,
+    // Create layout
+    const layout = createLayout(project.layout, {
       container: rootContainer,
       project,
     });
