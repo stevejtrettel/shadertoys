@@ -362,7 +362,7 @@ vec3 GetColorForRay(in vec3 startRayPos, in vec3 startRayDir, inout uint rngStat
         // if the ray missed, we are done
         if (hitInfo.dist == c_superFar)
         {
-            ret += SRGBToLinear(texture(iChannel1, dirToEquirect(rayDir)).rgb) * c_skyboxBrightnessMultiplier * throughput;
+            ret += SRGBToLinear(texture(iChannel1, rayDir).rgb) * c_skyboxBrightnessMultiplier * throughput;
             break;
         }
 

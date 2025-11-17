@@ -384,6 +384,17 @@ export class ShadertoyEngine implements ShadertoyEngineInterface {
     lines.push('precision highp float;');
     lines.push('');
 
+    // Automatic compatibility helpers for Shadertoy cubemap textures
+    lines.push('// Shadertoy compatibility: equirectangular texture sampling');
+    lines.push('const float ST_PI = 3.14159265359;');
+    lines.push('const float ST_TWOPI = 6.28318530718;');
+    lines.push('vec2 _st_dirToEquirect(vec3 dir) {');
+    lines.push('  float phi = atan(dir.z, dir.x);');
+    lines.push('  float theta = asin(dir.y);');
+    lines.push('  return vec2(phi / ST_TWOPI + 0.5, theta / ST_PI + 0.5);');
+    lines.push('}');
+    lines.push('');
+
     // Common code (if any)
     if (this.project.commonSource) {
       lines.push('// Common code');
@@ -404,9 +415,13 @@ export class ShadertoyEngine implements ShadertoyEngineInterface {
     lines.push('uniform sampler2D iChannel3;');
     lines.push('');
 
+    // Preprocess user shader code to handle cubemap-style texture sampling
+    // Convert: texture(iChannelN, vec3_expr) -> texture(iChannelN, _st_dirToEquirect(vec3_expr))
+    let processedSource = this.preprocessCubemapTextures(userSource);
+
     // User shader code
     lines.push('// User shader code');
-    lines.push(userSource);
+    lines.push(processedSource);
     lines.push('');
 
     // mainImage() wrapper
@@ -418,6 +433,34 @@ export class ShadertoyEngine implements ShadertoyEngineInterface {
     lines.push('}');
 
     return lines.join('\n');
+  }
+
+  /**
+   * Preprocess shader to convert cubemap-style texture() calls to equirectangular.
+   * Detects: texture(iChannelN, vec3_expr) and converts to texture(iChannelN, _st_dirToEquirect(vec3_expr))
+   */
+  private preprocessCubemapTextures(source: string): string {
+    // Match: texture(iChannelN, ...)
+    const textureCallRegex = /texture\s*\(\s*(iChannel[0-3])\s*,\s*([^)]+)\)/g;
+
+    return source.replace(textureCallRegex, (match, channel, coord) => {
+      // Heuristic: if coord contains indicators of 2D UV coordinates, leave it alone
+      // Otherwise, assume it's a 3D direction vector and wrap it
+      const is2DTexture =
+        coord.includes('fragCoord') ||   // Using fragCoord directly
+        coord.includes('/') ||            // Division (likely uv calculation)
+        /\.xy\s*$/.test(coord.trim()) ||  // Ends with .xy swizzle
+        /\.st\s*$/.test(coord.trim()) ||  // Ends with .st swizzle
+        /^vec2\s*\(/.test(coord.trim());  // Starts with vec2(
+
+      if (is2DTexture) {
+        // Leave 2D texture calls unchanged
+        return match;
+      } else {
+        // Wrap 3D direction with equirectangular conversion
+        return `texture(${channel}, _st_dirToEquirect(${coord}))`;
+      }
+    });
   }
 
   // ===========================================================================
