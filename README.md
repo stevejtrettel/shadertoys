@@ -23,14 +23,20 @@ A lightweight, Shadertoy-compatible GLSL shader playground built for teaching an
 # Install dependencies
 npm install
 
-# Start development server
-npm run dev
+# Run a specific demo in development
+npm run dev:demo keyboard-test
 
-# Build for production
+# Build a specific demo for production
+npm run build:demo keyboard-test
+
+# Or use the default demo
+npm run dev
 npm run build
 ```
 
 Open your browser to `http://localhost:5173` and you'll see the running demo!
+
+**Available demos**: `simple-gradient`, `ping-pong-test`, `multi-buffer-test`, `demofox-pt2`, `keyboard-test`
 
 ## 📚 Documentation
 
@@ -125,7 +131,7 @@ demos/               # Example shaders
 - **demofox-pt2** - Path tracing accumulation shader
 - **keyboard-test** - Interactive keyboard input
 
-Change the demo in `src/main.ts` to try different examples.
+Try different demos with `npm run dev:demo <demo-name>`.
 
 ## 🛠️ Architecture
 

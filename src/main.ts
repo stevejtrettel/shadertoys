@@ -3,10 +3,13 @@
  *
  * Loads a demo project from the demos/ folder and starts the App.
  *
- * Students can create their own demos by:
- * 1. Creating a new folder in demos/ (e.g., demos/my-shader/)
- * 2. Adding an image.glsl file with their shader code
- * 3. Changing DEMO_NAME below to load their shader
+ * To run a specific demo:
+ *   npm run dev:demo <demo-name>
+ *   npm run build:demo <demo-name>
+ *
+ * Examples:
+ *   npm run dev:demo keyboard-test
+ *   npm run build:demo simple-gradient
  */
 
 import './styles/base.css';
@@ -17,9 +20,10 @@ import { loadDemoProject } from './project/loadDemo';
 
 // ===== Configuration =====
 
-// Change this to load different demos!
-// Try: 'simple-gradient', 'ping-pong-test', 'multi-buffer-test', 'demofox-pt2', 'keyboard-test'
-const DEMO_NAME = 'keyboard-test';
+// Demo name can be set via:
+// 1. Environment variable: VITE_DEMO=xxx npm run dev:demo
+// 2. Falls back to this default for regular 'npm run dev'
+const DEMO_NAME = import.meta.env.VITE_DEMO || 'keyboard-test';
 
 async function main() {
   try {
