@@ -225,12 +225,33 @@ export class ShadertoyEngine implements ShadertoyEngineInterface {
   reset(): void {
     this._frame = 0;
 
-    // Clear all pass textures (important for accumulation shaders)
+    // Clear all pass textures (both current and previous for ping-pong)
+    // This is critical for accumulation shaders that read from previous frame
     const gl = this.gl;
     for (const pass of this._passes) {
+      // Clear current texture (already attached to framebuffer)
       gl.bindFramebuffer(gl.FRAMEBUFFER, pass.framebuffer);
       gl.clearColor(0, 0, 0, 0);
       gl.clear(gl.COLOR_BUFFER_BIT);
+
+      // Also clear previous texture (temporarily attach it)
+      gl.framebufferTexture2D(
+        gl.FRAMEBUFFER,
+        gl.COLOR_ATTACHMENT0,
+        gl.TEXTURE_2D,
+        pass.previousTexture,
+        0
+      );
+      gl.clear(gl.COLOR_BUFFER_BIT);
+
+      // Re-attach current texture
+      gl.framebufferTexture2D(
+        gl.FRAMEBUFFER,
+        gl.COLOR_ATTACHMENT0,
+        gl.TEXTURE_2D,
+        pass.currentTexture,
+        0
+      );
     }
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   }
