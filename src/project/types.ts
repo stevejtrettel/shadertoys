@@ -87,6 +87,15 @@ export interface ShadertoyConfig {
   };
 
   /**
+   * Optional layout mode for the shader viewer.
+   * - 'fullscreen': Canvas fills entire viewport, no styling
+   * - 'centered': Centered canvas with rounded corners and drop shadow (default)
+   * - 'split': Shader on left, code viewer on right with syntax highlighting
+   * If omitted, defaults to 'centered'.
+   */
+  layout?: 'fullscreen' | 'centered' | 'split';
+
+  /**
    * Optional path to common GLSL code (shared across all passes).
    * If omitted, loader checks for 'common.glsl' automatically.
    */
@@ -184,6 +193,11 @@ export interface ShadertoyProject {
    * Project metadata.
    */
   meta: ShadertoyMeta;
+
+  /**
+   * Layout mode for the shader viewer.
+   */
+  layout: 'fullscreen' | 'centered' | 'split';
 
   /**
    * Common GLSL code (prepended to all shaders), or null if none.

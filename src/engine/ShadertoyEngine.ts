@@ -253,13 +253,63 @@ export class ShadertoyEngine implements ShadertoyEngineInterface {
    * In a real implementation, you would load images here.
    */
   private initProjectTextures(): void {
-    // TODO: Load images from project.textures
-    // For each ShadertoyTexture2D in project.textures:
-    //   - load image from source path
-    //   - create WebGLTexture from image with correct filter/wrap
-    //   - store in this._textures
-
+    const gl = this.gl;
     this._textures = [];
+
+    // Load each texture from the project
+    for (const texDef of this.project.textures) {
+      // Create a placeholder 1x1 texture immediately
+      const texture = gl.createTexture();
+      if (!texture) {
+        throw new Error('Failed to create texture');
+      }
+
+      // Bind and set initial 1x1 black pixel
+      gl.bindTexture(gl.TEXTURE_2D, texture);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 255]));
+
+      // Store in runtime array
+      const runtimeTex: RuntimeTexture2D = {
+        name: texDef.name,
+        texture,
+        width: 1,
+        height: 1,
+      };
+      this._textures.push(runtimeTex);
+
+      // Load the actual image asynchronously
+      const image = new Image();
+      image.crossOrigin = 'anonymous';
+      image.onload = () => {
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+
+        // Set filter
+        const filter = texDef.filter === 'nearest' ? gl.NEAREST : gl.LINEAR;
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, filter);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filter);
+
+        // Set wrap mode
+        const wrap = texDef.wrap === 'clamp' ? gl.CLAMP_TO_EDGE : gl.REPEAT;
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, wrap);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, wrap);
+
+        // Generate mipmaps if using linear filtering
+        if (texDef.filter === 'linear') {
+          gl.generateMipmap(gl.TEXTURE_2D);
+        }
+
+        // Update dimensions
+        runtimeTex.width = image.width;
+        runtimeTex.height = image.height;
+
+        console.log(`Loaded texture '${texDef.name}': ${image.width}x${image.height}`);
+      };
+      image.onerror = () => {
+        console.error(`Failed to load texture '${texDef.name}' from ${texDef.source}`);
+      };
+      image.src = texDef.source;
+    }
   }
 
   /**
@@ -334,6 +384,17 @@ export class ShadertoyEngine implements ShadertoyEngineInterface {
     lines.push('precision highp float;');
     lines.push('');
 
+    // Automatic compatibility helpers for Shadertoy cubemap textures
+    lines.push('// Shadertoy compatibility: equirectangular texture sampling');
+    lines.push('const float ST_PI = 3.14159265359;');
+    lines.push('const float ST_TWOPI = 6.28318530718;');
+    lines.push('vec2 _st_dirToEquirect(vec3 dir) {');
+    lines.push('  float phi = atan(dir.z, dir.x);');
+    lines.push('  float theta = asin(dir.y);');
+    lines.push('  return vec2(phi / ST_TWOPI + 0.5, theta / ST_PI + 0.5);');
+    lines.push('}');
+    lines.push('');
+
     // Common code (if any)
     if (this.project.commonSource) {
       lines.push('// Common code');
@@ -354,9 +415,13 @@ export class ShadertoyEngine implements ShadertoyEngineInterface {
     lines.push('uniform sampler2D iChannel3;');
     lines.push('');
 
+    // Preprocess user shader code to handle cubemap-style texture sampling
+    // Convert: texture(iChannelN, vec3_expr) -> texture(iChannelN, _st_dirToEquirect(vec3_expr))
+    let processedSource = this.preprocessCubemapTextures(userSource);
+
     // User shader code
     lines.push('// User shader code');
-    lines.push(userSource);
+    lines.push(processedSource);
     lines.push('');
 
     // mainImage() wrapper
@@ -368,6 +433,34 @@ export class ShadertoyEngine implements ShadertoyEngineInterface {
     lines.push('}');
 
     return lines.join('\n');
+  }
+
+  /**
+   * Preprocess shader to convert cubemap-style texture() calls to equirectangular.
+   * Detects: texture(iChannelN, vec3_expr) and converts to texture(iChannelN, _st_dirToEquirect(vec3_expr))
+   */
+  private preprocessCubemapTextures(source: string): string {
+    // Match: texture(iChannelN, ...)
+    const textureCallRegex = /texture\s*\(\s*(iChannel[0-3])\s*,\s*([^)]+)\)/g;
+
+    return source.replace(textureCallRegex, (match, channel, coord) => {
+      // Heuristic: if coord contains indicators of 2D UV coordinates, leave it alone
+      // Otherwise, assume it's a 3D direction vector and wrap it
+      const is2DTexture =
+        coord.includes('fragCoord') ||   // Using fragCoord directly
+        coord.includes('/') ||            // Division (likely uv calculation)
+        /\.xy\s*$/.test(coord.trim()) ||  // Ends with .xy swizzle
+        /\.st\s*$/.test(coord.trim()) ||  // Ends with .st swizzle
+        /^vec2\s*\(/.test(coord.trim());  // Starts with vec2(
+
+      if (is2DTexture) {
+        // Leave 2D texture calls unchanged
+        return match;
+      } else {
+        // Wrap 3D direction with equirectangular conversion
+        return `texture(${channel}, _st_dirToEquirect(${coord}))`;
+      }
+    });
   }
 
   // ===========================================================================
@@ -448,7 +541,7 @@ export class ShadertoyEngine implements ShadertoyEngineInterface {
 
     for (let i = 0; i < 4; i++) {
       const channelSource = runtimePass.projectChannels[i];
-      const texture = this.resolveChannelTexture(channelSource);
+      const texture = this.resolveChannelTexture(channelSource, runtimePass.name);
 
       // Bind texture to texture unit i
       gl.activeTexture(gl.TEXTURE0 + i);
@@ -465,7 +558,7 @@ export class ShadertoyEngine implements ShadertoyEngineInterface {
   /**
    * Resolve a ChannelSource to an actual WebGLTexture to bind.
    */
-  private resolveChannelTexture(source: ChannelSource): WebGLTexture {
+  private resolveChannelTexture(source: ChannelSource, currentPassName: PassName): WebGLTexture {
     switch (source.kind) {
       case 'none':
         // Unused channel → bind black texture
@@ -480,7 +573,11 @@ export class ShadertoyEngine implements ShadertoyEngineInterface {
         if (!targetPass) {
           throw new Error(`Buffer '${source.buffer}' not found`);
         }
-        return source.previous ? targetPass.previousTexture : targetPass.currentTexture;
+
+        // Auto-detect self-reference: if a buffer references itself, always use previous texture
+        // This prevents feedback loops and enables temporal accumulation (like path tracers)
+        const isSelfReference = source.buffer === currentPassName;
+        return isSelfReference ? targetPass.previousTexture : targetPass.currentTexture;
       }
 
       case 'texture2D': {

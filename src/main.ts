@@ -10,11 +10,14 @@
  */
 
 import { App } from './app/App';
+import { Layout } from './app/Layout';
 import { loadDemoProject } from './project/loadDemo';
 
+// ===== Configuration =====
+
 // Change this to load different demos!
-// Try: 'simple-gradient', 'ping-pong-test', 'multi-buffer-test'
-const DEMO_NAME = 'simple-gradient';
+// Try: 'simple-gradient', 'ping-pong-test', 'multi-buffer-test', 'demofox-pt2'
+const DEMO_NAME = 'demofox-pt2';
 
 async function main() {
   try {
@@ -26,15 +29,25 @@ async function main() {
     console.log(`Loaded project: ${project.meta.title}`);
     console.log(`Passes:`, Object.keys(project.passes).filter(k => project.passes[k as keyof typeof project.passes]));
 
-    // Get container element
-    const container = document.getElementById('app');
-    if (!container) {
+    // Get root container element
+    const rootContainer = document.getElementById('app');
+    if (!rootContainer) {
       throw new Error('Container element #app not found');
     }
 
+    // Create layout (async to support Prism.js dynamic import in split mode)
+    const layout = await Layout.create({
+      mode: project.layout,
+      container: rootContainer,
+      project,
+    });
+
+    // Get canvas container from layout
+    const canvasContainer = layout.getCanvasContainer();
+
     // Create and start app
     const app = new App({
-      container,
+      container: canvasContainer,
       project,
       pixelRatio: window.devicePixelRatio,
     });
@@ -42,8 +55,9 @@ async function main() {
     app.start();
     console.log('App started!');
 
-    // Expose app globally for debugging
+    // Expose for debugging
     (window as any).app = app;
+    (window as any).layout = layout;
 
   } catch (error) {
     console.error('Failed to initialize:', error);

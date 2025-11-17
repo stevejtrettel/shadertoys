@@ -25,13 +25,19 @@ export async function loadDemoProject(demoName: string): Promise<ShadertoyProjec
     import: 'default',
   });
 
+  // Import image files as URLs
+  const imageFiles = import.meta.glob<string>('/demos/**/*.{jpg,jpeg,png,gif,webp,bmp}', {
+    query: '?url',
+    import: 'default',
+  });
+
   // Check if this demo has a config file
   const configPath = `/demos/${demoName}/shadertoy.config.json`;
   const hasConfig = configPath in jsonFiles;
 
   if (hasConfig) {
     // Multi-pass project with config
-    return await loadWithConfig(demoName, jsonFiles, glslFiles);
+    return await loadWithConfig(demoName, jsonFiles, glslFiles, imageFiles);
   } else {
     // Simple single-pass project
     return await loadSinglePass(demoName, glslFiles);
@@ -60,6 +66,7 @@ async function loadSinglePass(
       author: null,
       description: null,
     },
+    layout: 'centered', // Default layout for single-pass demos
     commonSource: null,
     passes: {
       Image: {
@@ -83,7 +90,8 @@ async function loadSinglePass(
 async function loadWithConfig(
   demoName: string,
   jsonFiles: Record<string, () => Promise<ShadertoyConfig>>,
-  glslFiles: Record<string, () => Promise<string>>
+  glslFiles: Record<string, () => Promise<string>>,
+  imageFiles: Record<string, () => Promise<string>>
 ): Promise<ShadertoyProject> {
   const configPath = `/demos/${demoName}/shadertoy.config.json`;
   const config = await jsonFiles[configPath]();
@@ -102,8 +110,50 @@ async function loadWithConfig(
     }
   }
 
-  // Load passes
+  // Collect all texture references from channels
+  const texturePathsSet = new Set<string>();
   const passOrder = ['Image', 'BufferA', 'BufferB', 'BufferC', 'BufferD'] as const;
+
+  for (const passName of passOrder) {
+    const passConfig = config.passes[passName];
+    if (!passConfig) continue;
+
+    for (const channelKey of ['iChannel0', 'iChannel1', 'iChannel2', 'iChannel3'] as const) {
+      const channelConfig = passConfig.channels?.[channelKey];
+      if (channelConfig && 'texture' in channelConfig) {
+        texturePathsSet.add(channelConfig.texture);
+      }
+    }
+  }
+
+  // Load textures
+  const textures: any[] = [];
+  const texturePathToName = new Map<string, string>();
+
+  for (const texturePath of texturePathsSet) {
+    // Resolve path relative to demo folder
+    const fullPath = `/demos/${demoName}/${texturePath.replace(/^\.\//, '')}`;
+
+    if (!(fullPath in imageFiles)) {
+      throw new Error(`Texture not found: ${texturePath} (expected at ${fullPath})`);
+    }
+
+    const imageUrl = await imageFiles[fullPath]();
+
+    // Generate texture name from filename
+    const textureName = texturePath.split('/').pop()!.replace(/\.[^.]+$/, '');
+
+    textures.push({
+      name: textureName,
+      source: imageUrl,  // Vite asset URL
+      filter: 'linear' as const,
+      wrap: 'repeat' as const,
+    });
+
+    texturePathToName.set(texturePath, textureName);
+  }
+
+  // Load passes
   const passes: any = {};
 
   for (const passName of passOrder) {
@@ -130,10 +180,10 @@ async function loadWithConfig(
 
     // Normalize channels
     const channels = [
-      normalizeChannel(passConfig.channels?.iChannel0),
-      normalizeChannel(passConfig.channels?.iChannel1),
-      normalizeChannel(passConfig.channels?.iChannel2),
-      normalizeChannel(passConfig.channels?.iChannel3),
+      normalizeChannel(passConfig.channels?.iChannel0, texturePathToName),
+      normalizeChannel(passConfig.channels?.iChannel1, texturePathToName),
+      normalizeChannel(passConfig.channels?.iChannel2, texturePathToName),
+      normalizeChannel(passConfig.channels?.iChannel3, texturePathToName),
     ];
 
     passes[passName] = {
@@ -151,20 +201,22 @@ async function loadWithConfig(
   const title = config.meta?.title || demoName.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
   const author = config.meta?.author || null;
   const description = config.meta?.description || null;
+  const layout = config.layout || 'centered'; // Default to centered if not specified
 
   return {
     root: `/demos/${demoName}`,
     meta: { title, author, description },
+    layout,
     commonSource,
     passes,
-    textures: [], // TODO: Handle textures if needed
+    textures,
   };
 }
 
 /**
  * Normalize a channel from JSON config to ChannelSource.
  */
-function normalizeChannel(channelJson: any): any {
+function normalizeChannel(channelJson: any, texturePathToName?: Map<string, string>): any {
   if (!channelJson) {
     return { kind: 'none' };
   }
@@ -178,9 +230,10 @@ function normalizeChannel(channelJson: any): any {
   }
 
   if ('texture' in channelJson) {
+    const textureName = texturePathToName?.get(channelJson.texture) || channelJson.texture;
     return {
       kind: 'texture2D',
-      name: channelJson.texture, // Simplified for now
+      name: textureName,
     };
   }
 

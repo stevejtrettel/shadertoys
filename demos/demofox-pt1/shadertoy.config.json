@@ -1,0 +1,19 @@
+{
+  "meta": {
+    "title": "Path Tracing I",
+    "description": "From Demofox's Blog"
+  },
+  "passes": {
+    "BufferA": {
+      "channels": {
+        "iChannel0": { "buffer": "BufferA" },
+        "iChannel1": { "texture": "./textures/equirect.jpg"}
+      }
+    },
+    "Image": {
+      "channels": {
+        "iChannel0": { "buffer": "BufferA" }
+      }
+    }
+  }
+}

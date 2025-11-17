@@ -4,12 +4,16 @@ A lightweight, Shadertoy-compatible shader playground for teaching shader progra
 
 ## Features
 
-- ✅ **Copy/paste compatibility** - Run Shadertoy shaders directly without modification
-- ✅ **Full Shadertoy semantics** - `mainImage()`, `iTime`, `iResolution`, `iChannel0-3`, etc.
-- ✅ **Multi-buffer support** - BufferA-D with ping-pong rendering
+- ✅ **Perfect Shadertoy copy/paste** - Run shaders directly from Shadertoy without ANY modification
+  - Automatic cubemap texture preprocessing (converts `texture(iChannel, vec3)` to equirectangular)
+  - Automatic `mainImage()` wrapper injection
+  - Automatic ping-pong detection for self-referencing buffers
+- ✅ **Full Shadertoy semantics** - `mainImage()`, `iTime`, `iResolution`, `iChannel0-3`, `iFrame`, `iMouse`
+- ✅ **Multi-buffer support** - BufferA-D with automatic ping-pong rendering
+- ✅ **Texture support** - Load images for environment maps and textures
 - ✅ **Float framebuffers** - RGBA32F for PDE/physics simulations
 - ✅ **Zero dependencies** - Pure WebGL2, no Three.js bloat
-- ✅ **Small builds** - Minimal, focused codebase
+- ✅ **Small builds** - 19KB JS (6KB gzipped)
 
 ## Quick Start
 
@@ -76,7 +80,7 @@ Example config:
   "passes": {
     "BufferA": {
       "channels": {
-        "iChannel0": { "buffer": "BufferA", "previous": true }
+        "iChannel0": { "buffer": "BufferA" }
       }
     },
     "Image": {
@@ -87,6 +91,8 @@ Example config:
   }
 }
 ```
+
+**Note**: Self-referencing buffers (like BufferA reading from itself) automatically use ping-pong textures - no special config needed!
 
 ## Architecture
 
