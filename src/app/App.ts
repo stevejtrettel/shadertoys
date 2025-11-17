@@ -12,6 +12,7 @@
 import './app.css';
 
 import { ShadertoyEngine } from '../engine/ShadertoyEngine';
+import { ShadertoyProject } from '../project/types';
 import { AppOptions, MouseState } from './types';
 
 export class App {
@@ -19,6 +20,7 @@ export class App {
   private canvas: HTMLCanvasElement;
   private gl: WebGL2RenderingContext;
   private engine: ShadertoyEngine;
+  private project: ShadertoyProject;
 
   private pixelRatio: number;
   private animationId: number | null = null;
@@ -46,6 +48,7 @@ export class App {
 
   constructor(opts: AppOptions) {
     this.container = opts.container;
+    this.project = opts.project;
     this.pixelRatio = opts.pixelRatio ?? window.devicePixelRatio;
 
     // Create canvas
@@ -108,6 +111,9 @@ export class App {
 
     // Set up keyboard tracking for shader keyboard texture
     this.setupKeyboardTracking();
+
+    // Set up global keyboard shortcuts (always available)
+    this.setupGlobalShortcuts();
 
     // Set up keyboard shortcuts if controls are enabled
     if (opts.project.controls) {
@@ -325,9 +331,22 @@ export class App {
     `;
     resetButton.addEventListener('click', () => this.reset());
 
+    // Screenshot button
+    const screenshotButton = document.createElement('button');
+    screenshotButton.className = 'control-button';
+    screenshotButton.title = 'Screenshot (S)';
+    screenshotButton.innerHTML = `
+      <svg viewBox="0 0 16 16">
+        <path d="M10.5 8.5a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0z"/>
+        <path d="M2 4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-1.172a2 2 0 0 1-1.414-.586l-.828-.828A2 2 0 0 0 9.172 2H6.828a2 2 0 0 0-1.414.586l-.828.828A2 2 0 0 1 3.172 4H2zm.5 2a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1zm9 2.5a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0z"/>
+      </svg>
+    `;
+    screenshotButton.addEventListener('click', () => this.screenshot());
+
     // Add to container
     this.controlsContainer.appendChild(this.playPauseButton);
     this.controlsContainer.appendChild(resetButton);
+    this.controlsContainer.appendChild(screenshotButton);
     this.container.appendChild(this.controlsContainer);
   }
 
@@ -350,6 +369,19 @@ export class App {
       const keycode = e.keyCode;
       if (keycode >= 0 && keycode < 256) {
         this.engine.updateKeyState(keycode, false);
+      }
+    });
+  }
+
+  /**
+   * Set up global keyboard shortcuts (always available).
+   */
+  private setupGlobalShortcuts(): void {
+    document.addEventListener('keydown', (e: KeyboardEvent) => {
+      // S - Screenshot
+      if (e.code === 'KeyS' && !e.repeat) {
+        e.preventDefault();
+        this.screenshot();
       }
     });
   }
@@ -389,6 +421,46 @@ export class App {
     this.frameCount = 0;
     this.lastFpsUpdate = 0;
     this.engine.reset();
+  }
+
+  /**
+   * Capture and download a screenshot of the current canvas as PNG.
+   * Filename format: shadertoy-{folderName}-{timestamp}.png
+   */
+  private screenshot(): void {
+    // Extract folder name from project root (e.g., "/demos/keyboard-test" -> "keyboard-test")
+    const folderName = this.project.root.split('/').pop() || 'shader';
+
+    // Generate timestamp (YYYYMMDD-HHMMSS)
+    const now = new Date();
+    const timestamp = now.getFullYear().toString() +
+      (now.getMonth() + 1).toString().padStart(2, '0') +
+      now.getDate().toString().padStart(2, '0') + '-' +
+      now.getHours().toString().padStart(2, '0') +
+      now.getMinutes().toString().padStart(2, '0') +
+      now.getSeconds().toString().padStart(2, '0');
+
+    const filename = `shadertoy-${folderName}-${timestamp}.png`;
+
+    // Capture canvas as PNG blob
+    this.canvas.toBlob((blob) => {
+      if (!blob) {
+        console.error('Failed to create screenshot blob');
+        return;
+      }
+
+      // Create download link
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      link.click();
+
+      // Clean up
+      URL.revokeObjectURL(url);
+
+      console.log(`Screenshot saved: ${filename}`);
+    }, 'image/png');
   }
 
   /**
