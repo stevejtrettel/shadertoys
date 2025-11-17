@@ -151,6 +151,15 @@ export class Layout {
     const codeViewer = document.createElement('div');
     codeViewer.className = 'code-viewer';
 
+    // Create copy button
+    const copyButton = document.createElement('button');
+    copyButton.className = 'copy-button';
+    copyButton.textContent = 'Copy';
+    copyButton.title = 'Copy code to clipboard';
+
+    // Track current source for copying
+    let currentSource = '';
+
     // Dynamically import Prism.js (only loaded in split-view mode!)
     const Prism = await import('prismjs');
     // @ts-ignore - Language components don't have type definitions
@@ -160,6 +169,7 @@ export class Layout {
 
     const showTab = (tabIndex: number) => {
       const tab = tabs[tabIndex];
+      currentSource = tab.source;
 
       // Create pre/code elements for Prism
       const pre = document.createElement('pre');
@@ -175,6 +185,27 @@ export class Layout {
       // Highlight with Prism
       Prism.highlightElement(code);
     };
+
+    // Copy button handler
+    copyButton.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(currentSource);
+        // Visual feedback
+        const originalText = copyButton.textContent;
+        copyButton.textContent = 'Copied!';
+        copyButton.classList.add('copied');
+        setTimeout(() => {
+          copyButton.textContent = originalText;
+          copyButton.classList.remove('copied');
+        }, 1500);
+      } catch (err) {
+        console.error('Failed to copy:', err);
+        copyButton.textContent = 'Failed';
+        setTimeout(() => {
+          copyButton.textContent = 'Copy';
+        }, 1500);
+      }
+    });
 
     // Create tabs
     tabs.forEach((tab, index) => {
@@ -196,6 +227,7 @@ export class Layout {
     });
 
     panel.appendChild(tabBar);
+    panel.appendChild(copyButton);
     panel.appendChild(codeViewer);
 
     // Show first tab
