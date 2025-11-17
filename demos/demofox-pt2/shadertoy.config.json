@@ -1,0 +1,20 @@
+{
+  "meta": {
+    "title": "Path Tracing II",
+    "description": "From Demofox's Blog"
+  },
+  "common": "common.glsl",
+  "passes": {
+    "BufferA": {
+      "channels": {
+        "iChannel0": { "buffer": "BufferA" },
+        "iChannel1": { "texture": "./textures/equirect.jpg"}
+      }
+    },
+    "Image": {
+      "channels": {
+        "iChannel0": { "buffer": "BufferA" }
+      }
+    }
+  }
+}

@@ -2,97 +2,13 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="a6f331fa-4577-4e68-b029-b20e4f3a301b" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/docs/engine-spec.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/example-sytstem/architecture.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/example-sytstem/core/Core.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/example-sytstem/engine/Engine.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/example-sytstem/engine/types.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/example-sytstem/layouts/builders.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/example-sytstem/layouts/types.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/example-sytstem/panels/BufferViewerPanel/BufferViewerPanel.css" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/example-sytstem/panels/BufferViewerPanel/BufferViewerPanel.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/example-sytstem/panels/CodePanel/CodePanel.css" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/example-sytstem/panels/CodePanel/CodePanel.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/example-sytstem/panels/ControlsPanel/ControlsPanel.css" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/example-sytstem/panels/ControlsPanel/ControlsPanel.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/example-sytstem/panels/ErrorPanel/ErrorPanel.css" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/example-sytstem/panels/ErrorPanel/ErrorPanel.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/example-sytstem/panels/Panel.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/example-sytstem/panels/ParamsPanel/ParamsPanel.css" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/example-sytstem/panels/ParamsPanel/ParamsPanel.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/example-sytstem/panels/PerformancePanel/PerformancePanel.css" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/example-sytstem/panels/PerformancePanel/PerformancePanel.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/example-sytstem/panels/PreviewPanel/PreviewPanel.css" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/example-sytstem/panels/PreviewPanel/PreviewPanel.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/example-sytstem/project/compiler.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/example-sytstem/project/types.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/project-spec.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/demos/demofox-pt2/bufferA.glsl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/demos/demofox-pt2/common.glsl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/demos/demofox-pt2/image.glsl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/demos/demofox-pt2/shadertoy.config.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/demos/demofox-pt2/textures/equirect.jpg" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/dist/assets/index-jmah4RXV.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/dist/index.html" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/237-band/main.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/237-band/shadertoy.glsl" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/237-disk/main.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/237-disk/shadertoy.glsl" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/3-inf-tiling/main.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/3-inf-tiling/shadertoy.glsl" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/334-band/main.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/334-band/shadertoy.glsl" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/334-disk/main.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/334-disk/shadertoy.glsl" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/blackhole-grid/main.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/blackhole-grid/shadertoy.glsl" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/blackhole-rainbow/main.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/blackhole-rainbow/shadertoy.glsl" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/circle-inversion/main.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/circle-inversion/shadertoy.glsl" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/convex-rp-tiling/main.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/convex-rp-tiling/shadertoy.glsl" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/cubic-eqn/main.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/cubic-eqn/shadertoy.glsl" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/genus-2-moduli/main.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/genus-2-moduli/shadertoy.glsl" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/hyperbolic-sdsu/main.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/hyperbolic-sdsu/shadertoy.glsl" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/light-intensity-3d/main.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/light-intensity-3d/shadertoy.glsl" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/mandelbrot-cartioid/main.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/mandelbrot-cartioid/shadertoy.glsl" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/mandelbrot-hexGrid/main.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/mandelbrot-hexGrid/shadertoy.glsl" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/mandelbrot-julia-animate/main.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/mandelbrot-julia-animate/shadertoy.glsl" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/mandelbrot-tau/main.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/mandelbrot-tau/shadertoy.glsl" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/mandelbrot/main.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/mandelbrot/shadertoy.glsl" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/newton-fractal/main.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/newton-fractal/shadertoy.glsl" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/nil-checkerboard/main.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/nil-checkerboard/shadertoy.glsl" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/nil-euc-interpolate/main.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/nil-euc-interpolate/shadertoy.glsl" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/orbitals-2/main.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/orbitals-2/shadertoy.glsl" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/orbitals/main.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/orbitals/shadertoy.glsl" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/punctured-torus-moduli/main.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/punctured-torus-moduli/shadertoy.glsl" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/ra-hexagon-moduli/main.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/ra-hexagon-moduli/shadertoy.glsl" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/ra-pentagon-moduli/main.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/ra-pentagon-moduli/shadertoy.glsl" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/taylor-center-animate/main.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/taylor-center-animate/shadertoy.glsl" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/taylor-center-simple/main.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/taylor-center-simple/shadertoy.glsl" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/taylor-convergence/main.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/taylor-convergence/shadertoy.glsl" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/test/main.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scenes/test/shadertoy.glsl" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/ShaderDisplay-Three.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/ShaderDisplay.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/style.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/main.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -117,6 +33,7 @@
     "WebServerToolWindowFactoryState": "false",
     "last_opened_file_path": "/Users/strettel/Code/shadertoys/docs/example-sytstem",
     "nodejs_package_manager_path": "npm",
+    "ts.external.directory.path": "/Users/strettel/Code/shadertoys/node_modules/typescript/lib",
     "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
@@ -129,6 +46,7 @@
       <recent name="$PROJECT_DIR$/mandelbrot-customSize" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/demos/demofox-pt2/textures" />
       <recent name="$PROJECT_DIR$/scenes" />
       <recent name="$PROJECT_DIR$/src" />
       <recent name="$PROJECT_DIR$" />

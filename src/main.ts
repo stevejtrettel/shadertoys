@@ -14,7 +14,7 @@ import { loadDemoProject } from './project/loadDemo';
 
 // Change this to load different demos!
 // Try: 'simple-gradient', 'ping-pong-test', 'multi-buffer-test'
-const DEMO_NAME = 'simple-gradient';
+const DEMO_NAME = 'demofox-pt2';
 
 async function main() {
   try {
