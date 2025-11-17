@@ -7,7 +7,7 @@
   "passes": {
     "BufferA": {
       "channels": {
-        "iChannel0": { "buffer": "BufferA", "previous": true },
+        "iChannel0": { "buffer": "BufferA" },
         "iChannel1": { "texture": "./textures/equirect.jpg"}
       }
     },

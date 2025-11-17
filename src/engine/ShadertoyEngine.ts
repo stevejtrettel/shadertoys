@@ -498,7 +498,7 @@ export class ShadertoyEngine implements ShadertoyEngineInterface {
 
     for (let i = 0; i < 4; i++) {
       const channelSource = runtimePass.projectChannels[i];
-      const texture = this.resolveChannelTexture(channelSource);
+      const texture = this.resolveChannelTexture(channelSource, runtimePass.name);
 
       // Bind texture to texture unit i
       gl.activeTexture(gl.TEXTURE0 + i);
@@ -515,7 +515,7 @@ export class ShadertoyEngine implements ShadertoyEngineInterface {
   /**
    * Resolve a ChannelSource to an actual WebGLTexture to bind.
    */
-  private resolveChannelTexture(source: ChannelSource): WebGLTexture {
+  private resolveChannelTexture(source: ChannelSource, currentPassName: PassName): WebGLTexture {
     switch (source.kind) {
       case 'none':
         // Unused channel → bind black texture
@@ -530,7 +530,11 @@ export class ShadertoyEngine implements ShadertoyEngineInterface {
         if (!targetPass) {
           throw new Error(`Buffer '${source.buffer}' not found`);
         }
-        return source.previous ? targetPass.previousTexture : targetPass.currentTexture;
+
+        // Auto-detect self-reference: if a buffer references itself, always use previous texture
+        // This prevents feedback loops and enables temporal accumulation (like path tracers)
+        const isSelfReference = source.buffer === currentPassName;
+        return isSelfReference ? targetPass.previousTexture : targetPass.currentTexture;
       }
 
       case 'texture2D': {
