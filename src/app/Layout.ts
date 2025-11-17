@@ -1,0 +1,153 @@
+/**
+ * Layout - Simple layout system with two modes
+ *
+ * Mode 1: Shader-only (centered canvas with styling)
+ * Mode 2: Split view (code + shader side by side)
+ */
+
+import { ShadertoyProject } from '../project/types';
+
+export type LayoutMode = 'shader-only' | 'split-view';
+
+export interface LayoutOptions {
+  mode: LayoutMode;
+  container: HTMLElement;
+  project: ShadertoyProject;
+}
+
+export class Layout {
+  private container: HTMLElement;
+  private mode: LayoutMode;
+  private project: ShadertoyProject;
+
+  // DOM elements
+  private root!: HTMLElement;
+  private canvasContainer!: HTMLElement;
+  private codePanel?: HTMLElement;
+
+  constructor(opts: LayoutOptions) {
+    this.container = opts.container;
+    this.mode = opts.mode;
+    this.project = opts.project;
+
+    this.buildLayout();
+  }
+
+  /**
+   * Get the canvas container element where App should render.
+   */
+  getCanvasContainer(): HTMLElement {
+    return this.canvasContainer;
+  }
+
+  /**
+   * Build the layout based on mode.
+   */
+  private buildLayout(): void {
+    // Clear container
+    this.container.innerHTML = '';
+
+    if (this.mode === 'shader-only') {
+      this.buildShaderOnlyLayout();
+    } else {
+      this.buildSplitViewLayout();
+    }
+  }
+
+  /**
+   * Mode 1: Shader-only layout
+   * Centered canvas with rounded corners and drop shadow.
+   */
+  private buildShaderOnlyLayout(): void {
+    this.root = document.createElement('div');
+    this.root.className = 'layout-shader-only';
+
+    this.canvasContainer = document.createElement('div');
+    this.canvasContainer.className = 'canvas-container';
+
+    this.root.appendChild(this.canvasContainer);
+    this.container.appendChild(this.root);
+  }
+
+  /**
+   * Mode 2: Split view layout
+   * Code editor on left, shader on right, with tabs for multi-buffer.
+   */
+  private buildSplitViewLayout(): void {
+    this.root = document.createElement('div');
+    this.root.className = 'layout-split-view';
+
+    // Code panel (left side)
+    this.codePanel = document.createElement('div');
+    this.codePanel.className = 'code-panel';
+    this.buildCodePanel(this.codePanel);
+
+    // Canvas container (right side)
+    this.canvasContainer = document.createElement('div');
+    this.canvasContainer.className = 'canvas-container';
+
+    this.root.appendChild(this.codePanel);
+    this.root.appendChild(this.canvasContainer);
+    this.container.appendChild(this.root);
+  }
+
+  /**
+   * Build the code panel with tabs for each shader pass.
+   */
+  private buildCodePanel(panel: HTMLElement): void {
+    // Get all passes
+    const passes = Object.entries(this.project.passes).map(([name, pass]) => ({
+      name,
+      source: pass.glslSource,
+    }));
+
+    // Add common code if it exists
+    const tabs: Array<{ name: string; source: string }> = [];
+    if (this.project.commonSource) {
+      tabs.push({ name: 'common.glsl', source: this.project.commonSource });
+    }
+    tabs.push(...passes.map(p => ({ name: `${p.name.toLowerCase()}.glsl`, source: p.source })));
+
+    // Create tab bar
+    const tabBar = document.createElement('div');
+    tabBar.className = 'tab-bar';
+
+    // Create code viewer
+    const codeViewer = document.createElement('pre');
+    codeViewer.className = 'code-viewer';
+
+    // Create tabs
+    tabs.forEach((tab, index) => {
+      const tabButton = document.createElement('button');
+      tabButton.className = 'tab-button';
+      tabButton.textContent = tab.name;
+      if (index === 0) tabButton.classList.add('active');
+
+      tabButton.addEventListener('click', () => {
+        // Update active tab
+        tabBar.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+        tabButton.classList.add('active');
+
+        // Update code viewer
+        codeViewer.textContent = tab.source;
+      });
+
+      tabBar.appendChild(tabButton);
+    });
+
+    // Set initial content
+    if (tabs.length > 0) {
+      codeViewer.textContent = tabs[0].source;
+    }
+
+    panel.appendChild(tabBar);
+    panel.appendChild(codeViewer);
+  }
+
+  /**
+   * Clean up layout.
+   */
+  dispose(): void {
+    this.container.innerHTML = '';
+  }
+}
