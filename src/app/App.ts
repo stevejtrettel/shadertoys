@@ -106,6 +106,9 @@ export class App {
     // Set up mouse tracking
     this.setupMouseTracking();
 
+    // Set up keyboard tracking for shader keyboard texture
+    this.setupKeyboardTracking();
+
     // Set up keyboard shortcuts if controls are enabled
     if (opts.project.controls) {
       this.setupKeyboardShortcuts();
@@ -175,6 +178,9 @@ export class App {
 
     // Update FPS counter
     this.updateFps(currentTimeSec);
+
+    // Update keyboard texture with current key states
+    this.engine.updateKeyboardTexture();
 
     // Run engine step
     this.engine.step(elapsedTime, this.mouse);
@@ -323,6 +329,29 @@ export class App {
     this.controlsContainer.appendChild(this.playPauseButton);
     this.controlsContainer.appendChild(resetButton);
     this.container.appendChild(this.controlsContainer);
+  }
+
+  /**
+   * Set up keyboard tracking for shader keyboard texture.
+   * Tracks all key presses/releases and forwards to engine.
+   */
+  private setupKeyboardTracking(): void {
+    // Track keydown events
+    document.addEventListener('keydown', (e: KeyboardEvent) => {
+      // Get keycode - use e.keyCode which is the ASCII code
+      const keycode = e.keyCode;
+      if (keycode >= 0 && keycode < 256) {
+        this.engine.updateKeyState(keycode, true);
+      }
+    });
+
+    // Track keyup events
+    document.addEventListener('keyup', (e: KeyboardEvent) => {
+      const keycode = e.keyCode;
+      if (keycode >= 0 && keycode < 256) {
+        this.engine.updateKeyState(keycode, false);
+      }
+    });
   }
 
   /**

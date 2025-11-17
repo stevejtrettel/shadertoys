@@ -18,8 +18,8 @@ import { loadDemoProject } from './project/loadDemo';
 // ===== Configuration =====
 
 // Change this to load different demos!
-// Try: 'simple-gradient', 'ping-pong-test', 'multi-buffer-test', 'demofox-pt2'
-const DEMO_NAME = 'demofox-pt2';
+// Try: 'simple-gradient', 'ping-pong-test', 'multi-buffer-test', 'demofox-pt2', 'keyboard-test'
+const DEMO_NAME = 'keyboard-test';
 
 async function main() {
   try {

@@ -32,6 +32,8 @@ import {
   createRenderTargetTexture,
   createFramebufferWithColorAttachment,
   createBlackTexture,
+  createKeyboardTexture,
+  updateKeyboardTexture,
 } from './glHelpers';
 
 // =============================================================================
@@ -69,6 +71,10 @@ export class ShadertoyEngine implements ShadertoyEngineInterface {
 
   private _blackTexture: WebGLTexture | null = null;
 
+  // Keyboard state tracking (Maps keycodes to state)
+  private _keyStates: Map<number, boolean> = new Map(); // true = down, false = up
+  private _toggleStates: Map<number, number> = new Map(); // 0.0 or 1.0
+
   // Compilation errors (if any occurred during initialization)
   private _compilationErrors: Array<{
     passName: PassName;
@@ -92,12 +98,20 @@ export class ShadertoyEngine implements ShadertoyEngineInterface {
     // 2. Create black texture for unused channels
     this._blackTexture = createBlackTexture(this.gl);
 
-    // 3. Initialize external textures (from project.textures)
+    // 3. Create keyboard texture (256x3, Shadertoy format)
+    const keyboardTex = createKeyboardTexture(this.gl);
+    this._keyboardTexture = {
+      texture: keyboardTex,
+      width: 256,
+      height: 3,
+    };
+
+    // 4. Initialize external textures (from project.textures)
     //    NOTE: This requires actual image data; for now just stub the array.
     //    Real implementation would load images here.
     this.initProjectTextures();
 
-    // 4. Compile shaders + create runtime passes
+    // 5. Compile shaders + create runtime passes
     this.initRuntimePasses();
   }
 
@@ -254,6 +268,42 @@ export class ShadertoyEngine implements ShadertoyEngineInterface {
       );
     }
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  }
+
+  /**
+   * Update keyboard key state (called from App on keydown/keyup events).
+   *
+   * @param keycode ASCII keycode (e.g., 65 for 'A')
+   * @param isDown true if key pressed, false if released
+   */
+  updateKeyState(keycode: number, isDown: boolean): void {
+    const wasDown = this._keyStates.get(keycode) || false;
+
+    // Update current state
+    this._keyStates.set(keycode, isDown);
+
+    // Toggle on press (down transition)
+    if (isDown && !wasDown) {
+      const currentToggle = this._toggleStates.get(keycode) || 0.0;
+      this._toggleStates.set(keycode, currentToggle === 0.0 ? 1.0 : 0.0);
+    }
+  }
+
+  /**
+   * Update keyboard texture with current key states.
+   * Should be called once per frame before rendering.
+   */
+  updateKeyboardTexture(): void {
+    if (!this._keyboardTexture) {
+      return; // No keyboard texture to update
+    }
+
+    updateKeyboardTexture(
+      this.gl,
+      this._keyboardTexture.texture,
+      this._keyStates,
+      this._toggleStates
+    );
   }
 
   /**
@@ -706,9 +756,9 @@ export class ShadertoyEngine implements ShadertoyEngineInterface {
       }
 
       case 'keyboard':
-        // Keyboard texture (optional feature)
+        // Keyboard texture (always available)
         if (!this._keyboardTexture) {
-          throw new Error('Keyboard texture not implemented');
+          throw new Error('Internal error: keyboard texture not initialized');
         }
         return this._keyboardTexture.texture;
 

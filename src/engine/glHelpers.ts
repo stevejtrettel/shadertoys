@@ -259,6 +259,110 @@ export function createBlackTexture(gl: WebGL2RenderingContext): WebGLTexture {
 }
 
 /**
+ * Create a 256x3 keyboard state texture.
+ *
+ * Shadertoy keyboard texture format:
+ * - Width: 256 (one column per ASCII keycode)
+ * - Height: 3 (3 rows for different data)
+ * - Row 0 (sample at y=0.25): Current key state (0.0 = up, 1.0 = down)
+ * - Row 1: Unused
+ * - Row 2 (sample at y=0.75): Toggle state (flips between 0.0 and 1.0 on each press)
+ *
+ * Returns the WebGLTexture. Data is initialized to all zeros.
+ * Use updateKeyboardTexture() to update the state.
+ */
+export function createKeyboardTexture(gl: WebGL2RenderingContext): WebGLTexture {
+  const tex = gl.createTexture();
+  if (!tex) {
+    throw new Error('Failed to create keyboard texture');
+  }
+
+  gl.bindTexture(gl.TEXTURE_2D, tex);
+
+  // 256x3 texture, all zeros initially
+  const width = 256;
+  const height = 3;
+  const data = new Float32Array(width * height * 4); // RGBA, all zeros
+
+  gl.texImage2D(
+    gl.TEXTURE_2D,
+    0,
+    gl.RGBA32F,
+    width,
+    height,
+    0,
+    gl.RGBA,
+    gl.FLOAT,
+    data
+  );
+
+  // NEAREST filtering - no interpolation between keys!
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+
+  // CLAMP to edge
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+  gl.bindTexture(gl.TEXTURE_2D, null);
+
+  return tex;
+}
+
+/**
+ * Update keyboard texture with current key states.
+ *
+ * @param gl WebGL context
+ * @param texture The keyboard texture to update
+ * @param keyStates Map of keycode -> current state (true = down, false = up)
+ * @param toggleStates Map of keycode -> toggle state (0.0 or 1.0)
+ */
+export function updateKeyboardTexture(
+  gl: WebGL2RenderingContext,
+  texture: WebGLTexture,
+  keyStates: Map<number, boolean>,
+  toggleStates: Map<number, number>
+): void {
+  const width = 256;
+  const height = 3;
+  const data = new Float32Array(width * height * 4);
+
+  // Fill in key states
+  for (let keycode = 0; keycode < 256; keycode++) {
+    const isDown = keyStates.get(keycode) || false;
+    const toggleValue = toggleStates.get(keycode) || 0.0;
+
+    // Row 0 (y=0): Current key state
+    const row0Index = (0 * width + keycode) * 4;
+    data[row0Index + 0] = isDown ? 1.0 : 0.0; // R channel
+    data[row0Index + 1] = isDown ? 1.0 : 0.0; // G channel (redundant but matches Shadertoy)
+    data[row0Index + 2] = isDown ? 1.0 : 0.0; // B channel
+    data[row0Index + 3] = 1.0; // A channel
+
+    // Row 1 (y=1): Unused (keep as zeros)
+
+    // Row 2 (y=2): Toggle state
+    const row2Index = (2 * width + keycode) * 4;
+    data[row2Index + 0] = toggleValue;
+    data[row2Index + 1] = toggleValue;
+    data[row2Index + 2] = toggleValue;
+    data[row2Index + 3] = 1.0;
+  }
+
+  gl.bindTexture(gl.TEXTURE_2D, texture);
+  gl.texSubImage2D(
+    gl.TEXTURE_2D,
+    0,
+    0, 0, // x, y offset
+    width, height,
+    gl.RGBA,
+    gl.FLOAT,
+    data
+  );
+  gl.bindTexture(gl.TEXTURE_2D, null);
+}
+
+/**
  * Create a 2D texture from an HTMLImageElement (or ImageBitmap).
  * This is used for project textures (dog.png, noise.png, etc.)
  *
