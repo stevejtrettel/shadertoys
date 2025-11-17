@@ -75,7 +75,7 @@ export class App {
       antialias: false,
       depth: false,
       stencil: false,
-      preserveDrawingBuffer: false,
+      preserveDrawingBuffer: true, // Required for screenshots
       powerPreference: 'high-performance',
     });
 
