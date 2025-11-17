@@ -261,7 +261,13 @@ export class App {
   /**
    * Display shader compilation errors in an overlay.
    */
-  private showErrorOverlay(errors: Array<{passName: string; error: string; source: string}>): void {
+  private showErrorOverlay(errors: Array<{
+    passName: string;
+    error: string;
+    source: string;
+    isFromCommon: boolean;
+    originalLine: number | null;
+  }>): void {
     // Create overlay if it doesn't exist
     if (!this.errorOverlay) {
       this.errorOverlay = document.createElement('div');
@@ -269,14 +275,34 @@ export class App {
       this.container.appendChild(this.errorOverlay);
     }
 
+    // Group errors: separate common.glsl errors from pass-specific errors
+    const commonErrors = errors.filter(e => e.isFromCommon);
+    const passErrors = errors.filter(e => !e.isFromCommon);
+
+    // Deduplicate common errors (same error reported for multiple passes)
+    const uniqueCommonErrors = commonErrors.length > 0 ? [commonErrors[0]] : [];
+
+    // Combine: show common errors first, then pass-specific errors
+    const allErrors = [...uniqueCommonErrors, ...passErrors];
+
     // Parse and format errors with source context
-    const formattedErrors = errors.map(({passName, error, source}) => {
+    const formattedErrors = allErrors.map(({passName, error, source, isFromCommon, originalLine}) => {
       // Extract the actual GLSL error from the thrown error message
       const glslError = error.replace('Shader compilation failed:\n', '');
+
+      // For common errors, adjust line number in error message
+      let adjustedError = glslError;
+      if (isFromCommon && originalLine !== null) {
+        adjustedError = glslError.replace(/Line \d+:/, `Line ${originalLine}:`);
+        adjustedError = adjustedError.replace(/ERROR:\s*\d+:(\d+):/, `ERROR: 0:${originalLine}:`);
+      }
+
       return {
-        passName,
-        error: this.parseShaderError(glslError),
-        codeContext: this.extractCodeContext(glslError, source),
+        passName: isFromCommon ? 'common.glsl' : passName,
+        error: this.parseShaderError(adjustedError),
+        codeContext: isFromCommon
+          ? this.extractCodeContextFromCommon(originalLine!)
+          : this.extractCodeContext(adjustedError, source),
       };
     });
 
@@ -362,7 +388,41 @@ export class App {
       } else {
         return `<span class="context-line">${lineNumPadded} │ ${escapedLine}</span>`;
       }
-    }).join('\n');
+    }).join(''); // No newline - spans already have display:block
+
+    return html;
+  }
+
+  /**
+   * Extract code context from common.glsl file.
+   * Similar to extractCodeContext but uses the original common source.
+   */
+  private extractCodeContextFromCommon(errorLine: number): string | null {
+    const commonSource = this.engine.project.commonSource;
+    if (!commonSource) return null;
+
+    const lines = commonSource.split('\n');
+
+    // Extract context (3 lines before and after)
+    const contextRange = 3;
+    const startLine = Math.max(0, errorLine - contextRange - 1);
+    const endLine = Math.min(lines.length, errorLine + contextRange);
+
+    const contextLines = lines.slice(startLine, endLine);
+
+    // Build HTML with line numbers and highlighting
+    const html = contextLines.map((line, idx) => {
+      const lineNum = startLine + idx + 1;
+      const isErrorLine = lineNum === errorLine;
+      const lineNumPadded = String(lineNum).padStart(4, ' ');
+      const escapedLine = this.escapeHTML(line);
+
+      if (isErrorLine) {
+        return `<span class="error-line-highlight">${lineNumPadded} │ ${escapedLine}</span>`;
+      } else {
+        return `<span class="context-line">${lineNumPadded} │ ${escapedLine}</span>`;
+      }
+    }).join(''); // No newline - spans already have display:block
 
     return html;
   }

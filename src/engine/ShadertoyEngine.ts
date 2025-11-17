@@ -70,7 +70,13 @@ export class ShadertoyEngine implements ShadertoyEngineInterface {
   private _blackTexture: WebGLTexture | null = null;
 
   // Compilation errors (if any occurred during initialization)
-  private _compilationErrors: Array<{passName: PassName; error: string; source: string}> = [];
+  private _compilationErrors: Array<{
+    passName: PassName;
+    error: string;
+    source: string;
+    isFromCommon: boolean;
+    originalLine: number | null;
+  }> = [];
 
   constructor(opts: EngineOptions) {
     this.gl = opts.gl;
@@ -122,7 +128,13 @@ export class ShadertoyEngine implements ShadertoyEngineInterface {
    * Get shader compilation errors (if any occurred during initialization).
    * Returns empty array if all shaders compiled successfully.
    */
-  getCompilationErrors(): Array<{passName: PassName; error: string; source: string}> {
+  getCompilationErrors(): Array<{
+    passName: PassName;
+    error: string;
+    source: string;
+    isFromCommon: boolean;
+    originalLine: number | null;
+  }> {
     return this._compilationErrors;
   }
 
@@ -392,14 +404,51 @@ export class ShadertoyEngine implements ShadertoyEngineInterface {
       } catch (err) {
         // Store compilation error with source code for context display
         const errorMessage = err instanceof Error ? err.message : String(err);
+
+        // Detect if error is from common.glsl
+        const lineMapping = this.getLineMapping();
+        const errorLineMatch = errorMessage.match(/ERROR:\s*\d+:(\d+):/);
+        let isFromCommon = false;
+        let originalLine: number | null = null;
+
+        if (errorLineMatch && this.project.commonSource) {
+          const errorLine = parseInt(errorLineMatch[1], 10);
+          const commonStartLine = lineMapping.boilerplateLinesBeforeCommon + 2; // +1 for comment, +1 for 1-indexed
+          const commonEndLine = commonStartLine + lineMapping.commonLineCount - 1;
+
+          if (errorLine >= commonStartLine && errorLine <= commonEndLine) {
+            isFromCommon = true;
+            // Calculate line number relative to common.glsl
+            originalLine = errorLine - commonStartLine + 1;
+          }
+        }
+
         this._compilationErrors.push({
           passName,
           error: errorMessage,
           source: fragmentSource,
+          isFromCommon,
+          originalLine,
         });
         console.error(`Failed to compile ${passName}:`, errorMessage);
       }
     }
+  }
+
+  /**
+   * Calculate line number mappings for error reporting.
+   * Returns info about where common.glsl code lives in the compiled shader.
+   */
+  private getLineMapping(): { boilerplateLinesBeforeCommon: number; commonLineCount: number } {
+    // Count boilerplate lines before common.glsl
+    // Version/precision (3) + Equirect helpers (9) = 12 lines
+    const boilerplateLinesBeforeCommon = 12;
+
+    const commonLineCount = this.project.commonSource
+      ? this.project.commonSource.split('\n').length
+      : 0;
+
+    return { boilerplateLinesBeforeCommon, commonLineCount };
   }
 
   /**
