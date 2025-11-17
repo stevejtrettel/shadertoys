@@ -438,7 +438,8 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     // see if space was pressed. if so we want to restart our render.
     // This is useful for when we go fullscreen for a bigger image.
-    bool spacePressed = (texture(iChannel2, vec2(KEY_SPACE,0.25)).x > 0.1);
+    // TODO: Implement keyboard texture support
+    bool spacePressed = false; // (texture(iChannel2, vec2(KEY_SPACE,0.25)).x > 0.1);
 
     // average the frames together
     vec4 lastFrameColor = texture(iChannel0, fragCoord / iResolution.xy);

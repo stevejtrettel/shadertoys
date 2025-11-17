@@ -8,8 +8,7 @@
     "BufferA": {
       "channels": {
         "iChannel0": { "buffer": "BufferA" },
-        "iChannel1": { "texture": "./textures/equirect.jpg"},
-        "iChannel2": { "keyboard": true }
+        "iChannel1": { "texture": "./textures/equirect.jpg"}
       }
     },
     "Image": {
