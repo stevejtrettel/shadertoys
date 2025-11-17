@@ -144,7 +144,7 @@ async function loadWithConfig(
 
     textures.push({
       name: textureName,
-      url: imageUrl,
+      source: imageUrl,  // Vite asset URL
       filter: 'linear' as const,
       wrap: 'repeat' as const,
     });

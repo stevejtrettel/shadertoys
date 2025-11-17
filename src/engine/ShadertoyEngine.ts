@@ -253,13 +253,63 @@ export class ShadertoyEngine implements ShadertoyEngineInterface {
    * In a real implementation, you would load images here.
    */
   private initProjectTextures(): void {
-    // TODO: Load images from project.textures
-    // For each ShadertoyTexture2D in project.textures:
-    //   - load image from source path
-    //   - create WebGLTexture from image with correct filter/wrap
-    //   - store in this._textures
-
+    const gl = this.gl;
     this._textures = [];
+
+    // Load each texture from the project
+    for (const texDef of this.project.textures) {
+      // Create a placeholder 1x1 texture immediately
+      const texture = gl.createTexture();
+      if (!texture) {
+        throw new Error('Failed to create texture');
+      }
+
+      // Bind and set initial 1x1 black pixel
+      gl.bindTexture(gl.TEXTURE_2D, texture);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 255]));
+
+      // Store in runtime array
+      const runtimeTex: RuntimeTexture2D = {
+        name: texDef.name,
+        texture,
+        width: 1,
+        height: 1,
+      };
+      this._textures.push(runtimeTex);
+
+      // Load the actual image asynchronously
+      const image = new Image();
+      image.crossOrigin = 'anonymous';
+      image.onload = () => {
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+
+        // Set filter
+        const filter = texDef.filter === 'nearest' ? gl.NEAREST : gl.LINEAR;
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, filter);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filter);
+
+        // Set wrap mode
+        const wrap = texDef.wrap === 'clamp' ? gl.CLAMP_TO_EDGE : gl.REPEAT;
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, wrap);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, wrap);
+
+        // Generate mipmaps if using linear filtering
+        if (texDef.filter === 'linear') {
+          gl.generateMipmap(gl.TEXTURE_2D);
+        }
+
+        // Update dimensions
+        runtimeTex.width = image.width;
+        runtimeTex.height = image.height;
+
+        console.log(`Loaded texture '${texDef.name}': ${image.width}x${image.height}`);
+      };
+      image.onerror = () => {
+        console.error(`Failed to load texture '${texDef.name}' from ${texDef.source}`);
+      };
+      image.src = texDef.source;
+    }
   }
 
   /**
