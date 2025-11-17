@@ -1,0 +1,22 @@
+/**
+ * Centered Layout Styles
+ */
+
+.layout-centered {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 60px;
+}
+
+.layout-centered .canvas-container {
+  position: relative;
+  width: 800px;
+  height: 600px;
+  background: #000;
+  border-radius: 8px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25), 0 5px 15px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+}

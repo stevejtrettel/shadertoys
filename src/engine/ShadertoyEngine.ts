@@ -32,6 +32,8 @@ import {
   createRenderTargetTexture,
   createFramebufferWithColorAttachment,
   createBlackTexture,
+  createKeyboardTexture,
+  updateKeyboardTexture,
 } from './glHelpers';
 
 // =============================================================================
@@ -69,6 +71,19 @@ export class ShadertoyEngine implements ShadertoyEngineInterface {
 
   private _blackTexture: WebGLTexture | null = null;
 
+  // Keyboard state tracking (Maps keycodes to state)
+  private _keyStates: Map<number, boolean> = new Map(); // true = down, false = up
+  private _toggleStates: Map<number, number> = new Map(); // 0.0 or 1.0
+
+  // Compilation errors (if any occurred during initialization)
+  private _compilationErrors: Array<{
+    passName: PassName;
+    error: string;
+    source: string;
+    isFromCommon: boolean;
+    originalLine: number | null;
+  }> = [];
+
   constructor(opts: EngineOptions) {
     this.gl = opts.gl;
     this.project = opts.project;
@@ -83,12 +98,20 @@ export class ShadertoyEngine implements ShadertoyEngineInterface {
     // 2. Create black texture for unused channels
     this._blackTexture = createBlackTexture(this.gl);
 
-    // 3. Initialize external textures (from project.textures)
+    // 3. Create keyboard texture (256x3, Shadertoy format)
+    const keyboardTex = createKeyboardTexture(this.gl);
+    this._keyboardTexture = {
+      texture: keyboardTex,
+      width: 256,
+      height: 3,
+    };
+
+    // 4. Initialize external textures (from project.textures)
     //    NOTE: This requires actual image data; for now just stub the array.
     //    Real implementation would load images here.
     this.initProjectTextures();
 
-    // 4. Compile shaders + create runtime passes
+    // 5. Compile shaders + create runtime passes
     this.initRuntimePasses();
   }
 
@@ -113,6 +136,27 @@ export class ShadertoyEngine implements ShadertoyEngineInterface {
       width: this._width,
       height: this._height,
     };
+  }
+
+  /**
+   * Get shader compilation errors (if any occurred during initialization).
+   * Returns empty array if all shaders compiled successfully.
+   */
+  getCompilationErrors(): Array<{
+    passName: PassName;
+    error: string;
+    source: string;
+    isFromCommon: boolean;
+    originalLine: number | null;
+  }> {
+    return this._compilationErrors;
+  }
+
+  /**
+   * Check if there were any compilation errors.
+   */
+  hasErrors(): boolean {
+    return this._compilationErrors.length > 0;
   }
 
   /**
@@ -186,6 +230,80 @@ export class ShadertoyEngine implements ShadertoyEngineInterface {
       // Create new framebuffer (attached to current texture)
       pass.framebuffer = createFramebufferWithColorAttachment(gl, pass.currentTexture);
     }
+  }
+
+  /**
+   * Reset frame counter and clear all render targets.
+   * Used for playback controls to restart shader from frame 0.
+   */
+  reset(): void {
+    this._frame = 0;
+
+    // Clear all pass textures (both current and previous for ping-pong)
+    // This is critical for accumulation shaders that read from previous frame
+    const gl = this.gl;
+    for (const pass of this._passes) {
+      // Clear current texture (already attached to framebuffer)
+      gl.bindFramebuffer(gl.FRAMEBUFFER, pass.framebuffer);
+      gl.clearColor(0, 0, 0, 0);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+
+      // Also clear previous texture (temporarily attach it)
+      gl.framebufferTexture2D(
+        gl.FRAMEBUFFER,
+        gl.COLOR_ATTACHMENT0,
+        gl.TEXTURE_2D,
+        pass.previousTexture,
+        0
+      );
+      gl.clear(gl.COLOR_BUFFER_BIT);
+
+      // Re-attach current texture
+      gl.framebufferTexture2D(
+        gl.FRAMEBUFFER,
+        gl.COLOR_ATTACHMENT0,
+        gl.TEXTURE_2D,
+        pass.currentTexture,
+        0
+      );
+    }
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  }
+
+  /**
+   * Update keyboard key state (called from App on keydown/keyup events).
+   *
+   * @param keycode ASCII keycode (e.g., 65 for 'A')
+   * @param isDown true if key pressed, false if released
+   */
+  updateKeyState(keycode: number, isDown: boolean): void {
+    const wasDown = this._keyStates.get(keycode) || false;
+
+    // Update current state
+    this._keyStates.set(keycode, isDown);
+
+    // Toggle on press (down transition)
+    if (isDown && !wasDown) {
+      const currentToggle = this._toggleStates.get(keycode) || 0.0;
+      this._toggleStates.set(keycode, currentToggle === 0.0 ? 1.0 : 0.0);
+    }
+  }
+
+  /**
+   * Update keyboard texture with current key states.
+   * Should be called once per frame before rendering.
+   */
+  updateKeyboardTexture(): void {
+    if (!this._keyboardTexture) {
+      return; // No keyboard texture to update
+    }
+
+    updateKeyboardTexture(
+      this.gl,
+      this._keyboardTexture.texture,
+      this._keyStates,
+      this._toggleStates
+    );
   }
 
   /**
@@ -329,48 +447,96 @@ export class ShadertoyEngine implements ShadertoyEngineInterface {
       const projectPass = project.passes[passName];
       if (!projectPass) continue;
 
-      // Build fragment shader source
+      // Build fragment shader source (outside try so we can access in catch)
       const fragmentSource = this.buildFragmentShader(projectPass.glslSource);
 
-      // Compile program
-      const program = createProgramFromSources(gl, VERTEX_SHADER_SOURCE, fragmentSource);
+      try {
+        // Compile program
+        const program = createProgramFromSources(gl, VERTEX_SHADER_SOURCE, fragmentSource);
 
-      // Cache uniform locations
-      const uniforms: PassUniformLocations = {
-        program,
-        iResolution: gl.getUniformLocation(program, 'iResolution'),
-        iTime: gl.getUniformLocation(program, 'iTime'),
-        iTimeDelta: gl.getUniformLocation(program, 'iTimeDelta'),
-        iFrame: gl.getUniformLocation(program, 'iFrame'),
-        iMouse: gl.getUniformLocation(program, 'iMouse'),
-        iChannel: [
-          gl.getUniformLocation(program, 'iChannel0'),
-          gl.getUniformLocation(program, 'iChannel1'),
-          gl.getUniformLocation(program, 'iChannel2'),
-          gl.getUniformLocation(program, 'iChannel3'),
-        ],
-      };
+        // Cache uniform locations
+        const uniforms: PassUniformLocations = {
+          program,
+          iResolution: gl.getUniformLocation(program, 'iResolution'),
+          iTime: gl.getUniformLocation(program, 'iTime'),
+          iTimeDelta: gl.getUniformLocation(program, 'iTimeDelta'),
+          iFrame: gl.getUniformLocation(program, 'iFrame'),
+          iMouse: gl.getUniformLocation(program, 'iMouse'),
+          iChannel: [
+            gl.getUniformLocation(program, 'iChannel0'),
+            gl.getUniformLocation(program, 'iChannel1'),
+            gl.getUniformLocation(program, 'iChannel2'),
+            gl.getUniformLocation(program, 'iChannel3'),
+          ],
+        };
 
-      // Create ping-pong textures (MUST allocate both for all passes)
-      const currentTexture = createRenderTargetTexture(gl, this._width, this._height);
-      const previousTexture = createRenderTargetTexture(gl, this._width, this._height);
+        // Create ping-pong textures (MUST allocate both for all passes)
+        const currentTexture = createRenderTargetTexture(gl, this._width, this._height);
+        const previousTexture = createRenderTargetTexture(gl, this._width, this._height);
 
-      // Create framebuffer (attached to current texture)
-      const framebuffer = createFramebufferWithColorAttachment(gl, currentTexture);
+        // Create framebuffer (attached to current texture)
+        const framebuffer = createFramebufferWithColorAttachment(gl, currentTexture);
 
-      // Build RuntimePass
-      const runtimePass: RuntimePass = {
-        name: passName,
-        projectChannels: projectPass.channels,
-        vao: sharedVAO,
-        uniforms,
-        framebuffer,
-        currentTexture,
-        previousTexture,
-      };
+        // Build RuntimePass
+        const runtimePass: RuntimePass = {
+          name: passName,
+          projectChannels: projectPass.channels,
+          vao: sharedVAO,
+          uniforms,
+          framebuffer,
+          currentTexture,
+          previousTexture,
+        };
 
-      this._passes.push(runtimePass);
+        this._passes.push(runtimePass);
+      } catch (err) {
+        // Store compilation error with source code for context display
+        const errorMessage = err instanceof Error ? err.message : String(err);
+
+        // Detect if error is from common.glsl
+        const lineMapping = this.getLineMapping();
+        const errorLineMatch = errorMessage.match(/ERROR:\s*\d+:(\d+):/);
+        let isFromCommon = false;
+        let originalLine: number | null = null;
+
+        if (errorLineMatch && this.project.commonSource) {
+          const errorLine = parseInt(errorLineMatch[1], 10);
+          const commonStartLine = lineMapping.boilerplateLinesBeforeCommon + 2; // +1 for comment, +1 for 1-indexed
+          const commonEndLine = commonStartLine + lineMapping.commonLineCount - 1;
+
+          if (errorLine >= commonStartLine && errorLine <= commonEndLine) {
+            isFromCommon = true;
+            // Calculate line number relative to common.glsl
+            originalLine = errorLine - commonStartLine + 1;
+          }
+        }
+
+        this._compilationErrors.push({
+          passName,
+          error: errorMessage,
+          source: fragmentSource,
+          isFromCommon,
+          originalLine,
+        });
+        console.error(`Failed to compile ${passName}:`, errorMessage);
+      }
     }
+  }
+
+  /**
+   * Calculate line number mappings for error reporting.
+   * Returns info about where common.glsl code lives in the compiled shader.
+   */
+  private getLineMapping(): { boilerplateLinesBeforeCommon: number; commonLineCount: number } {
+    // Count boilerplate lines before common.glsl
+    // Version/precision (3) + Equirect helpers (9) = 12 lines
+    const boilerplateLinesBeforeCommon = 12;
+
+    const commonLineCount = this.project.commonSource
+      ? this.project.commonSource.split('\n').length
+      : 0;
+
+    return { boilerplateLinesBeforeCommon, commonLineCount };
   }
 
   /**
@@ -590,9 +756,9 @@ export class ShadertoyEngine implements ShadertoyEngineInterface {
       }
 
       case 'keyboard':
-        // Keyboard texture (optional feature)
+        // Keyboard texture (always available)
         if (!this._keyboardTexture) {
-          throw new Error('Keyboard texture not implemented');
+          throw new Error('Internal error: keyboard texture not initialized');
         }
         return this._keyboardTexture.texture;
 

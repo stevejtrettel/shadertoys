@@ -1,0 +1,169 @@
+/**
+ * Split Layout Styles
+ * Includes code panel, tabs, and Prism.js syntax highlighting theme
+ */
+
+/* ===== Split Layout ===== */
+.layout-split {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  gap: 40px;
+  /* Very generous margins on large screens */
+  padding: 120px 140px;
+}
+
+.layout-split .canvas-container {
+  position: relative;
+  flex: 1;
+  background: #000;
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2), 0 3px 8px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+}
+
+.layout-split .code-panel {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2), 0 3px 8px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+}
+
+/* ===== Code Panel ===== */
+.tab-bar {
+  display: flex;
+  background: #f8f8f8;
+  border-bottom: 1px solid #e0e0e0;
+  padding: 8px 8px 0 8px;
+  gap: 4px;
+}
+
+.tab-button {
+  padding: 8px 16px;
+  background: transparent;
+  border: none;
+  border-radius: 6px 6px 0 0;
+  font-size: 13px;
+  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+  cursor: pointer;
+  transition: background 0.2s;
+  color: #666;
+}
+
+.tab-button:hover {
+  background: #e8e8e8;
+}
+
+.tab-button.active {
+  background: white;
+  color: #000;
+  font-weight: 500;
+}
+
+.copy-button {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 6px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.2s;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.copy-button:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: #333;
+}
+
+.copy-button:active {
+  transform: scale(0.9);
+}
+
+.copy-button.copied {
+  color: #4caf50;
+}
+
+.code-viewer {
+  flex: 1;
+  overflow: auto;
+  position: relative;
+  background: white;
+}
+
+/* Prism.js syntax highlighting */
+.code-viewer pre {
+  margin: 0;
+  padding: 16px;
+  font-size: 13px;
+  line-height: 1.5;
+  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+  background: white;
+  overflow: visible;
+}
+
+.code-viewer code {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+/* Prism theme - simple light theme */
+.token.comment { color: #6a9955; }
+.token.keyword { color: #0000ff; }
+.token.string { color: #a31515; }
+.token.number { color: #098658; }
+.token.operator { color: #000000; }
+.token.function { color: #795e26; }
+.token.class-name { color: #267f99; }
+.token.punctuation { color: #000000; }
+
+/* ===== Responsive adjustments ===== */
+
+/* Progressively shrink margins on smaller screens */
+@media (max-width: 1800px) {
+  .layout-split {
+    padding: 100px 120px;
+  }
+}
+
+@media (max-width: 1600px) {
+  .layout-split {
+    padding: 80px 100px;
+  }
+}
+
+@media (max-width: 1400px) {
+  .layout-split {
+    padding: 60px 80px;
+  }
+}
+
+@media (max-width: 1200px) {
+  .layout-split {
+    padding: 50px 60px;
+  }
+}
+
+@media (max-width: 1000px) {
+  .layout-split {
+    padding: 40px 50px;
+  }
+}
+
+@media (max-width: 800px) {
+  .layout-split {
+    flex-direction: column;
+    padding: 30px;
+    gap: 30px;
+  }
+}

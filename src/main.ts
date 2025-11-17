@@ -9,15 +9,17 @@
  * 3. Changing DEMO_NAME below to load their shader
  */
 
+import './styles/base.css';
+
 import { App } from './app/App';
-import { Layout } from './app/Layout';
+import { createLayout } from './layouts';
 import { loadDemoProject } from './project/loadDemo';
 
 // ===== Configuration =====
 
 // Change this to load different demos!
-// Try: 'simple-gradient', 'ping-pong-test', 'multi-buffer-test', 'demofox-pt2'
-const DEMO_NAME = 'demofox-pt2';
+// Try: 'simple-gradient', 'ping-pong-test', 'multi-buffer-test', 'demofox-pt2', 'keyboard-test'
+const DEMO_NAME = 'keyboard-test';
 
 async function main() {
   try {
@@ -35,9 +37,8 @@ async function main() {
       throw new Error('Container element #app not found');
     }
 
-    // Create layout (async to support Prism.js dynamic import in split mode)
-    const layout = await Layout.create({
-      mode: project.layout,
+    // Create layout
+    const layout = createLayout(project.layout, {
       container: rootContainer,
       project,
     });
@@ -45,15 +46,21 @@ async function main() {
     // Get canvas container from layout
     const canvasContainer = layout.getCanvasContainer();
 
-    // Create and start app
+    // Create app
     const app = new App({
       container: canvasContainer,
       project,
       pixelRatio: window.devicePixelRatio,
     });
 
-    app.start();
-    console.log('App started!');
+    // Only start animation loop if there are no compilation errors
+    // If there are errors, the error overlay is already shown by App constructor
+    if (!app.hasErrors()) {
+      app.start();
+      console.log('App started!');
+    } else {
+      console.warn('App not started due to shader compilation errors');
+    }
 
     // Expose for debugging
     (window as any).app = app;
