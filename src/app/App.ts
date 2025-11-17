@@ -261,7 +261,7 @@ export class App {
   /**
    * Display shader compilation errors in an overlay.
    */
-  private showErrorOverlay(errors: Array<{passName: string; error: string}>): void {
+  private showErrorOverlay(errors: Array<{passName: string; error: string; source: string}>): void {
     // Create overlay if it doesn't exist
     if (!this.errorOverlay) {
       this.errorOverlay = document.createElement('div');
@@ -269,18 +269,23 @@ export class App {
       this.container.appendChild(this.errorOverlay);
     }
 
-    // Parse and format errors for better readability
-    const formattedErrors = errors.map(({passName, error}) => {
+    // Parse and format errors with source context
+    const formattedErrors = errors.map(({passName, error, source}) => {
       // Extract the actual GLSL error from the thrown error message
       const glslError = error.replace('Shader compilation failed:\n', '');
-      return {passName, error: this.parseShaderError(glslError)};
+      return {
+        passName,
+        error: this.parseShaderError(glslError),
+        codeContext: this.extractCodeContext(glslError, source),
+      };
     });
 
     // Build error HTML
-    const errorHTML = formattedErrors.map(({passName, error}) => `
+    const errorHTML = formattedErrors.map(({passName, error, codeContext}) => `
       <div class="error-section">
         <div class="error-pass-name">${passName}</div>
         <pre class="error-content">${this.escapeHTML(error)}</pre>
+        ${codeContext ? `<pre class="error-code-context">${codeContext}</pre>` : ''}
       </div>
     `).join('');
 
@@ -324,6 +329,42 @@ export class App {
       }
       return line;
     }).join('\n');
+  }
+
+  /**
+   * Extract code context around error line (±3 lines).
+   * Returns HTML with the error line highlighted.
+   */
+  private extractCodeContext(error: string, source: string): string | null {
+    // Extract line number from error
+    const match = error.match(/ERROR:\s*\d+:(\d+):/);
+    if (!match) return null;
+
+    const errorLine = parseInt(match[1], 10);
+    const lines = source.split('\n');
+
+    // Extract context (3 lines before and after)
+    const contextRange = 3;
+    const startLine = Math.max(0, errorLine - contextRange - 1);
+    const endLine = Math.min(lines.length, errorLine + contextRange);
+
+    const contextLines = lines.slice(startLine, endLine);
+
+    // Build HTML with line numbers and highlighting
+    const html = contextLines.map((line, idx) => {
+      const lineNum = startLine + idx + 1;
+      const isErrorLine = lineNum === errorLine;
+      const lineNumPadded = String(lineNum).padStart(4, ' ');
+      const escapedLine = this.escapeHTML(line);
+
+      if (isErrorLine) {
+        return `<span class="error-line-highlight">${lineNumPadded} │ ${escapedLine}</span>`;
+      } else {
+        return `<span class="context-line">${lineNumPadded} │ ${escapedLine}</span>`;
+      }
+    }).join('\n');
+
+    return html;
   }
 
   /**

@@ -70,7 +70,7 @@ export class ShadertoyEngine implements ShadertoyEngineInterface {
   private _blackTexture: WebGLTexture | null = null;
 
   // Compilation errors (if any occurred during initialization)
-  private _compilationErrors: Array<{passName: PassName; error: string}> = [];
+  private _compilationErrors: Array<{passName: PassName; error: string; source: string}> = [];
 
   constructor(opts: EngineOptions) {
     this.gl = opts.gl;
@@ -122,7 +122,7 @@ export class ShadertoyEngine implements ShadertoyEngineInterface {
    * Get shader compilation errors (if any occurred during initialization).
    * Returns empty array if all shaders compiled successfully.
    */
-  getCompilationErrors(): Array<{passName: PassName; error: string}> {
+  getCompilationErrors(): Array<{passName: PassName; error: string; source: string}> {
     return this._compilationErrors;
   }
 
@@ -347,10 +347,10 @@ export class ShadertoyEngine implements ShadertoyEngineInterface {
       const projectPass = project.passes[passName];
       if (!projectPass) continue;
 
-      try {
-        // Build fragment shader source
-        const fragmentSource = this.buildFragmentShader(projectPass.glslSource);
+      // Build fragment shader source (outside try so we can access in catch)
+      const fragmentSource = this.buildFragmentShader(projectPass.glslSource);
 
+      try {
         // Compile program
         const program = createProgramFromSources(gl, VERTEX_SHADER_SOURCE, fragmentSource);
 
@@ -390,11 +390,12 @@ export class ShadertoyEngine implements ShadertoyEngineInterface {
 
         this._passes.push(runtimePass);
       } catch (err) {
-        // Store compilation error
+        // Store compilation error with source code for context display
         const errorMessage = err instanceof Error ? err.message : String(err);
         this._compilationErrors.push({
           passName,
           error: errorMessage,
+          source: fragmentSource,
         });
         console.error(`Failed to compile ${passName}:`, errorMessage);
       }
