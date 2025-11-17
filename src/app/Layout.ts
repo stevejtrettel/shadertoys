@@ -25,12 +25,20 @@ export class Layout {
   private canvasContainer!: HTMLElement;
   private codePanel?: HTMLElement;
 
-  constructor(opts: LayoutOptions) {
+  private constructor(opts: LayoutOptions) {
     this.container = opts.container;
     this.mode = opts.mode;
     this.project = opts.project;
+  }
 
-    this.buildLayout();
+  /**
+   * Create and initialize a Layout instance.
+   * Use this instead of constructor to handle async initialization.
+   */
+  static async create(opts: LayoutOptions): Promise<Layout> {
+    const layout = new Layout(opts);
+    await layout.buildLayout();
+    return layout;
   }
 
   /**
@@ -43,14 +51,14 @@ export class Layout {
   /**
    * Build the layout based on mode.
    */
-  private buildLayout(): void {
+  private async buildLayout(): Promise<void> {
     // Clear container
     this.container.innerHTML = '';
 
     if (this.mode === 'shader-only') {
       this.buildShaderOnlyLayout();
     } else {
-      this.buildSplitViewLayout();
+      await this.buildSplitViewLayout();
     }
   }
 
@@ -71,30 +79,31 @@ export class Layout {
 
   /**
    * Mode 2: Split view layout
-   * Code editor on left, shader on right, with tabs for multi-buffer.
+   * Shader on left, code editor on right, with tabs for multi-buffer.
    */
-  private buildSplitViewLayout(): void {
+  private async buildSplitViewLayout(): Promise<void> {
     this.root = document.createElement('div');
     this.root.className = 'layout-split-view';
 
-    // Code panel (left side)
-    this.codePanel = document.createElement('div');
-    this.codePanel.className = 'code-panel';
-    this.buildCodePanel(this.codePanel);
-
-    // Canvas container (right side)
+    // Canvas container (left side)
     this.canvasContainer = document.createElement('div');
     this.canvasContainer.className = 'canvas-container';
 
-    this.root.appendChild(this.codePanel);
+    // Code panel (right side)
+    this.codePanel = document.createElement('div');
+    this.codePanel.className = 'code-panel';
+    await this.buildCodePanel(this.codePanel);
+
     this.root.appendChild(this.canvasContainer);
+    this.root.appendChild(this.codePanel);
     this.container.appendChild(this.root);
   }
 
   /**
    * Build the code panel with tabs for each shader pass.
+   * Uses CodeMirror with C++ syntax highlighting (works well for GLSL).
    */
-  private buildCodePanel(panel: HTMLElement): void {
+  private async buildCodePanel(panel: HTMLElement): Promise<void> {
     // Get all passes
     const passes = Object.entries(this.project.passes).map(([name, pass]) => ({
       name,
@@ -112,9 +121,45 @@ export class Layout {
     const tabBar = document.createElement('div');
     tabBar.className = 'tab-bar';
 
-    // Create code viewer
-    const codeViewer = document.createElement('pre');
+    // Create code viewer container
+    const codeViewer = document.createElement('div');
     codeViewer.className = 'code-viewer';
+
+    // Dynamically import CodeMirror (only loaded in split-view mode!)
+    const { EditorView, basicSetup } = await import('codemirror');
+    const { cpp } = await import('@codemirror/lang-cpp');
+    const { EditorState } = await import('@codemirror/state');
+
+    // Create CodeMirror editor
+    let currentEditor: typeof EditorView.prototype | null = null;
+
+    const showTab = (tabIndex: number) => {
+      const tab = tabs[tabIndex];
+
+      // Destroy existing editor
+      if (currentEditor) {
+        currentEditor.destroy();
+      }
+
+      // Create new editor
+      const state = EditorState.create({
+        doc: tab.source,
+        extensions: [
+          basicSetup,
+          cpp(),
+          EditorView.editable.of(false), // Read-only
+          EditorView.theme({
+            '&': { height: '100%' },
+            '.cm-scroller': { overflow: 'auto' }
+          })
+        ]
+      });
+
+      currentEditor = new EditorView({
+        state,
+        parent: codeViewer
+      });
+    };
 
     // Create tabs
     tabs.forEach((tab, index) => {
@@ -129,19 +174,19 @@ export class Layout {
         tabButton.classList.add('active');
 
         // Update code viewer
-        codeViewer.textContent = tab.source;
+        showTab(index);
       });
 
       tabBar.appendChild(tabButton);
     });
 
-    // Set initial content
-    if (tabs.length > 0) {
-      codeViewer.textContent = tabs[0].source;
-    }
-
     panel.appendChild(tabBar);
     panel.appendChild(codeViewer);
+
+    // Show first tab
+    if (tabs.length > 0) {
+      showTab(0);
+    }
   }
 
   /**

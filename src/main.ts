@@ -40,8 +40,8 @@ async function main() {
       throw new Error('Container element #app not found');
     }
 
-    // Create layout
-    const layout = new Layout({
+    // Create layout (async to support CodeMirror dynamic import)
+    const layout = await Layout.create({
       mode: LAYOUT_MODE,
       container: rootContainer,
       project,

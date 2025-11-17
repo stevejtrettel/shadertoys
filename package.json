@@ -9,9 +9,11 @@
     "preview": "vite preview"
   },
   "devDependencies": {
+    "@codemirror/lang-cpp": "^6.0.3",
+    "@codemirror/state": "^6.5.2",
     "@types/node": "^20.10.0",
+    "codemirror": "^6.0.2",
     "typescript": "^5.3.3",
     "vite": "^5.0.8"
-  },
-  "dependencies": {}
+  }
 }
