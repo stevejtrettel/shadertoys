@@ -122,18 +122,26 @@ export class Layout {
    * Uses Prism.js with C++ syntax highlighting (lightweight, works well for GLSL).
    */
   private async buildCodePanel(panel: HTMLElement): Promise<void> {
-    // Get all passes
-    const passes = Object.entries(this.project.passes).map(([name, pass]) => ({
-      name,
-      source: pass.glslSource,
-    }));
-
-    // Add common code if it exists
+    // Build tabs in order: common, BufferA-D, Image
     const tabs: Array<{ name: string; source: string }> = [];
+
+    // 1. Common first (if exists)
     if (this.project.commonSource) {
       tabs.push({ name: 'common.glsl', source: this.project.commonSource });
     }
-    tabs.push(...passes.map(p => ({ name: `${p.name.toLowerCase()}.glsl`, source: p.source })));
+
+    // 2. Buffers in order (A, B, C, D)
+    const bufferOrder: ('BufferA' | 'BufferB' | 'BufferC' | 'BufferD')[] = ['BufferA', 'BufferB', 'BufferC', 'BufferD'];
+    for (const bufferName of bufferOrder) {
+      const pass = this.project.passes[bufferName];
+      if (pass) {
+        tabs.push({ name: `${bufferName.toLowerCase()}.glsl`, source: pass.glslSource });
+      }
+    }
+
+    // 3. Image last
+    const imagePass = this.project.passes.Image;
+    tabs.push({ name: 'image.glsl', source: imagePass.glslSource });
 
     // Create tab bar
     const tabBar = document.createElement('div');
