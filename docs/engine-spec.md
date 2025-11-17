@@ -318,6 +318,57 @@ If you bind `null`, user code sampling `iChannelX` becomes undefined NAN.
 
 Do not require shaders to define `main()` manually.
 
+### ✔ Shader Preprocessing for Shadertoy Compatibility
+
+**CRITICAL**: The engine MUST preprocess user shader code to enable **direct copy-paste from Shadertoy** without modification.
+
+#### Automatic Cubemap Texture Conversion
+
+Shadertoy shaders often use cubemap-style texture sampling with 3D direction vectors:
+
+```glsl
+vec3 color = texture(iChannel1, rayDir).rgb;  // rayDir is vec3
+```
+
+Since we only support `sampler2D` (not `samplerCube`), the engine MUST automatically detect and convert these calls to equirectangular sampling.
+
+**Preprocessing Algorithm:**
+
+1. **Inject helper function** at the top of every fragment shader (before common code):
+
+```glsl
+const float ST_PI = 3.14159265359;
+const float ST_TWOPI = 6.28318530718;
+vec2 _st_dirToEquirect(vec3 dir) {
+  float phi = atan(dir.z, dir.x);
+  float theta = asin(dir.y);
+  return vec2(phi / ST_TWOPI + 0.5, theta / ST_PI + 0.5);
+}
+```
+
+2. **Detect cubemap-style texture calls** using heuristics:
+   - Match: `texture(iChannel[0-3], <coord>)`
+   - If `<coord>` appears to be 2D UV (contains `fragCoord`, `/`, `.xy`, `.st`, or `vec2(`), leave unchanged
+   - Otherwise, assume 3D direction vector and wrap with `_st_dirToEquirect(...)`
+
+3. **Transform example:**
+
+```glsl
+// Original shader (copied from Shadertoy):
+ret += texture(iChannel1, rayDir).rgb;
+
+// Automatically becomes:
+ret += texture(iChannel1, _st_dirToEquirect(rayDir)).rgb;
+```
+
+**Why this matters:**
+- Enables **zero-modification copy-paste** from Shadertoy
+- Students can use environment maps and path tracers directly
+- Shaders remain portable back to Shadertoy (just bind cubemaps there)
+- Source `.glsl` files stay pure Shadertoy code
+
+**Implementation note**: Preprocessing happens during shader compilation, NOT to source files. The `.glsl` files in the project remain unchanged and fully Shadertoy-compatible.
+
 ### ✔ Float FBOs
 
 Integer framebuffers break PDE scripts.
