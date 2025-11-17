@@ -10,7 +10,7 @@
  */
 
 import { App } from './app/App';
-import { Layout, LayoutMode } from './app/Layout';
+import { Layout } from './app/Layout';
 import { loadDemoProject } from './project/loadDemo';
 
 // ===== Configuration =====
@@ -18,11 +18,6 @@ import { loadDemoProject } from './project/loadDemo';
 // Change this to load different demos!
 // Try: 'simple-gradient', 'ping-pong-test', 'multi-buffer-test', 'demofox-pt2'
 const DEMO_NAME = 'demofox-pt2';
-
-// Choose layout mode
-// 'shader-only': Centered canvas with styling (default)
-// 'split-view': Code editor + shader side by side
-const LAYOUT_MODE: LayoutMode = 'shader-only';
 
 async function main() {
   try {
@@ -40,9 +35,9 @@ async function main() {
       throw new Error('Container element #app not found');
     }
 
-    // Create layout (async to support CodeMirror dynamic import)
+    // Create layout (async to support Prism.js dynamic import in split mode)
     const layout = await Layout.create({
-      mode: LAYOUT_MODE,
+      mode: project.layout,
       container: rootContainer,
       project,
     });

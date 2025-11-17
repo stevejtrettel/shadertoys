@@ -66,6 +66,7 @@ async function loadSinglePass(
       author: null,
       description: null,
     },
+    layout: 'centered', // Default layout for single-pass demos
     commonSource: null,
     passes: {
       Image: {
@@ -200,10 +201,12 @@ async function loadWithConfig(
   const title = config.meta?.title || demoName.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
   const author = config.meta?.author || null;
   const description = config.meta?.description || null;
+  const layout = config.layout || 'centered'; // Default to centered if not specified
 
   return {
     root: `/demos/${demoName}`,
     meta: { title, author, description },
+    layout,
     commonSource,
     passes,
     textures,

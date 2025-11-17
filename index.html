@@ -31,8 +31,20 @@
       display: block;
     }
 
-    /* ===== Shader-Only Layout ===== */
-    .layout-shader-only {
+    /* ===== Fullscreen Layout ===== */
+    .layout-fullscreen {
+      width: 100%;
+      height: 100%;
+    }
+
+    .layout-fullscreen .canvas-container {
+      width: 100%;
+      height: 100%;
+      background: #000;
+    }
+
+    /* ===== Centered Layout ===== */
+    .layout-centered {
       width: 100%;
       height: 100%;
       display: flex;
@@ -41,7 +53,7 @@
       padding: 60px;
     }
 
-    .layout-shader-only .canvas-container {
+    .layout-centered .canvas-container {
       width: 800px;
       height: 600px;
       background: #000;
@@ -50,8 +62,8 @@
       overflow: hidden;
     }
 
-    /* ===== Split View Layout ===== */
-    .layout-split-view {
+    /* ===== Split Layout ===== */
+    .layout-split {
       width: 100%;
       height: 100%;
       display: flex;
@@ -59,7 +71,7 @@
       padding: 80px 72px;  /* More generous: ~1 inch on sides, extra on top/bottom */
     }
 
-    .layout-split-view .canvas-container {
+    .layout-split .canvas-container {
       flex: 1;
       background: #000;
       border-radius: 8px;
@@ -67,7 +79,7 @@
       overflow: hidden;
     }
 
-    .layout-split-view .code-panel {
+    .layout-split .code-panel {
       flex: 1;
       display: flex;
       flex-direction: column;
@@ -143,18 +155,18 @@
 
     /* ===== Responsive adjustments ===== */
     @media (max-width: 900px) {
-      .layout-shader-only .canvas-container {
+      .layout-centered .canvas-container {
         width: 100%;
         height: 100%;
         border-radius: 0;
         box-shadow: none;
       }
 
-      .layout-shader-only {
+      .layout-centered {
         padding: 0;
       }
 
-      .layout-split-view {
+      .layout-split {
         flex-direction: column;
       }
     }

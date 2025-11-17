@@ -1,13 +1,14 @@
 /**
- * Layout - Simple layout system with two modes
+ * Layout - Simple layout system with three modes
  *
- * Mode 1: Shader-only (centered canvas with styling)
- * Mode 2: Split view (code + shader side by side)
+ * Mode 1: Fullscreen - Canvas fills entire viewport, no styling
+ * Mode 2: Centered - Centered canvas with rounded corners and drop shadow (default)
+ * Mode 3: Split - Shader on left, code viewer on right with syntax highlighting
  */
 
 import { ShadertoyProject } from '../project/types';
 
-export type LayoutMode = 'shader-only' | 'split-view';
+export type LayoutMode = 'fullscreen' | 'centered' | 'split';
 
 export interface LayoutOptions {
   mode: LayoutMode;
@@ -55,20 +56,22 @@ export class Layout {
     // Clear container
     this.container.innerHTML = '';
 
-    if (this.mode === 'shader-only') {
-      this.buildShaderOnlyLayout();
-    } else {
-      await this.buildSplitViewLayout();
+    if (this.mode === 'fullscreen') {
+      this.buildFullscreenLayout();
+    } else if (this.mode === 'centered') {
+      this.buildCenteredLayout();
+    } else if (this.mode === 'split') {
+      await this.buildSplitLayout();
     }
   }
 
   /**
-   * Mode 1: Shader-only layout
-   * Centered canvas with rounded corners and drop shadow.
+   * Mode 1: Fullscreen layout
+   * Canvas fills entire viewport, no padding or styling.
    */
-  private buildShaderOnlyLayout(): void {
+  private buildFullscreenLayout(): void {
     this.root = document.createElement('div');
-    this.root.className = 'layout-shader-only';
+    this.root.className = 'layout-fullscreen';
 
     this.canvasContainer = document.createElement('div');
     this.canvasContainer.className = 'canvas-container';
@@ -78,12 +81,27 @@ export class Layout {
   }
 
   /**
-   * Mode 2: Split view layout
-   * Shader on left, code editor on right, with tabs for multi-buffer.
+   * Mode 2: Centered layout
+   * Centered canvas with rounded corners and drop shadow.
    */
-  private async buildSplitViewLayout(): Promise<void> {
+  private buildCenteredLayout(): void {
     this.root = document.createElement('div');
-    this.root.className = 'layout-split-view';
+    this.root.className = 'layout-centered';
+
+    this.canvasContainer = document.createElement('div');
+    this.canvasContainer.className = 'canvas-container';
+
+    this.root.appendChild(this.canvasContainer);
+    this.container.appendChild(this.root);
+  }
+
+  /**
+   * Mode 3: Split layout
+   * Shader on left, code viewer on right, with tabs for multi-buffer.
+   */
+  private async buildSplitLayout(): Promise<void> {
+    this.root = document.createElement('div');
+    this.root.className = 'layout-split';
 
     // Canvas container (left side)
     this.canvasContainer = document.createElement('div');
