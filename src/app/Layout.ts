@@ -101,7 +101,7 @@ export class Layout {
 
   /**
    * Build the code panel with tabs for each shader pass.
-   * Uses CodeMirror with C++ syntax highlighting (works well for GLSL).
+   * Uses Prism.js with C++ syntax highlighting (lightweight, works well for GLSL).
    */
   private async buildCodePanel(panel: HTMLElement): Promise<void> {
     // Get all passes
@@ -125,40 +125,29 @@ export class Layout {
     const codeViewer = document.createElement('div');
     codeViewer.className = 'code-viewer';
 
-    // Dynamically import CodeMirror (only loaded in split-view mode!)
-    const { EditorView, basicSetup } = await import('codemirror');
-    const { cpp } = await import('@codemirror/lang-cpp');
-    const { EditorState } = await import('@codemirror/state');
-
-    // Create CodeMirror editor
-    let currentEditor: typeof EditorView.prototype | null = null;
+    // Dynamically import Prism.js (only loaded in split-view mode!)
+    const Prism = await import('prismjs');
+    // @ts-ignore - Language components don't have type definitions
+    await import('prismjs/components/prism-c');
+    // @ts-ignore - Language components don't have type definitions
+    await import('prismjs/components/prism-cpp');
 
     const showTab = (tabIndex: number) => {
       const tab = tabs[tabIndex];
 
-      // Destroy existing editor
-      if (currentEditor) {
-        currentEditor.destroy();
-      }
+      // Create pre/code elements for Prism
+      const pre = document.createElement('pre');
+      const code = document.createElement('code');
+      code.className = 'language-cpp';
+      code.textContent = tab.source;
+      pre.appendChild(code);
 
-      // Create new editor
-      const state = EditorState.create({
-        doc: tab.source,
-        extensions: [
-          basicSetup,
-          cpp(),
-          EditorView.editable.of(false), // Read-only
-          EditorView.theme({
-            '&': { height: '100%' },
-            '.cm-scroller': { overflow: 'auto' }
-          })
-        ]
-      });
+      // Clear and append
+      codeViewer.innerHTML = '';
+      codeViewer.appendChild(pre);
 
-      currentEditor = new EditorView({
-        state,
-        parent: codeViewer
-      });
+      // Highlight with Prism
+      Prism.highlightElement(code);
     };
 
     // Create tabs

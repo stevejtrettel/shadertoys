@@ -110,24 +110,36 @@
 
     .code-viewer {
       flex: 1;
-      overflow: hidden;
-      position: relative;
-    }
-
-    /* CodeMirror overrides */
-    .code-viewer .cm-editor {
-      height: 100%;
-      font-size: 13px;
-      font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
-    }
-
-    .code-viewer .cm-scroller {
       overflow: auto;
+      position: relative;
+      background: white;
     }
 
-    .code-viewer .cm-content {
+    /* Prism.js syntax highlighting */
+    .code-viewer pre {
+      margin: 0;
       padding: 16px;
+      font-size: 13px;
+      line-height: 1.5;
+      font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+      background: white;
+      overflow: visible;
     }
+
+    .code-viewer code {
+      font-family: inherit;
+      font-size: inherit;
+    }
+
+    /* Prism theme - simple light theme */
+    .token.comment { color: #6a9955; }
+    .token.keyword { color: #0000ff; }
+    .token.string { color: #a31515; }
+    .token.number { color: #098658; }
+    .token.operator { color: #000000; }
+    .token.function { color: #795e26; }
+    .token.class-name { color: #267f99; }
+    .token.punctuation { color: #000000; }
 
     /* ===== Responsive adjustments ===== */
     @media (max-width: 900px) {
