@@ -359,6 +359,7 @@ export class App {
     this.startTime = performance.now() / 1000;
     this.frameCount = 0;
     this.lastFpsUpdate = 0;
+    this.engine.reset();
   }
 
   /**

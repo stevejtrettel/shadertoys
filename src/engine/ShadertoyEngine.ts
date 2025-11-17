@@ -219,6 +219,23 @@ export class ShadertoyEngine implements ShadertoyEngineInterface {
   }
 
   /**
+   * Reset frame counter and clear all render targets.
+   * Used for playback controls to restart shader from frame 0.
+   */
+  reset(): void {
+    this._frame = 0;
+
+    // Clear all pass textures (important for accumulation shaders)
+    const gl = this.gl;
+    for (const pass of this._passes) {
+      gl.bindFramebuffer(gl.FRAMEBUFFER, pass.framebuffer);
+      gl.clearColor(0, 0, 0, 0);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+    }
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  }
+
+  /**
    * Delete all GL resources.
    */
   dispose(): void {

@@ -98,7 +98,7 @@ export interface ShadertoyConfig {
   /**
    * Optional controls for playback.
    * If true, shows play/pause and reset buttons with keyboard shortcuts.
-   * If omitted, defaults to true.
+   * If omitted, defaults to false (opt-in).
    */
   controls?: boolean;
 
