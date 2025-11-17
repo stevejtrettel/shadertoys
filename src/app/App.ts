@@ -100,6 +100,14 @@ export class App {
   // ===========================================================================
 
   /**
+   * Check if there were any shader compilation errors.
+   * Returns true if the engine has errors and should not be started.
+   */
+  hasErrors(): boolean {
+    return this.engine.hasErrors();
+  }
+
+  /**
    * Start the animation loop.
    */
   start(): void {

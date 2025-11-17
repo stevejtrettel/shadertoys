@@ -45,15 +45,21 @@ async function main() {
     // Get canvas container from layout
     const canvasContainer = layout.getCanvasContainer();
 
-    // Create and start app
+    // Create app
     const app = new App({
       container: canvasContainer,
       project,
       pixelRatio: window.devicePixelRatio,
     });
 
-    app.start();
-    console.log('App started!');
+    // Only start animation loop if there are no compilation errors
+    // If there are errors, the error overlay is already shown by App constructor
+    if (!app.hasErrors()) {
+      app.start();
+      console.log('App started!');
+    } else {
+      console.warn('App not started due to shader compilation errors');
+    }
 
     // Expose for debugging
     (window as any).app = app;
