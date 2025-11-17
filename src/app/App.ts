@@ -9,6 +9,8 @@
  *  - Present Image pass output to screen
  */
 
+import './app.css';
+
 import { ShadertoyEngine } from '../engine/ShadertoyEngine';
 import { AppOptions, MouseState } from './types';
 

@@ -5,6 +5,8 @@
  * Default layout mode for a polished presentation.
  */
 
+import './centered.css';
+
 import { BaseLayout, LayoutOptions } from './types';
 
 export class CenteredLayout implements BaseLayout {

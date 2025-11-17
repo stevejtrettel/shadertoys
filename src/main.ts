@@ -9,6 +9,8 @@
  * 3. Changing DEMO_NAME below to load their shader
  */
 
+import './styles/base.css';
+
 import { App } from './app/App';
 import { createLayout } from './layouts';
 import { loadDemoProject } from './project/loadDemo';

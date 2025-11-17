@@ -5,6 +5,8 @@
  * Used for immersive shader experiences.
  */
 
+import './fullscreen.css';
+
 import { BaseLayout, LayoutOptions } from './types';
 
 export class FullscreenLayout implements BaseLayout {
