@@ -151,10 +151,15 @@ export class Layout {
     const codeViewer = document.createElement('div');
     codeViewer.className = 'code-viewer';
 
-    // Create copy button
+    // Create copy button with clipboard icon
     const copyButton = document.createElement('button');
     copyButton.className = 'copy-button';
-    copyButton.textContent = 'Copy';
+    copyButton.innerHTML = `
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+        <path d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V2z" opacity="0.4"/>
+        <path d="M2 5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H2zm0 1h7a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z"/>
+      </svg>
+    `;
     copyButton.title = 'Copy code to clipboard';
 
     // Track current source for copying
@@ -186,24 +191,27 @@ export class Layout {
       Prism.highlightElement(code);
     };
 
+    // Store original icon HTML
+    const clipboardIcon = copyButton.innerHTML;
+    const checkIcon = `
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+        <path d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"/>
+      </svg>
+    `;
+
     // Copy button handler
     copyButton.addEventListener('click', async () => {
       try {
         await navigator.clipboard.writeText(currentSource);
-        // Visual feedback
-        const originalText = copyButton.textContent;
-        copyButton.textContent = 'Copied!';
+        // Visual feedback - show checkmark
+        copyButton.innerHTML = checkIcon;
         copyButton.classList.add('copied');
         setTimeout(() => {
-          copyButton.textContent = originalText;
+          copyButton.innerHTML = clipboardIcon;
           copyButton.classList.remove('copied');
         }, 1500);
       } catch (err) {
         console.error('Failed to copy:', err);
-        copyButton.textContent = 'Failed';
-        setTimeout(() => {
-          copyButton.textContent = 'Copy';
-        }, 1500);
       }
     });
 
