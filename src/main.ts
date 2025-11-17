@@ -16,21 +16,15 @@ import './styles/base.css';
 
 import { App } from './app/App';
 import { createLayout } from './layouts';
-import { loadDemoProject } from './project/loadDemo';
-
-// ===== Configuration =====
-
-// Demo name can be set via:
-// 1. Environment variable: VITE_DEMO=xxx npm run dev:demo
-// 2. Falls back to this default for regular 'npm run dev'
-const DEMO_NAME = import.meta.env.VITE_DEMO || 'keyboard-test';
+import { loadDemoProject, DEMO_NAME } from './project/generatedLoader';
 
 async function main() {
   try {
     console.log(`Loading demo: ${DEMO_NAME}`);
 
     // Load the demo project from demos/ folder
-    const project = await loadDemoProject(DEMO_NAME);
+    // The demo is determined by the generated loader (created by dev-demo.cjs or build-demo.cjs)
+    const project = await loadDemoProject();
 
     console.log(`Loaded project: ${project.meta.title}`);
     console.log(`Passes:`, Object.keys(project.passes).filter(k => project.passes[k as keyof typeof project.passes]));
