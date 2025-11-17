@@ -69,6 +69,9 @@ export class ShadertoyEngine implements ShadertoyEngineInterface {
 
   private _blackTexture: WebGLTexture | null = null;
 
+  // Compilation errors (if any occurred during initialization)
+  private _compilationErrors: Array<{passName: PassName; error: string}> = [];
+
   constructor(opts: EngineOptions) {
     this.gl = opts.gl;
     this.project = opts.project;
@@ -113,6 +116,21 @@ export class ShadertoyEngine implements ShadertoyEngineInterface {
       width: this._width,
       height: this._height,
     };
+  }
+
+  /**
+   * Get shader compilation errors (if any occurred during initialization).
+   * Returns empty array if all shaders compiled successfully.
+   */
+  getCompilationErrors(): Array<{passName: PassName; error: string}> {
+    return this._compilationErrors;
+  }
+
+  /**
+   * Check if there were any compilation errors.
+   */
+  hasErrors(): boolean {
+    return this._compilationErrors.length > 0;
   }
 
   /**
@@ -329,47 +347,57 @@ export class ShadertoyEngine implements ShadertoyEngineInterface {
       const projectPass = project.passes[passName];
       if (!projectPass) continue;
 
-      // Build fragment shader source
-      const fragmentSource = this.buildFragmentShader(projectPass.glslSource);
+      try {
+        // Build fragment shader source
+        const fragmentSource = this.buildFragmentShader(projectPass.glslSource);
 
-      // Compile program
-      const program = createProgramFromSources(gl, VERTEX_SHADER_SOURCE, fragmentSource);
+        // Compile program
+        const program = createProgramFromSources(gl, VERTEX_SHADER_SOURCE, fragmentSource);
 
-      // Cache uniform locations
-      const uniforms: PassUniformLocations = {
-        program,
-        iResolution: gl.getUniformLocation(program, 'iResolution'),
-        iTime: gl.getUniformLocation(program, 'iTime'),
-        iTimeDelta: gl.getUniformLocation(program, 'iTimeDelta'),
-        iFrame: gl.getUniformLocation(program, 'iFrame'),
-        iMouse: gl.getUniformLocation(program, 'iMouse'),
-        iChannel: [
-          gl.getUniformLocation(program, 'iChannel0'),
-          gl.getUniformLocation(program, 'iChannel1'),
-          gl.getUniformLocation(program, 'iChannel2'),
-          gl.getUniformLocation(program, 'iChannel3'),
-        ],
-      };
+        // Cache uniform locations
+        const uniforms: PassUniformLocations = {
+          program,
+          iResolution: gl.getUniformLocation(program, 'iResolution'),
+          iTime: gl.getUniformLocation(program, 'iTime'),
+          iTimeDelta: gl.getUniformLocation(program, 'iTimeDelta'),
+          iFrame: gl.getUniformLocation(program, 'iFrame'),
+          iMouse: gl.getUniformLocation(program, 'iMouse'),
+          iChannel: [
+            gl.getUniformLocation(program, 'iChannel0'),
+            gl.getUniformLocation(program, 'iChannel1'),
+            gl.getUniformLocation(program, 'iChannel2'),
+            gl.getUniformLocation(program, 'iChannel3'),
+          ],
+        };
 
-      // Create ping-pong textures (MUST allocate both for all passes)
-      const currentTexture = createRenderTargetTexture(gl, this._width, this._height);
-      const previousTexture = createRenderTargetTexture(gl, this._width, this._height);
+        // Create ping-pong textures (MUST allocate both for all passes)
+        const currentTexture = createRenderTargetTexture(gl, this._width, this._height);
+        const previousTexture = createRenderTargetTexture(gl, this._width, this._height);
 
-      // Create framebuffer (attached to current texture)
-      const framebuffer = createFramebufferWithColorAttachment(gl, currentTexture);
+        // Create framebuffer (attached to current texture)
+        const framebuffer = createFramebufferWithColorAttachment(gl, currentTexture);
 
-      // Build RuntimePass
-      const runtimePass: RuntimePass = {
-        name: passName,
-        projectChannels: projectPass.channels,
-        vao: sharedVAO,
-        uniforms,
-        framebuffer,
-        currentTexture,
-        previousTexture,
-      };
+        // Build RuntimePass
+        const runtimePass: RuntimePass = {
+          name: passName,
+          projectChannels: projectPass.channels,
+          vao: sharedVAO,
+          uniforms,
+          framebuffer,
+          currentTexture,
+          previousTexture,
+        };
 
-      this._passes.push(runtimePass);
+        this._passes.push(runtimePass);
+      } catch (err) {
+        // Store compilation error
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        this._compilationErrors.push({
+          passName,
+          error: errorMessage,
+        });
+        console.error(`Failed to compile ${passName}:`, errorMessage);
+      }
     }
   }
 

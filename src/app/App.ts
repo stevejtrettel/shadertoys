@@ -31,6 +31,9 @@ export class App {
   private lastFpsUpdate: number = 0;
   private currentFps: number = 0;
 
+  // Error overlay
+  private errorOverlay: HTMLElement | null = null;
+
   // Resize observer
   private resizeObserver: ResizeObserver;
 
@@ -75,6 +78,11 @@ export class App {
       gl: this.gl,
       project: opts.project,
     });
+
+    // Check for compilation errors and show overlay if needed
+    if (this.engine.hasErrors()) {
+      this.showErrorOverlay(this.engine.getCompilationErrors());
+    }
 
     // Set up resize observer
     this.resizeObserver = new ResizeObserver(() => {
@@ -244,5 +252,96 @@ export class App {
 
     this.canvas.addEventListener('mousemove', updateMouse);
     this.canvas.addEventListener('click', handleClick);
+  }
+
+  // ===========================================================================
+  // Error Handling
+  // ===========================================================================
+
+  /**
+   * Display shader compilation errors in an overlay.
+   */
+  private showErrorOverlay(errors: Array<{passName: string; error: string}>): void {
+    // Create overlay if it doesn't exist
+    if (!this.errorOverlay) {
+      this.errorOverlay = document.createElement('div');
+      this.errorOverlay.className = 'shader-error-overlay';
+      this.container.appendChild(this.errorOverlay);
+    }
+
+    // Parse and format errors for better readability
+    const formattedErrors = errors.map(({passName, error}) => {
+      // Extract the actual GLSL error from the thrown error message
+      const glslError = error.replace('Shader compilation failed:\n', '');
+      return {passName, error: this.parseShaderError(glslError)};
+    });
+
+    // Build error HTML
+    const errorHTML = formattedErrors.map(({passName, error}) => `
+      <div class="error-section">
+        <div class="error-pass-name">${passName}</div>
+        <pre class="error-content">${this.escapeHTML(error)}</pre>
+      </div>
+    `).join('');
+
+    this.errorOverlay.innerHTML = `
+      <div class="error-overlay-content">
+        <div class="error-header">
+          <span class="error-title">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" style="vertical-align: text-bottom;">
+              <path d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0zM3.5 7.5a.75.75 0 0 0 0 1.5h9a.75.75 0 0 0 0-1.5h-9z"/>
+            </svg>
+            Shader Compilation Failed
+          </span>
+          <button class="error-close" title="Dismiss">×</button>
+        </div>
+        <div class="error-body">
+          ${errorHTML}
+        </div>
+      </div>
+    `;
+
+    // Add close button handler
+    const closeButton = this.errorOverlay.querySelector('.error-close');
+    if (closeButton) {
+      closeButton.addEventListener('click', () => this.hideErrorOverlay());
+    }
+  }
+
+  /**
+   * Parse and improve WebGL shader error messages.
+   */
+  private parseShaderError(error: string): string {
+    // WebGL errors typically look like: "ERROR: 0:45: 'texure' : no matching overloaded function found"
+    // Let's make them more readable by highlighting line numbers and adding context
+
+    return error.split('\n').map(line => {
+      // Match pattern: ERROR: 0:lineNumber: message
+      const match = line.match(/^ERROR:\s*(\d+):(\d+):\s*(.+)$/);
+      if (match) {
+        const [, , lineNum, message] = match;
+        return `Line ${lineNum}: ${message}`;
+      }
+      return line;
+    }).join('\n');
+  }
+
+  /**
+   * Escape HTML to prevent XSS.
+   */
+  private escapeHTML(text: string): string {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  /**
+   * Hide the error overlay.
+   */
+  private hideErrorOverlay(): void {
+    if (this.errorOverlay) {
+      this.errorOverlay.remove();
+      this.errorOverlay = null;
+    }
   }
 }
