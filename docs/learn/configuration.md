@@ -420,13 +420,13 @@ These work even if you hide the control buttons!
 
 ## Loading Your Shader
 
-Edit `src/main.ts`:
+Use the npm script with your folder name:
 
-```typescript
-const DEMO_NAME = 'my-shader';  // Your folder name
+```bash
+npm run dev:demo my-shader
 ```
 
-Then refresh your browser. That's it!
+That's it!
 
 ## Troubleshooting
 

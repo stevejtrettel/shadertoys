@@ -23,14 +23,16 @@ A lightweight, Shadertoy-compatible GLSL shader playground built for teaching an
 # Install dependencies
 npm install
 
-# Start development server
-npm run dev
+# Run a specific demo in development
+npm run dev:demo keyboard-test
 
-# Build for production
-npm run build
+# Build a specific demo for production
+npm run build:demo simple-gradient
 ```
 
-Open your browser to `http://localhost:5173` and you'll see the running demo!
+Open your browser to `http://localhost:3000` and you'll see the running demo!
+
+**Available demos**: `simple-gradient`, `ping-pong-test`, `multi-buffer-test`, `demofox-pt2`, `keyboard-test`
 
 ## 📚 Documentation
 
@@ -60,12 +62,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 }
 ```
 
-3. Change `src/main.ts`:
-```typescript
-const DEMO_NAME = 'my-shader';
+3. Run it:
+```bash
+npm run dev:demo my-shader
 ```
 
-4. Refresh your browser - done! 🎉
+Done! 🎉
 
 ### Multi-Pass Shader with Buffers
 
@@ -125,7 +127,7 @@ demos/               # Example shaders
 - **demofox-pt2** - Path tracing accumulation shader
 - **keyboard-test** - Interactive keyboard input
 
-Change the demo in `src/main.ts` to try different examples.
+Try different demos with `npm run dev:demo <demo-name>`.
 
 ## 🛠️ Architecture
 

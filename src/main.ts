@@ -3,30 +3,28 @@
  *
  * Loads a demo project from the demos/ folder and starts the App.
  *
- * Students can create their own demos by:
- * 1. Creating a new folder in demos/ (e.g., demos/my-shader/)
- * 2. Adding an image.glsl file with their shader code
- * 3. Changing DEMO_NAME below to load their shader
+ * To run a specific demo:
+ *   npm run dev:demo <demo-name>
+ *   npm run build:demo <demo-name>
+ *
+ * Examples:
+ *   npm run dev:demo keyboard-test
+ *   npm run build:demo simple-gradient
  */
 
 import './styles/base.css';
 
 import { App } from './app/App';
 import { createLayout } from './layouts';
-import { loadDemoProject } from './project/loadDemo';
-
-// ===== Configuration =====
-
-// Change this to load different demos!
-// Try: 'simple-gradient', 'ping-pong-test', 'multi-buffer-test', 'demofox-pt2', 'keyboard-test'
-const DEMO_NAME = 'keyboard-test';
+import { loadDemoProject, DEMO_NAME } from './project/generatedLoader';
 
 async function main() {
   try {
     console.log(`Loading demo: ${DEMO_NAME}`);
 
     // Load the demo project from demos/ folder
-    const project = await loadDemoProject(DEMO_NAME);
+    // The demo is determined by the generated loader (created by dev-demo.cjs or build-demo.cjs)
+    const project = await loadDemoProject();
 
     console.log(`Loaded project: ${project.meta.title}`);
     console.log(`Passes:`, Object.keys(project.passes).filter(k => project.passes[k as keyof typeof project.passes]));

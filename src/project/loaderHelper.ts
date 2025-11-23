@@ -1,52 +1,26 @@
 /**
- * Browser-compatible project loader using Vite's import.meta.glob
- *
- * This works at build time - Vite statically analyzes and bundles the files.
- * Much better than trying to use Node's fs module in the browser!
+ * Helper functions for loading demo files
+ * Called by the generated loader
  */
 
 import { ShadertoyProject, ShadertoyConfig } from './types';
 
-/**
- * Load a Shadertoy project from the demos/ folder.
- *
- * @param demoName - Name of the folder in demos/ (e.g., "simple-gradient")
- * @returns ShadertoyProject ready for the engine
- */
-export async function loadDemoProject(demoName: string): Promise<ShadertoyProject> {
-  // Use Vite's import.meta.glob to get all files in demos/
-  // This is evaluated at build time, not runtime!
-  const glslFiles = import.meta.glob<string>('/demos/**/*.glsl', {
-    query: '?raw',
-    import: 'default',
-  });
-
-  const jsonFiles = import.meta.glob<ShadertoyConfig>('/demos/**/*.json', {
-    import: 'default',
-  });
-
-  // Import image files as URLs
-  const imageFiles = import.meta.glob<string>('/demos/**/*.{jpg,jpeg,png,gif,webp,bmp}', {
-    query: '?url',
-    import: 'default',
-  });
-
-  // Check if this demo has a config file
+export async function loadDemo(
+  demoName: string,
+  glslFiles: Record<string, () => Promise<string>>,
+  jsonFiles: Record<string, () => Promise<ShadertoyConfig>>,
+  imageFiles: Record<string, () => Promise<string>>
+): Promise<ShadertoyProject> {
   const configPath = `/demos/${demoName}/shadertoy.config.json`;
   const hasConfig = configPath in jsonFiles;
 
   if (hasConfig) {
-    // Multi-pass project with config
-    return await loadWithConfig(demoName, jsonFiles, glslFiles, imageFiles);
+    return loadWithConfig(demoName, jsonFiles, glslFiles, imageFiles);
   } else {
-    // Simple single-pass project
-    return await loadSinglePass(demoName, glslFiles);
+    return loadSinglePass(demoName, glslFiles);
   }
 }
 
-/**
- * Load a single-pass demo (just image.glsl, no config).
- */
 async function loadSinglePass(
   demoName: string,
   glslFiles: Record<string, () => Promise<string>>
@@ -66,8 +40,8 @@ async function loadSinglePass(
       author: null,
       description: null,
     },
-    layout: 'centered', // Default layout for single-pass demos
-    controls: false, // Default to not showing controls (opt-in)
+    layout: 'centered',
+    controls: false,
     commonSource: null,
     passes: {
       Image: {
@@ -85,9 +59,6 @@ async function loadSinglePass(
   };
 }
 
-/**
- * Load a multi-pass demo with shadertoy.config.json.
- */
 async function loadWithConfig(
   demoName: string,
   jsonFiles: Record<string, () => Promise<ShadertoyConfig>>,
@@ -97,7 +68,6 @@ async function loadWithConfig(
   const configPath = `/demos/${demoName}/shadertoy.config.json`;
   const config = await jsonFiles[configPath]();
 
-  // Load common.glsl if specified or if it exists
   let commonSource: string | null = null;
   if (config.common) {
     const commonPath = `/demos/${demoName}/${config.common}`;
@@ -111,7 +81,6 @@ async function loadWithConfig(
     }
   }
 
-  // Collect all texture references from channels
   const texturePathsSet = new Set<string>();
   const passOrder = ['Image', 'BufferA', 'BufferB', 'BufferC', 'BufferD'] as const;
 
@@ -127,12 +96,10 @@ async function loadWithConfig(
     }
   }
 
-  // Load textures
   const textures: any[] = [];
   const texturePathToName = new Map<string, string>();
 
   for (const texturePath of texturePathsSet) {
-    // Resolve path relative to demo folder
     const fullPath = `/demos/${demoName}/${texturePath.replace(/^\.\//, '')}`;
 
     if (!(fullPath in imageFiles)) {
@@ -140,13 +107,11 @@ async function loadWithConfig(
     }
 
     const imageUrl = await imageFiles[fullPath]();
-
-    // Generate texture name from filename
     const textureName = texturePath.split('/').pop()!.replace(/\.[^.]+$/, '');
 
     textures.push({
       name: textureName,
-      source: imageUrl,  // Vite asset URL
+      source: imageUrl,
       filter: 'linear' as const,
       wrap: 'repeat' as const,
     });
@@ -154,14 +119,12 @@ async function loadWithConfig(
     texturePathToName.set(texturePath, textureName);
   }
 
-  // Load passes
   const passes: any = {};
 
   for (const passName of passOrder) {
     const passConfig = config.passes[passName];
     if (!passConfig) continue;
 
-    // Determine source file
     const defaultNames: Record<string, string> = {
       Image: 'image.glsl',
       BufferA: 'bufferA.glsl',
@@ -179,7 +142,6 @@ async function loadWithConfig(
 
     const glslSource = await glslFiles[sourcePath]();
 
-    // Normalize channels
     const channels = [
       normalizeChannel(passConfig.channels?.iChannel0, texturePathToName),
       normalizeChannel(passConfig.channels?.iChannel1, texturePathToName),
@@ -198,12 +160,11 @@ async function loadWithConfig(
     throw new Error(`Demo '${demoName}' must have an Image pass`);
   }
 
-  // Build metadata
   const title = config.meta?.title || demoName.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
   const author = config.meta?.author || null;
   const description = config.meta?.description || null;
-  const layout = config.layout || 'centered'; // Default to centered if not specified
-  const controls = config.controls ?? false; // Default to false (opt-in)
+  const layout = config.layout || 'centered';
+  const controls = config.controls ?? false;
 
   return {
     root: `/demos/${demoName}`,
@@ -216,9 +177,6 @@ async function loadWithConfig(
   };
 }
 
-/**
- * Normalize a channel from JSON config to ChannelSource.
- */
 function normalizeChannel(channelJson: any, texturePathToName?: Map<string, string>): any {
   if (!channelJson) {
     return { kind: 'none' };

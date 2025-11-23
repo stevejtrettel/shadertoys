@@ -486,14 +486,14 @@ Error: EXT_color_buffer_float not supported
 Error: Demo 'my-shader' not found
 ```
 
-**Cause**: Folder doesn't exist or DEMO_NAME is wrong.
+**Cause**: Folder doesn't exist or demo name is wrong.
 
 **Solution**:
 1. Check folder exists: `demos/my-shader/`
 2. Check spelling matches exactly
-3. Check `src/main.ts` has correct name:
-```typescript
-const DEMO_NAME = 'my-shader';  // Must match folder name
+3. Check npm command has correct name:
+```bash
+npm run dev:demo my-shader  # Must match folder name
 ```
 
 ### "No image.glsl found"

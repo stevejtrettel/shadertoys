@@ -35,21 +35,13 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 }
 ```
 
-### Step 3: Load Your Shader
-
-Edit `src/main.ts` and change the demo name:
-
-```typescript
-const DEMO_NAME = 'my-first-shader';
-```
-
-### Step 4: Run It!
+### Step 3: Run It!
 
 ```bash
-npm run dev
+npm run dev:demo my-first-shader
 ```
 
-Open `http://localhost:5173` in your browser. You should see a gradient!
+Open `http://localhost:3000` in your browser. You should see a gradient!
 
 🎉 **Congratulations!** You just wrote your first shader!
 
