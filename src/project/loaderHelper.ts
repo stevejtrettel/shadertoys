@@ -40,7 +40,7 @@ async function loadSinglePass(
       author: null,
       description: null,
     },
-    layout: 'centered',
+    layout: 'tabbed',
     controls: false,
     commonSource: null,
     passes: {
@@ -163,7 +163,7 @@ async function loadWithConfig(
   const title = config.meta?.title || demoName.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
   const author = config.meta?.author || null;
   const description = config.meta?.description || null;
-  const layout = config.layout || 'centered';
+  const layout = config.layout || 'tabbed';
   const controls = config.controls ?? false;
 
   return {
