@@ -3,6 +3,7 @@
     "title": "Path Tracing I",
     "description": "From Demofox's Blog"
   },
+  "layout": "split",
   "passes": {
     "BufferA": {
       "channels": {
