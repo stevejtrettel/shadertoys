@@ -9,15 +9,29 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  padding: 60px 80px;
+  align-items: center;
+  justify-content: center;
+  padding: 60px;
   box-sizing: border-box;
+}
+
+.tabbed-wrapper {
+  display: flex;
+  flex-direction: column;
+  width: 800px;
+  max-width: 100%;
+  height: 650px; /* 600px content + ~50px tabs */
+  max-height: 100%;
+  border-radius: 8px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25), 0 5px 15px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
 }
 
 /* ===== Tab Bar ===== */
 .tabbed-tab-bar {
   display: flex;
+  flex-shrink: 0;
   background: #f8f8f8;
-  border-radius: 8px 8px 0 0;
   border-bottom: 1px solid #e0e0e0;
   padding: 8px 8px 0 8px;
   gap: 4px;
@@ -61,10 +75,8 @@
   flex: 1;
   min-height: 0; /* Critical for flexbox scrolling */
   position: relative;
-  background: white;
-  border-radius: 0 0 8px 8px;
+  background: #000;
   overflow: hidden;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2), 0 3px 8px rgba(0, 0, 0, 0.12);
 }
 
 .tabbed-canvas-container {

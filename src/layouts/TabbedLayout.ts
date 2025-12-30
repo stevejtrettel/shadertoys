@@ -31,6 +31,10 @@ export class TabbedLayout implements BaseLayout {
     this.root = document.createElement('div');
     this.root.className = 'layout-tabbed';
 
+    // Create wrapper to constrain size (matches centered layout)
+    const wrapper = document.createElement('div');
+    wrapper.className = 'tabbed-wrapper';
+
     // Create content area (holds either canvas or code)
     this.contentArea = document.createElement('div');
     this.contentArea.className = 'tabbed-content';
@@ -64,8 +68,9 @@ export class TabbedLayout implements BaseLayout {
     const tabBar = this.buildTabBar();
 
     // Assemble and append to DOM
-    this.root.appendChild(tabBar);
-    this.root.appendChild(this.contentArea);
+    wrapper.appendChild(tabBar);
+    wrapper.appendChild(this.contentArea);
+    this.root.appendChild(wrapper);
     this.container.appendChild(this.root);
   }
 
