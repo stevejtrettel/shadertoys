@@ -8,7 +8,7 @@
     "dev:demo": "node scripts/dev-demo.cjs",
     "build": "tsc && vite build",
     "build:demo": "node scripts/build-demo.cjs",
-    "build:folder": "node scripts/build-folder.cjs",
+    "build:embed": "node scripts/build-embed.cjs",
     "preview": "vite preview"
   },
   "devDependencies": {
