@@ -5,17 +5,13 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
     uv.x *= iResolution.x / iResolution.y;
     vec2 p = uv * 4.0;
     
-    float a = 1.5;
-    float r2 = dot(p, p);
-    float F = r2 * r2 - a * a * (p.x * p.x - p.y * p.y);
-    
-    float eps = 0.15;
+    float L = p.y;
     
     vec3 color;
-    if (abs(F) < eps) {
-        color = vec3(1.0, 1.0, 0.0);
+    if (L < 0.0) {
+        color = vec3(1.0, 0.0, 0.0);  // red below
     } else {
-        color = vec3(0.1, 0.1, 0.3);
+        color = vec3(0.0, 0.0, 1.0);  // blue above
     }
     
     fragColor = vec4(color, 1.0);
