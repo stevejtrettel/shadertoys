@@ -1,8 +1,59 @@
 /**
  * Tabbed Layout Styles
  * Single window with tabs switching between shader and code views
- * Light theme to match split layout
+ * Supports light/dark mode via CSS custom properties
  */
+
+/* ===== Theme Variables ===== */
+.layout-tabbed {
+  --tab-bg: #f8f8f8;
+  --tab-border: #e0e0e0;
+  --tab-text: #666;
+  --tab-text-hover: #333;
+  --tab-hover-bg: #e8e8e8;
+  --tab-active-bg: white;
+  --tab-active-text: #000;
+  --code-bg: white;
+  --code-text: #000;
+  --line-number-text: #999;
+  --copy-btn-bg: rgba(0, 0, 0, 0.05);
+  --copy-btn-hover-bg: rgba(0, 0, 0, 0.1);
+}
+
+/* Dark mode - responds to Quarto's data-bs-theme or prefers-color-scheme */
+[data-bs-theme="dark"] .layout-tabbed,
+.dark .layout-tabbed,
+:root.dark .layout-tabbed {
+  --tab-bg: #2d2d2d;
+  --tab-border: #444;
+  --tab-text: #999;
+  --tab-text-hover: #ccc;
+  --tab-hover-bg: #3d3d3d;
+  --tab-active-bg: #1e1e1e;
+  --tab-active-text: #fff;
+  --code-bg: #1e1e1e;
+  --code-text: #d4d4d4;
+  --line-number-text: #666;
+  --copy-btn-bg: rgba(255, 255, 255, 0.1);
+  --copy-btn-hover-bg: rgba(255, 255, 255, 0.15);
+}
+
+@media (prefers-color-scheme: dark) {
+  .layout-tabbed:not([data-theme="light"]) {
+    --tab-bg: #2d2d2d;
+    --tab-border: #444;
+    --tab-text: #999;
+    --tab-text-hover: #ccc;
+    --tab-hover-bg: #3d3d3d;
+    --tab-active-bg: #1e1e1e;
+    --tab-active-text: #fff;
+    --code-bg: #1e1e1e;
+    --code-text: #d4d4d4;
+    --line-number-text: #666;
+    --copy-btn-bg: rgba(255, 255, 255, 0.1);
+    --copy-btn-hover-bg: rgba(255, 255, 255, 0.15);
+  }
+}
 
 .layout-tabbed {
   width: 100%;
@@ -31,7 +82,7 @@
 .tabbed-tab-bar {
   display: flex;
   flex-shrink: 0;
-  background: #f8f8f8;
+  background: var(--tab-bg);
   padding: 8px 8px 0 8px;
   gap: 4px;
   overflow-x: auto;
@@ -48,7 +99,7 @@
   left: 0;
   right: 0;
   height: 1px;
-  background: #e0e0e0;
+  background: var(--tab-border);
   z-index: 0;
 }
 
@@ -71,19 +122,19 @@
   font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
   cursor: pointer;
   transition: background 0.2s, color 0.2s;
-  color: #666;
+  color: var(--tab-text);
   white-space: nowrap;
   flex-shrink: 0;
 }
 
 .tabbed-tab-button:hover {
-  background: #e8e8e8;
-  color: #333;
+  background: var(--tab-hover-bg);
+  color: var(--tab-text-hover);
 }
 
 .tabbed-tab-button.active {
-  background: white;
-  color: #000;
+  background: var(--tab-active-bg);
+  color: var(--tab-active-text);
   font-weight: 500;
   /* Connect to content below by extending past the border line */
   position: relative;
@@ -121,7 +172,7 @@
   width: 100%;
   height: 100%;
   overflow: auto;
-  background: white;
+  background: var(--code-bg);
 }
 
 .tabbed-code-viewer pre {
@@ -130,8 +181,8 @@
   font-size: 13px;
   line-height: 1.6;
   font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
-  background: white;
-  color: #000;
+  background: var(--code-bg);
+  color: var(--code-text);
   display: flex;
 }
 
@@ -145,8 +196,8 @@
   text-align: right;
   padding-right: 16px;
   margin-right: 16px;
-  border-right: 1px solid #e0e0e0;
-  color: #999;
+  border-right: 1px solid var(--tab-border);
+  color: var(--line-number-text);
   user-select: none;
   flex-shrink: 0;
   padding-left: 16px;
@@ -163,10 +214,10 @@
   top: 12px;
   right: 12px;
   padding: 8px;
-  background: rgba(0, 0, 0, 0.05);
+  background: var(--copy-btn-bg);
   border: none;
   border-radius: 6px;
-  color: #666;
+  color: var(--tab-text);
   cursor: pointer;
   transition: all 0.2s;
   z-index: 10;
@@ -176,8 +227,8 @@
 }
 
 .tabbed-copy-button:hover {
-  background: rgba(0, 0, 0, 0.1);
-  color: #333;
+  background: var(--copy-btn-hover-bg);
+  color: var(--tab-text-hover);
 }
 
 .tabbed-copy-button:active {
@@ -188,7 +239,7 @@
   color: #4caf50;
 }
 
-/* ===== Light Prism Theme ===== */
+/* ===== Prism Theme (Light) ===== */
 .tabbed-code-viewer .token.comment { color: #6a9955; }
 .tabbed-code-viewer .token.keyword { color: #0000ff; }
 .tabbed-code-viewer .token.string { color: #a31515; }
@@ -197,6 +248,34 @@
 .tabbed-code-viewer .token.function { color: #795e26; }
 .tabbed-code-viewer .token.class-name { color: #267f99; }
 .tabbed-code-viewer .token.punctuation { color: #000000; }
+
+/* ===== Prism Theme (Dark) ===== */
+[data-bs-theme="dark"] .tabbed-code-viewer .token.comment,
+.dark .tabbed-code-viewer .token.comment { color: #6a9955; }
+[data-bs-theme="dark"] .tabbed-code-viewer .token.keyword,
+.dark .tabbed-code-viewer .token.keyword { color: #569cd6; }
+[data-bs-theme="dark"] .tabbed-code-viewer .token.string,
+.dark .tabbed-code-viewer .token.string { color: #ce9178; }
+[data-bs-theme="dark"] .tabbed-code-viewer .token.number,
+.dark .tabbed-code-viewer .token.number { color: #b5cea8; }
+[data-bs-theme="dark"] .tabbed-code-viewer .token.operator,
+.dark .tabbed-code-viewer .token.operator { color: #d4d4d4; }
+[data-bs-theme="dark"] .tabbed-code-viewer .token.function,
+.dark .tabbed-code-viewer .token.function { color: #dcdcaa; }
+[data-bs-theme="dark"] .tabbed-code-viewer .token.class-name,
+.dark .tabbed-code-viewer .token.class-name { color: #4ec9b0; }
+[data-bs-theme="dark"] .tabbed-code-viewer .token.punctuation,
+.dark .tabbed-code-viewer .token.punctuation { color: #d4d4d4; }
+
+@media (prefers-color-scheme: dark) {
+  .tabbed-code-viewer:not([data-theme="light"]) .token.keyword { color: #569cd6; }
+  .tabbed-code-viewer:not([data-theme="light"]) .token.string { color: #ce9178; }
+  .tabbed-code-viewer:not([data-theme="light"]) .token.number { color: #b5cea8; }
+  .tabbed-code-viewer:not([data-theme="light"]) .token.operator { color: #d4d4d4; }
+  .tabbed-code-viewer:not([data-theme="light"]) .token.function { color: #dcdcaa; }
+  .tabbed-code-viewer:not([data-theme="light"]) .token.class-name { color: #4ec9b0; }
+  .tabbed-code-viewer:not([data-theme="light"]) .token.punctuation { color: #d4d4d4; }
+}
 
 /* ===== Responsive ===== */
 @media (max-width: 1200px) {
