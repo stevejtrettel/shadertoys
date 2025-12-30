@@ -163,13 +163,26 @@ export class TabbedLayout implements BaseLayout {
         this.copyButton.style.visibility = 'visible';
 
         currentSource = tab.source || '';
+        const lines = currentSource.split('\n');
 
-        // Create pre/code elements for Prism
+        // Create pre element
         const pre = document.createElement('pre');
+
+        // Line numbers column
+        const lineNumbers = document.createElement('div');
+        lineNumbers.className = 'tabbed-line-numbers';
+        lineNumbers.innerHTML = lines.map((_, i) => i + 1).join('\n');
+
+        // Code content column
+        const codeContent = document.createElement('div');
+        codeContent.className = 'tabbed-code-content';
         const code = document.createElement('code');
         code.className = 'language-cpp';
-        code.textContent = tab.source || '';
-        pre.appendChild(code);
+        code.textContent = currentSource;
+        codeContent.appendChild(code);
+
+        pre.appendChild(lineNumbers);
+        pre.appendChild(codeContent);
 
         // Clear and append
         this.codeViewer.innerHTML = '';
