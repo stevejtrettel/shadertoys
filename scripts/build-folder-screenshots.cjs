@@ -118,6 +118,16 @@ function sleep(ms) {
 async function takeScreenshot(browser, htmlPath, outputPath, frames = 60) {
   const page = await browser.newPage();
 
+  // Log console errors for debugging
+  page.on('console', msg => {
+    if (msg.type() === 'error') {
+      console.log(`    Browser error: ${msg.text()}`);
+    }
+  });
+  page.on('pageerror', err => {
+    console.log(`    Page error: ${err.message}`);
+  });
+
   try {
     // Set viewport to match typical shader size
     await page.setViewport({ width: 800, height: 600 });
@@ -126,7 +136,7 @@ async function takeScreenshot(browser, htmlPath, outputPath, frames = 60) {
     await page.goto(`file://${htmlPath}`, { waitUntil: 'networkidle0', timeout: 30000 });
 
     // Wait for shader to render some frames
-    await sleep(1000 + (frames / 60) * 1000);
+    await sleep(2000 + (frames / 60) * 1000);
 
     // Find the canvas and screenshot it
     const canvas = await page.$('canvas');
@@ -163,7 +173,7 @@ async function main() {
   console.log('Launching headless browser...\n');
   const browser = await puppeteer.launch({
     executablePath: process.env.CHROME_PATH || chromePath,
-    headless: 'new',
+    headless: process.env.DEBUG_SCREENSHOTS ? false : 'new',
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
@@ -176,6 +186,7 @@ async function main() {
       '--use-gl=angle',
       '--use-angle=swiftshader',
       '--enable-unsafe-swiftshader',
+      '--ignore-gpu-blocklist',
     ]
   });
 
