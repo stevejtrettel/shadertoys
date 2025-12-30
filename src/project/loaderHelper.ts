@@ -40,8 +40,8 @@ async function loadSinglePass(
       author: null,
       description: null,
     },
-    layout: 'centered',
-    controls: false,
+    layout: 'tabbed',
+    controls: true,
     commonSource: null,
     passes: {
       Image: {
@@ -163,8 +163,8 @@ async function loadWithConfig(
   const title = config.meta?.title || demoName.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
   const author = config.meta?.author || null;
   const description = config.meta?.description || null;
-  const layout = config.layout || 'centered';
-  const controls = config.controls ?? false;
+  const layout = config.layout || 'tabbed';
+  const controls = config.controls ?? true;
 
   return {
     root: `/demos/${demoName}`,

@@ -89,16 +89,17 @@ export interface ShadertoyConfig {
   /**
    * Optional layout mode for the shader viewer.
    * - 'fullscreen': Canvas fills entire viewport, no styling
-   * - 'centered': Centered canvas with rounded corners and drop shadow (default)
+   * - 'centered': Centered canvas with rounded corners and drop shadow
    * - 'split': Shader on left, code viewer on right with syntax highlighting
-   * If omitted, defaults to 'centered'.
+   * - 'tabbed': Single window with tabs for shader and code (default)
+   * If omitted, defaults to 'tabbed'.
    */
-  layout?: 'fullscreen' | 'centered' | 'split';
+  layout?: 'fullscreen' | 'centered' | 'split' | 'tabbed';
 
   /**
    * Optional controls for playback.
    * If true, shows play/pause and reset buttons with keyboard shortcuts.
-   * If omitted, defaults to false (opt-in).
+   * If omitted, defaults to true.
    */
   controls?: boolean;
 
@@ -209,7 +210,7 @@ export interface ShadertoyProject {
   /**
    * Layout mode for the shader viewer.
    */
-  layout: 'fullscreen' | 'centered' | 'split';
+  layout: 'fullscreen' | 'centered' | 'split' | 'tabbed';
 
   /**
    * Whether to show playback controls (play/pause, reset).

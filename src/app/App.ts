@@ -46,6 +46,10 @@ export class App {
   // Resize observer
   private resizeObserver: ResizeObserver;
 
+  // Visibility observer (auto-pause when off-screen)
+  private intersectionObserver: IntersectionObserver;
+  private isVisible: boolean = true;
+
   constructor(opts: AppOptions) {
     this.container = opts.container;
     this.project = opts.project;
@@ -109,6 +113,16 @@ export class App {
     });
     this.resizeObserver.observe(this.container);
 
+    // Set up intersection observer for auto-pause when off-screen
+    this.intersectionObserver = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        this.isVisible = entry.isIntersecting;
+      },
+      { threshold: 0.1 } // Trigger when 10% visible
+    );
+    this.intersectionObserver.observe(this.container);
+
     // Set up mouse tracking
     this.setupMouseTracking();
 
@@ -164,6 +178,7 @@ export class App {
   dispose(): void {
     this.stop();
     this.resizeObserver.disconnect();
+    this.intersectionObserver.disconnect();
     this.engine.dispose();
     this.container.removeChild(this.canvas);
     this.container.removeChild(this.fpsDisplay);
@@ -174,11 +189,11 @@ export class App {
   // ===========================================================================
 
   private animate = (currentTimeMs: number): void => {
-    // Schedule next frame first (even if paused)
+    // Schedule next frame first (even if paused or invisible)
     this.animationId = requestAnimationFrame(this.animate);
 
-    // Skip rendering if paused
-    if (this.isPaused) {
+    // Skip rendering if paused or off-screen
+    if (this.isPaused || !this.isVisible) {
       return;
     }
 
