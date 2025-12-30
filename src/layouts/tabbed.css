@@ -20,7 +20,7 @@
   --copy-btn-hover-bg: rgba(0, 0, 0, 0.1);
 }
 
-/* Dark mode - responds to Quarto's data-bs-theme or prefers-color-scheme */
+/* Dark mode - responds to Quarto's data-bs-theme or .dark class */
 [data-bs-theme="dark"] .layout-tabbed,
 .dark .layout-tabbed,
 :root.dark .layout-tabbed {
@@ -36,23 +36,6 @@
   --line-number-text: #666;
   --copy-btn-bg: rgba(255, 255, 255, 0.1);
   --copy-btn-hover-bg: rgba(255, 255, 255, 0.15);
-}
-
-@media (prefers-color-scheme: dark) {
-  .layout-tabbed:not([data-theme="light"]) {
-    --tab-bg: #2d2d2d;
-    --tab-border: #444;
-    --tab-text: #999;
-    --tab-text-hover: #ccc;
-    --tab-hover-bg: #3d3d3d;
-    --tab-active-bg: #1e1e1e;
-    --tab-active-text: #fff;
-    --code-bg: #1e1e1e;
-    --code-text: #d4d4d4;
-    --line-number-text: #666;
-    --copy-btn-bg: rgba(255, 255, 255, 0.1);
-    --copy-btn-hover-bg: rgba(255, 255, 255, 0.15);
-  }
 }
 
 .layout-tabbed {
@@ -266,16 +249,6 @@
 .dark .tabbed-code-viewer .token.class-name { color: #4ec9b0; }
 [data-bs-theme="dark"] .tabbed-code-viewer .token.punctuation,
 .dark .tabbed-code-viewer .token.punctuation { color: #d4d4d4; }
-
-@media (prefers-color-scheme: dark) {
-  .tabbed-code-viewer:not([data-theme="light"]) .token.keyword { color: #569cd6; }
-  .tabbed-code-viewer:not([data-theme="light"]) .token.string { color: #ce9178; }
-  .tabbed-code-viewer:not([data-theme="light"]) .token.number { color: #b5cea8; }
-  .tabbed-code-viewer:not([data-theme="light"]) .token.operator { color: #d4d4d4; }
-  .tabbed-code-viewer:not([data-theme="light"]) .token.function { color: #dcdcaa; }
-  .tabbed-code-viewer:not([data-theme="light"]) .token.class-name { color: #4ec9b0; }
-  .tabbed-code-viewer:not([data-theme="light"]) .token.punctuation { color: #d4d4d4; }
-}
 
 /* ===== Responsive ===== */
 @media (max-width: 1200px) {
