@@ -170,6 +170,12 @@ async function main() {
       '--disable-dev-shm-usage',
       '--disable-web-security',
       '--allow-file-access-from-files',
+      // WebGL support in headless mode
+      '--enable-webgl',
+      '--enable-webgl2',
+      '--use-gl=angle',
+      '--use-angle=swiftshader',
+      '--enable-unsafe-swiftshader',
     ]
   });
 
