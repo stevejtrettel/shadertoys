@@ -32,12 +32,24 @@
   display: flex;
   flex-shrink: 0;
   background: #f8f8f8;
-  border-bottom: 1px solid #e0e0e0;
   padding: 8px 8px 0 8px;
   gap: 4px;
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: thin;
+  position: relative;
+}
+
+/* Border line that sits behind the tabs */
+.tabbed-tab-bar::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: #e0e0e0;
+  z-index: 0;
 }
 
 /* Hide scrollbar on webkit but keep functionality */
@@ -73,11 +85,11 @@
   background: white;
   color: #000;
   font-weight: 500;
-  /* Connect to content below by overlapping the border */
+  /* Connect to content below by extending past the border line */
   position: relative;
   z-index: 1;
+  padding-bottom: 11px;
   margin-bottom: -1px;
-  border-bottom: 1px solid white;
 }
 
 .tabbed-tab-button.shader-tab {
