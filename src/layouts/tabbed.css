@@ -35,6 +35,19 @@
   border-bottom: 1px solid #e0e0e0;
   padding: 8px 8px 0 8px;
   gap: 4px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+}
+
+/* Hide scrollbar on webkit but keep functionality */
+.tabbed-tab-bar::-webkit-scrollbar {
+  height: 4px;
+}
+
+.tabbed-tab-bar::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 2px;
 }
 
 .tabbed-tab-button {
@@ -47,6 +60,8 @@
   cursor: pointer;
   transition: background 0.2s, color 0.2s;
   color: #666;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .tabbed-tab-button:hover {
@@ -58,13 +73,17 @@
   background: white;
   color: #000;
   font-weight: 500;
+  /* Connect to content below by overlapping the border */
+  position: relative;
+  margin-bottom: -1px;
+  padding-bottom: 11px;
 }
 
 .tabbed-tab-button.shader-tab {
   font-family: system-ui, -apple-system, sans-serif;
-  font-weight: 500;
 }
 
+/* When shader tab is active, connect to black content */
 .tabbed-tab-button.shader-tab.active {
   background: #000;
   color: #fff;
@@ -100,17 +119,35 @@
 
 .tabbed-code-viewer pre {
   margin: 0;
-  padding: 20px;
-  font-size: 14px;
+  padding: 16px 16px 16px 0;
+  font-size: 13px;
   line-height: 1.6;
   font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
   background: white;
   color: #000;
+  display: flex;
 }
 
 .tabbed-code-viewer code {
   font-family: inherit;
   font-size: inherit;
+}
+
+/* Line numbers */
+.tabbed-line-numbers {
+  text-align: right;
+  padding-right: 16px;
+  margin-right: 16px;
+  border-right: 1px solid #e0e0e0;
+  color: #999;
+  user-select: none;
+  flex-shrink: 0;
+  padding-left: 16px;
+}
+
+.tabbed-code-content {
+  flex: 1;
+  overflow-x: auto;
 }
 
 /* ===== Copy Button ===== */
