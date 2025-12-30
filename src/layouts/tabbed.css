@@ -75,18 +75,13 @@
   font-weight: 500;
   /* Connect to content below by overlapping the border */
   position: relative;
+  z-index: 1;
   margin-bottom: -1px;
-  padding-bottom: 11px;
+  border-bottom: 1px solid white;
 }
 
 .tabbed-tab-button.shader-tab {
   font-family: system-ui, -apple-system, sans-serif;
-}
-
-/* When shader tab is active, connect to black content */
-.tabbed-tab-button.shader-tab.active {
-  background: #000;
-  color: #fff;
 }
 
 /* ===== Content Area ===== */
