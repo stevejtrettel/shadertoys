@@ -42,7 +42,7 @@ export class TabbedLayout implements BaseLayout {
     // Create code viewer (shown when code tabs are active)
     this.codeViewer = document.createElement('div');
     this.codeViewer.className = 'tabbed-code-viewer';
-    this.codeViewer.style.display = 'none';
+    this.codeViewer.style.visibility = 'hidden';
 
     // Create copy button
     this.copyButton = document.createElement('button');
@@ -54,7 +54,7 @@ export class TabbedLayout implements BaseLayout {
       </svg>
     `;
     this.copyButton.title = 'Copy code to clipboard';
-    this.copyButton.style.display = 'none';
+    this.copyButton.style.visibility = 'hidden';
 
     this.contentArea.appendChild(this.canvasContainer);
     this.contentArea.appendChild(this.codeViewer);
@@ -148,14 +148,14 @@ export class TabbedLayout implements BaseLayout {
 
       if (tab.isShader) {
         // Show shader canvas
-        this.canvasContainer.style.display = 'block';
-        this.codeViewer.style.display = 'none';
-        this.copyButton.style.display = 'none';
+        this.canvasContainer.style.visibility = 'visible';
+        this.codeViewer.style.visibility = 'hidden';
+        this.copyButton.style.visibility = 'hidden';
       } else {
         // Show code
-        this.canvasContainer.style.display = 'none';
-        this.codeViewer.style.display = 'block';
-        this.copyButton.style.display = 'flex';
+        this.canvasContainer.style.visibility = 'hidden';
+        this.codeViewer.style.visibility = 'visible';
+        this.copyButton.style.visibility = 'visible';
 
         currentSource = tab.source || '';
 

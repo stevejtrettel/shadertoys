@@ -1,6 +1,7 @@
 /**
  * Tabbed Layout Styles
  * Single window with tabs switching between shader and code views
+ * Light theme to match split layout
  */
 
 .layout-tabbed {
@@ -15,8 +16,9 @@
 /* ===== Tab Bar ===== */
 .tabbed-tab-bar {
   display: flex;
-  background: #1a1a1a;
+  background: #f8f8f8;
   border-radius: 8px 8px 0 0;
+  border-bottom: 1px solid #e0e0e0;
   padding: 8px 8px 0 8px;
   gap: 4px;
 }
@@ -30,17 +32,17 @@
   font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
   cursor: pointer;
   transition: background 0.2s, color 0.2s;
-  color: #888;
+  color: #666;
 }
 
 .tabbed-tab-button:hover {
-  background: #333;
-  color: #ccc;
+  background: #e8e8e8;
+  color: #333;
 }
 
 .tabbed-tab-button.active {
-  background: #000;
-  color: #fff;
+  background: white;
+  color: #000;
   font-weight: 500;
 }
 
@@ -51,30 +53,37 @@
 
 .tabbed-tab-button.shader-tab.active {
   background: #000;
+  color: #fff;
 }
 
 /* ===== Content Area ===== */
 .tabbed-content {
   flex: 1;
-  min-height: 0;
+  min-height: 0; /* Critical for flexbox scrolling */
   position: relative;
-  background: #000;
+  background: white;
   border-radius: 0 0 8px 8px;
   overflow: hidden;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2), 0 3px 8px rgba(0, 0, 0, 0.12);
 }
 
 .tabbed-canvas-container {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
 }
 
 /* ===== Code Viewer ===== */
 .tabbed-code-viewer {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
   overflow: auto;
-  background: #1e1e1e;
+  background: white;
 }
 
 .tabbed-code-viewer pre {
@@ -83,8 +92,8 @@
   font-size: 14px;
   line-height: 1.6;
   font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
-  background: #1e1e1e;
-  color: #d4d4d4;
+  background: white;
+  color: #000;
 }
 
 .tabbed-code-viewer code {
@@ -98,10 +107,10 @@
   top: 12px;
   right: 12px;
   padding: 8px;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.05);
   border: none;
   border-radius: 6px;
-  color: #888;
+  color: #666;
   cursor: pointer;
   transition: all 0.2s;
   z-index: 10;
@@ -111,8 +120,8 @@
 }
 
 .tabbed-copy-button:hover {
-  background: rgba(255, 255, 255, 0.2);
-  color: #fff;
+  background: rgba(0, 0, 0, 0.1);
+  color: #333;
 }
 
 .tabbed-copy-button:active {
@@ -123,15 +132,15 @@
   color: #4caf50;
 }
 
-/* ===== Dark Prism Theme ===== */
+/* ===== Light Prism Theme ===== */
 .tabbed-code-viewer .token.comment { color: #6a9955; }
-.tabbed-code-viewer .token.keyword { color: #569cd6; }
-.tabbed-code-viewer .token.string { color: #ce9178; }
-.tabbed-code-viewer .token.number { color: #b5cea8; }
-.tabbed-code-viewer .token.operator { color: #d4d4d4; }
-.tabbed-code-viewer .token.function { color: #dcdcaa; }
-.tabbed-code-viewer .token.class-name { color: #4ec9b0; }
-.tabbed-code-viewer .token.punctuation { color: #d4d4d4; }
+.tabbed-code-viewer .token.keyword { color: #0000ff; }
+.tabbed-code-viewer .token.string { color: #a31515; }
+.tabbed-code-viewer .token.number { color: #098658; }
+.tabbed-code-viewer .token.operator { color: #000000; }
+.tabbed-code-viewer .token.function { color: #795e26; }
+.tabbed-code-viewer .token.class-name { color: #267f99; }
+.tabbed-code-viewer .token.punctuation { color: #000000; }
 
 /* ===== Responsive ===== */
 @media (max-width: 1200px) {
