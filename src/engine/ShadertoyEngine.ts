@@ -18,7 +18,6 @@ import {
 
 import {
   EngineOptions,
-  ShadertoyEngine as ShadertoyEngineInterface,
   RuntimePass,
   RuntimeTexture2D,
   RuntimeKeyboardTexture,
@@ -51,10 +50,30 @@ void main() {
 `;
 
 // =============================================================================
+// Fragment Shader Boilerplate (before common code)
+// =============================================================================
+
+const FRAGMENT_PREAMBLE = `#version 300 es
+precision highp float;
+
+// Shadertoy compatibility: equirectangular texture sampling
+const float ST_PI = 3.14159265359;
+const float ST_TWOPI = 6.28318530718;
+vec2 _st_dirToEquirect(vec3 dir) {
+  float phi = atan(dir.z, dir.x);
+  float theta = asin(dir.y);
+  return vec2(phi / ST_TWOPI + 0.5, theta / ST_PI + 0.5);
+}
+`;
+
+// Line count computed from actual preamble (for error line mapping)
+const PREAMBLE_LINE_COUNT = FRAGMENT_PREAMBLE.split('\n').length - 1; // -1 because split adds empty at end
+
+// =============================================================================
 // ShadertoyEngine Implementation
 // =============================================================================
 
-export class ShadertoyEngine implements ShadertoyEngineInterface {
+export class ShadertoyEngine {
   readonly project: ShadertoyProject;
   readonly gl: WebGL2RenderingContext;
 
@@ -536,9 +555,8 @@ export class ShadertoyEngine implements ShadertoyEngineInterface {
    * Returns info about where common.glsl code lives in the compiled shader.
    */
   private getLineMapping(): { boilerplateLinesBeforeCommon: number; commonLineCount: number } {
-    // Count boilerplate lines before common.glsl
-    // Version/precision (3) + Equirect helpers (9) = 12 lines
-    const boilerplateLinesBeforeCommon = 12;
+    // +1 for the "// Common code" comment line added before common source
+    const boilerplateLinesBeforeCommon = PREAMBLE_LINE_COUNT + 1;
 
     const commonLineCount = this.project.commonSource
       ? this.project.commonSource.split('\n').length
@@ -551,62 +569,45 @@ export class ShadertoyEngine implements ShadertoyEngineInterface {
    * Build complete fragment shader source with Shadertoy boilerplate.
    */
   private buildFragmentShader(userSource: string): string {
-    const lines: string[] = [];
-
-    // Version and precision
-    lines.push('#version 300 es');
-    lines.push('precision highp float;');
-    lines.push('');
-
-    // Automatic compatibility helpers for Shadertoy cubemap textures
-    lines.push('// Shadertoy compatibility: equirectangular texture sampling');
-    lines.push('const float ST_PI = 3.14159265359;');
-    lines.push('const float ST_TWOPI = 6.28318530718;');
-    lines.push('vec2 _st_dirToEquirect(vec3 dir) {');
-    lines.push('  float phi = atan(dir.z, dir.x);');
-    lines.push('  float theta = asin(dir.y);');
-    lines.push('  return vec2(phi / ST_TWOPI + 0.5, theta / ST_PI + 0.5);');
-    lines.push('}');
-    lines.push('');
+    const parts: string[] = [FRAGMENT_PREAMBLE];
 
     // Common code (if any)
     if (this.project.commonSource) {
-      lines.push('// Common code');
-      lines.push(this.project.commonSource);
-      lines.push('');
+      parts.push('// Common code');
+      parts.push(this.project.commonSource);
+      parts.push('');
     }
 
     // Shadertoy built-in uniforms
-    lines.push('// Shadertoy built-in uniforms');
-    lines.push('uniform vec3  iResolution;');
-    lines.push('uniform float iTime;');
-    lines.push('uniform float iTimeDelta;');
-    lines.push('uniform int   iFrame;');
-    lines.push('uniform vec4  iMouse;');
-    lines.push('uniform sampler2D iChannel0;');
-    lines.push('uniform sampler2D iChannel1;');
-    lines.push('uniform sampler2D iChannel2;');
-    lines.push('uniform sampler2D iChannel3;');
-    lines.push('');
+    parts.push(`// Shadertoy built-in uniforms
+uniform vec3  iResolution;
+uniform float iTime;
+uniform float iTimeDelta;
+uniform int   iFrame;
+uniform vec4  iMouse;
+uniform sampler2D iChannel0;
+uniform sampler2D iChannel1;
+uniform sampler2D iChannel2;
+uniform sampler2D iChannel3;
+`);
 
     // Preprocess user shader code to handle cubemap-style texture sampling
-    // Convert: texture(iChannelN, vec3_expr) -> texture(iChannelN, _st_dirToEquirect(vec3_expr))
-    let processedSource = this.preprocessCubemapTextures(userSource);
+    const processedSource = this.preprocessCubemapTextures(userSource);
 
     // User shader code
-    lines.push('// User shader code');
-    lines.push(processedSource);
-    lines.push('');
+    parts.push('// User shader code');
+    parts.push(processedSource);
+    parts.push('');
 
     // mainImage() wrapper
-    lines.push('// Main wrapper');
-    lines.push('out vec4 fragColor;');
-    lines.push('');
-    lines.push('void main() {');
-    lines.push('  mainImage(fragColor, gl_FragCoord.xy);');
-    lines.push('}');
+    parts.push(`// Main wrapper
+out vec4 fragColor;
 
-    return lines.join('\n');
+void main() {
+  mainImage(fragColor, gl_FragCoord.xy);
+}`);
+
+    return parts.join('\n');
   }
 
   /**
