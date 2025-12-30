@@ -41,7 +41,7 @@ async function loadSinglePass(
       description: null,
     },
     layout: 'tabbed',
-    controls: false,
+    controls: true,
     commonSource: null,
     passes: {
       Image: {
@@ -164,7 +164,7 @@ async function loadWithConfig(
   const author = config.meta?.author || null;
   const description = config.meta?.description || null;
   const layout = config.layout || 'tabbed';
-  const controls = config.controls ?? false;
+  const controls = config.controls ?? true;
 
   return {
     root: `/demos/${demoName}`,
