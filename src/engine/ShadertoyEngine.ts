@@ -160,6 +160,14 @@ export class ShadertoyEngine implements ShadertoyEngineInterface {
   }
 
   /**
+   * Get the framebuffer for the Image pass (for presenting to screen).
+   */
+  getImageFramebuffer(): WebGLFramebuffer | null {
+    const imagePass = this._passes.find((p) => p.name === 'Image');
+    return imagePass?.framebuffer ?? null;
+  }
+
+  /**
    * Run one full frame of all passes.
    *
    * @param timeSeconds - global time in seconds (monotone, from App)
