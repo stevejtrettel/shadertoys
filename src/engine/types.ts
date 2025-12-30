@@ -8,7 +8,7 @@
 import type {
   ShadertoyProject,
   PassName,
-  ChannelSource,
+  Channels,
 } from '../project/types';
 
 // =============================================================================
@@ -62,7 +62,7 @@ export interface PassUniformLocations {
  */
 export interface RuntimePass {
   name: PassName;
-  projectChannels: ChannelSource[];
+  projectChannels: Channels;
 
   vao: WebGLVertexArrayObject;
   uniforms: PassUniformLocations;
@@ -116,45 +116,3 @@ export interface EngineStats {
   height: number;
 }
 
-// =============================================================================
-// Public Engine Interface
-// =============================================================================
-
-/**
- * Public engine interface.
- *
- * The engine does not decide when to render; the App calls `step(timeSeconds)`
- * once per animation frame.
- */
-export interface ShadertoyEngine {
-  readonly project: ShadertoyProject;
-  readonly gl: WebGL2RenderingContext;
-
-  readonly width: number;
-  readonly height: number;
-
-  /** Stats snapshot (read-only) */
-  readonly stats: EngineStats;
-
-  /**
-   * Run one full frame worth of passes at the given time in seconds.
-   *
-   * The App is responsible for calling this from requestAnimationFrame
-   * and passing a monotone time.
-   */
-  step(timeSeconds: number, mouse: [number, number, number, number]): void;
-
-  /**
-   * Resize all internal render targets to the new resolution.
-   *
-   * This MUST NOT reset iFrame/iTime; existing ping-pong history may be
-   * cleared or discarded, but frame counter must remain monotone.
-   */
-  resize(width: number, height: number): void;
-
-  /**
-   * Clean up all GL resources allocated by the engine.
-   * After dispose(), the engine instance MUST NOT be used again.
-   */
-  dispose(): void;
-}

@@ -220,14 +220,11 @@ export class App {
   private presentToScreen(): void {
     const gl = this.gl;
 
-    // Find the Image pass
-    const imagePasses = (this.engine as any)._passes.filter((p: any) => p.name === 'Image');
-    if (imagePasses.length === 0) {
+    const imageFramebuffer = this.engine.getImageFramebuffer();
+    if (!imageFramebuffer) {
       console.warn('No Image pass found');
       return;
     }
-
-    const imagePass = imagePasses[0];
 
     // Bind default framebuffer (screen)
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -236,12 +233,8 @@ export class App {
     gl.clearColor(0, 0, 0, 1);
     gl.clear(gl.COLOR_BUFFER_BIT);
 
-    // Use a simple blit shader to display the texture
-    // For now, we'll use a simple approach: bind the Image pass FBO as read buffer
-    // and blit to the default framebuffer
-
-    // Alternative: use glBindFramebuffer READ/DRAW and blitFramebuffer
-    gl.bindFramebuffer(gl.READ_FRAMEBUFFER, imagePass.framebuffer);
+    // Blit Image pass FBO to screen
+    gl.bindFramebuffer(gl.READ_FRAMEBUFFER, imageFramebuffer);
     gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null);
 
     gl.blitFramebuffer(

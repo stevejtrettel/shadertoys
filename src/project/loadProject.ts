@@ -12,6 +12,7 @@ import * as path from 'path';
 import {
   PassName,
   ChannelSource,
+  Channels,
   ShadertoyConfig,
   ShadertoyPass,
   ShadertoyProject,
@@ -168,6 +169,8 @@ async function loadSinglePassProject(root: string): Promise<ShadertoyProject> {
       author: null,
       description: null,
     },
+    layout: 'centered',
+    controls: false,
     commonSource: null,
     passes: {
       Image: {
@@ -178,7 +181,7 @@ async function loadSinglePassProject(root: string): Promise<ShadertoyProject> {
           { kind: 'none' },
           { kind: 'none' },
           { kind: 'none' },
-        ],
+        ] as Channels,
       },
     },
     textures: [],
@@ -337,7 +340,7 @@ async function loadProjectWithConfig(root: string, config: ShadertoyConfig): Pro
     return {
       name,
       glslSource,
-      channels: channelSources,
+      channels: channelSources as Channels,
     };
   }
 
@@ -360,6 +363,8 @@ async function loadProjectWithConfig(root: string, config: ShadertoyConfig): Pro
   const project: ShadertoyProject = {
     root,
     meta: { title, author, description },
+    layout: config.layout ?? 'centered',
+    controls: config.controls ?? false,
     commonSource,
     passes: {
       Image: imagePass,

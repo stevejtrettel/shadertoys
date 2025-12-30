@@ -8,9 +8,8 @@ Complete guide to the codebase organization and what each file does.
 shadertoys/
 ├── src/               # Source code
 ├── demos/             # Example shaders
-├── public/            # Static assets
-├── dist/              # Build output (generated)
 ├── docs/              # Documentation
+├── scripts/           # Build scripts
 ├── package.json       # Dependencies and scripts
 ├── tsconfig.json      # TypeScript configuration
 ├── vite.config.ts     # Build configuration
@@ -23,26 +22,17 @@ shadertoys/
 
 ```
 src/
-└── main.ts            # Application entry point
+├── main.ts            # Application entry point
+└── styles/
+    └── base.css       # Global CSS resets
 ```
 
 **`main.ts`**
-- Loads demo project by name
-- Creates layout
+- Loads demo project via generated loader
+- Creates layout based on project config
 - Initializes App
 - Starts animation loop
 - Handles initialization errors
-
-**Key code**:
-```typescript
-// Demo name comes from generated loader (set via npm run dev:demo <name>)
-import { loadDemoProject, DEMO_NAME } from './project/generatedLoader';
-
-const project = await loadDemoProject();
-const layout = createLayout(project.layout, { container, project });
-const app = new App({ container, project, pixelRatio });
-app.start();
-```
 
 ### Project Layer (`src/project/`)
 
@@ -51,32 +41,31 @@ Handles configuration loading and normalization.
 ```
 src/project/
 ├── types.ts           # Type definitions
-├── loadDemo.ts        # Demo loader
-└── preprocess.ts      # GLSL preprocessing
+├── loadProject.ts     # Project loader (Node.js)
+└── loaderHelper.ts    # Runtime loader for bundled demos
 ```
 
 **`types.ts`**
-- `PassName` - Type for pass names ('Image', 'BufferA', etc.)
+- `PassName` - Union type: `'Image' | 'BufferA' | 'BufferB' | 'BufferC' | 'BufferD'`
 - `ChannelJSON*` - JSON config format types
-- `ChannelSource` - Normalized channel type
+- `ChannelSource` - Normalized channel type (discriminated union)
+- `Channels` - Tuple of exactly 4 ChannelSource
 - `ShadertoyConfig` - JSON config structure
 - `ShadertoyProject` - Normalized project (engine input)
 - `ShadertoyPass` - Normalized pass definition
 - `ShadertoyMeta` - Project metadata
 
-**`loadDemo.ts`**
-- `loadDemoProject(demoName)` - Main loading function
-- Handles both simple (just image.glsl) and complex (with config) demos
-- Uses Vite's `import.meta.glob()` to load files
-- Normalizes configs to `ShadertoyProject`
+**`loadProject.ts`**
+- `loadProject(root)` - Main loading function (async, Node.js)
+- Handles both simple (just `image.glsl`) and complex (with config) projects
 - Validates passes and channels
+- Normalizes configs to `ShadertoyProject`
+- Sets default values for layout and controls
 
-**`preprocess.ts`**
-- `preprocessGLSL(source, common)` - Prepend common.glsl
-- `convertCubemapToEquirect(source)` - Transform texture() calls
-- `wrapInMainIfNeeded(source)` - Add main() wrapper for mainImage()
-- Detects cubemap sampling: `texture(iChannel, vec3)`
-- Converts to: `texture(iChannel, equirectangularUV)`
+**`loaderHelper.ts`**
+- `loadProjectFromFiles()` - Runtime loader for bundled demos
+- Used by generated loader code
+- Converts bundled file maps to ShadertoyProject
 
 ### Engine Layer (`src/engine/`)
 
@@ -91,7 +80,7 @@ src/engine/
 
 **`ShadertoyEngine.ts`**
 
-Main engine implementation:
+Main engine class (~800 lines):
 
 **Constructor**:
 - Initialize extensions (float textures)
@@ -106,15 +95,22 @@ Main engine implementation:
 - `reset()` - Clear buffers and reset frame counter
 - `updateKeyState(keycode, down)` - Track keyboard input
 - `updateKeyboardTexture()` - Upload key states to GPU
+- `getImageFramebuffer()` - Get Image pass FBO for presentation
+- `hasErrors()` - Check for compilation errors
+- `getCompilationErrors()` - Get error details
 - `dispose()` - Clean up all resources
 
 **Private methods**:
 - `initExtensions()` - Enable required WebGL extensions
 - `initProjectTextures()` - Load external images
 - `initRuntimePasses()` - Compile shaders, create VAOs/FBOs
-- `bindUniforms()` - Set uniform values
-- `bindChannel()` - Bind texture to channel
+- `buildFragmentShader()` - Assemble shader with boilerplate
+- `preprocessCubemapTextures()` - Convert cubemap calls to equirect
+- `executePass()` - Render single pass
+- `bindBuiltinUniforms()` - Set uniform values
+- `bindChannelTextures()` - Bind textures to channels
 - `resolveChannelTexture()` - Get WebGLTexture for channel
+- `swapPassTextures()` - Ping-pong swap after render
 
 **`types.ts`**
 - `EngineOptions` - Engine constructor options
@@ -123,14 +119,13 @@ Main engine implementation:
 - `RuntimeTexture2D` - Loaded external texture
 - `RuntimeKeyboardTexture` - Keyboard state texture
 - `EngineStats` - Frame statistics
-- `ShadertoyEngine` - Public engine interface
 
 **`glHelpers.ts`**
 
 WebGL utility functions:
 
 **Shader compilation**:
-- `compileShader(gl, type, source)` - Compile shader with error checking
+- `createShader(gl, type, source)` - Compile shader with error checking
 - `createProgramFromSources(gl, vs, fs)` - Link shader program
 
 **Geometry**:
@@ -140,7 +135,6 @@ WebGL utility functions:
 - `createRenderTargetTexture(gl, w, h)` - RGBA32F float texture
 - `createBlackTexture(gl)` - 1×1 black texture for unused channels
 - `createKeyboardTexture(gl)` - 256×3 keyboard state texture
-- `createTextureFromImage(gl, img, filter, wrap)` - Texture from HTMLImageElement
 - `updateKeyboardTexture(gl, tex, keyStates, toggleStates)` - Upload key data
 
 **Framebuffers**:
@@ -159,28 +153,22 @@ src/app/
 
 **`App.ts`**
 
-Main application class:
+Main application class (~680 lines):
 
 **Constructor**:
 - Create canvas element
 - Create FPS display
 - Create playback controls (if enabled)
-- Get WebGL2 context with `preserveDrawingBuffer: true`
+- Get WebGL2 context
 - Create ShadertoyEngine
 - Set up resize observer
-- Set up mouse tracking
-- Set up keyboard tracking
+- Set up mouse/keyboard tracking
 - Set up keyboard shortcuts
 
 **Animation loop**:
 - `start()` - Begin requestAnimationFrame loop
 - `stop()` - Cancel animation
 - `animate(time)` - Main render callback
-  - Skip if paused
-  - Update FPS counter
-  - Update keyboard texture
-  - Call engine.step()
-  - Present to screen
 
 **Controls**:
 - `togglePlayPause()` - Toggle isPaused flag
@@ -191,22 +179,26 @@ Main application class:
 - `setupMouseTracking()` - Track mouse position and clicks
 - `setupKeyboardTracking()` - Forward all keys to engine
 - `setupGlobalShortcuts()` - S for screenshot
-- `setupKeyboardShortcuts()` - Space/R for playback controls
+- `setupKeyboardShortcuts()` - Space/R for playback
 
 **Rendering**:
 - `updateCanvasSize()` - Resize canvas to container
 - `presentToScreen()` - Blit Image pass to canvas
 - `updateFps()` - Calculate and display FPS
 
+**Error display**:
+- `showErrorOverlay()` - Display compilation errors
+- `extractCodeContext()` - Get source context around error
+
 **`types.ts`**
 - `AppOptions` - App constructor options
-- `MouseState` - [x, y, clickX, clickY] for iMouse
+- `MouseState` - `[x, y, clickX, clickY]` for iMouse
 
 **`app.css`**
 - `.fps-counter` - FPS display styling
 - `.playback-controls` - Control buttons styling
 - `.control-button` - Individual button styling
-- `.error-overlay` - Shader compilation error display
+- `.shader-error-overlay` - Compilation error display
 
 ### Layout Layer (`src/layouts/`)
 
@@ -229,33 +221,27 @@ src/layouts/
   - `getCanvasContainer()` - Returns HTMLElement for canvas
   - `dispose()` - Clean up
 - `LayoutOptions` - Layout constructor options
-- `LayoutMode` - 'fullscreen' | 'centered' | 'split'
+- `LayoutMode` - `'fullscreen' | 'centered' | 'split'`
 
 **`index.ts`**
 - `createLayout(mode, options)` - Factory function
-- Exports all layout classes
 
 **`FullscreenLayout.ts`**
 - Canvas fills entire screen
 - Imports `fullscreen.css`
 
 **`CenteredLayout.ts`**
-- Canvas centered with max-width
+- Canvas centered with max-width and shadow
 - Imports `centered.css`
 
 **`SplitLayout.ts`**
-- Split view with code panel
-- Uses Prism for syntax highlighting
-- Imports `split.css` and Prism theme
-
-**CSS files**
-- Each layout imports its own CSS
-- Vite bundles them together
-- Uses class names like `.layout-fullscreen`, `.layout-centered`, `.layout-split`
+- Split view with code panel on right
+- Uses Prism.js for syntax highlighting
+- Tab switching between passes
+- Copy-to-clipboard button
+- Imports `split.css`
 
 ### Styles (`src/styles/`)
-
-Global base styles.
 
 ```
 src/styles/
@@ -266,34 +252,10 @@ src/styles/
 - CSS reset (margin, padding, box-sizing)
 - html/body 100% height
 - Disable overflow on body
-- Imported in `main.ts`
 
 ## Demos (`demos/`)
 
-Example shader projects.
-
-```
-demos/
-├── simple-gradient/
-│   └── image.glsl
-├── ping-pong-test/
-│   ├── shadertoy.config.json
-│   ├── bufferA.glsl
-│   └── image.glsl
-├── multi-buffer-test/
-│   ├── shadertoy.config.json
-│   ├── bufferA.glsl
-│   ├── bufferB.glsl
-│   └── image.glsl
-├── demofox-pt2/
-│   ├── shadertoy.config.json
-│   ├── bufferA.glsl
-│   ├── image.glsl
-│   └── equirect.jpg
-└── keyboard-test/
-    ├── shadertoy.config.json
-    └── image.glsl
-```
+Example shader projects. Each demo is a folder containing shader files.
 
 **Demo structure** (two variants):
 
@@ -316,17 +278,14 @@ demos/my-shader/
 └── texture.jpg          (if textures used)
 ```
 
-## Public Assets (`public/`)
+## Scripts (`scripts/`)
 
-Static files copied as-is to build output.
+Build helper scripts (Node.js):
 
-```
-public/
-└── (currently empty)
-```
+- `dev-demo.cjs` - Generate loader for dev server
+- `build-demo.cjs` - Generate loader for production build
 
-Files in `public/` are served at the root URL. Example:
-- `public/logo.png` → `http://localhost:5173/logo.png`
+These scripts create `src/project/generatedLoader.ts` which bundles the demo files.
 
 ## Documentation (`docs/`)
 
@@ -338,29 +297,10 @@ docs/
 │   └── configuration.md
 └── dev/
     ├── architecture.md
-    ├── project-structure.md  (this file!)
+    ├── project-structure.md
     ├── components.md
     └── troubleshooting.md
 ```
-
-## Build Output (`dist/`)
-
-Generated by `npm run build`, do not edit manually.
-
-```
-dist/
-├── index.html
-├── assets/
-│   ├── index-[hash].css
-│   ├── main.js
-│   └── equirect.jpg
-└── (demo assets)
-```
-
-**File sizes** (approximate):
-- `index.html` - 0.37 kB
-- `main.js` - ~100 kB (~26 kB gzipped)
-- CSS - ~6 kB (~1.6 kB gzipped)
 
 ## Configuration Files
 
@@ -372,10 +312,13 @@ dist/
 **DevDependencies**:
 - `typescript` - TypeScript compiler
 - `vite` - Build tool and dev server
+- `vite-plugin-css-injected-by-js` - Inline CSS into JS bundle
 
 **Scripts**:
-- `npm run dev` - Start dev server
-- `npm run build` - Build for production
+- `npm run dev` - Start dev server (port 3000)
+- `npm run dev:demo <name>` - Run specific demo
+- `npm run build` - TypeScript + Vite build
+- `npm run build:demo <name>` - Build specific demo
 - `npm run preview` - Preview production build
 
 ### `tsconfig.json`
@@ -385,76 +328,38 @@ TypeScript compiler options:
 - `module: "ESNext"` - ES modules
 - `strict: true` - All strict checks enabled
 - `moduleResolution: "bundler"` - For Vite
-
-**Includes**: `src/**/*`
+- Path alias: `@/*` → `src/*`
 
 ### `vite.config.ts`
 
 Vite build configuration:
-- Base URL: `/`
-- Out dir: `dist`
-- Asset inline threshold: 4096 bytes
-
-## Import Patterns
-
-### GLSL Files
-
-Loaded dynamically using Vite glob imports:
-
-```typescript
-const glslFiles = import.meta.glob<string>('/demos/**/*.glsl', {
-  as: 'raw',
-  eager: false,
-});
-
-const source = await glslFiles[`/demos/${name}/image.glsl`]();
-```
-
-### CSS Files
-
-Imported directly in TypeScript:
-
-```typescript
-import './app.css';
-import './layouts/centered.css';
-```
-
-Vite processes these and bundles them.
-
-### Images
-
-Loaded as assets:
-
-```typescript
-const img = new Image();
-img.src = `/demos/${demoName}/${filename}`;
-await img.decode();
-```
-
-Vite copies these to `dist/assets/` with hashed filenames.
+- Dev server on port 3000, auto-opens browser
+- CSS injected into JS bundle
+- Single JS output file (`assets/main.js`)
+- Images keep original names
 
 ## File Naming Conventions
 
 ### TypeScript
-- PascalCase for classes: `ShadertoyEngine.ts`
-- camelCase for utilities: `loadDemo.ts`, `glHelpers.ts`
+- PascalCase for classes: `ShadertoyEngine.ts`, `App.ts`
+- camelCase for utilities: `glHelpers.ts`, `loaderHelper.ts`
 - lowercase for types: `types.ts`
 
 ### CSS
 - kebab-case: `base.css`, `fullscreen.css`
-- Same name as corresponding TS file
+- Component CSS same name as TS: `app.css`, `split.css`
 
 ### GLSL
-- lowercase: `image.glsl`, `bufferA.glsl`
+- lowercase: `image.glsl`, `bufferA.glsl`, `common.glsl`
 - Must match pass name (case-insensitive)
 
 ### Demos
-- kebab-case folder names: `simple-gradient/`, `keyboard-test/`
+- kebab-case folder names: `my-shader/`, `feedback-effect/`
 
 ## Code Organization Principles
 
 ### 1. Separation of Concerns
-Each file has one clear purpose. No "god classes" or "utility dumping grounds".
+Each file has one clear purpose. No "god classes" or utility dumping grounds.
 
 ### 2. Co-location
 Related files live together:
@@ -470,10 +375,10 @@ Layout → (independent)
 ```
 
 ### 4. Minimal Exports
-Files export only what's needed externally. Internal helpers are not exported.
+Files export only what's needed externally. Internal helpers stay private.
 
 ### 5. Strong Typing
-Every module has a `types.ts` with clear interfaces and types.
+Every module has clear interfaces and types in `types.ts`.
 
 ## Adding New Files
 
@@ -492,35 +397,27 @@ Every module has a `types.ts` with clear interfaces and types.
 5. Add to factory in `layouts/index.ts`
 6. Add to `LayoutMode` type in `types.ts`
 
-### New Utility Module
+### New Engine Feature
 
-1. Create `src/engine/myUtility.ts` (or appropriate layer)
-2. Export functions/types
-3. Import in file that needs it
-4. Keep it focused - single responsibility
-
-### New Shader Preprocessing
-
-1. Add function to `src/project/preprocess.ts`
-2. Call from `preprocessGLSL()`
-3. Add tests if modifying GLSL structure
+1. Add types to `src/engine/types.ts`
+2. Implement in `ShadertoyEngine.ts`
+3. Add WebGL helpers to `glHelpers.ts` if needed
 
 ## Development Workflow
 
 ### Typical Session
 
-1. `npm run dev` - Start dev server
-2. Edit `src/main.ts` to load your demo
-3. Edit shader files - browser auto-reloads
-4. Edit TypeScript - browser auto-reloads
-5. Press S to save screenshots
+1. `npm run dev:demo <name>` - Start with a demo
+2. Edit shader files - browser auto-reloads
+3. Edit TypeScript - browser auto-reloads
+4. Press S to save screenshots
 
 ### Debugging
 
 **Shader compilation errors**:
 - Displayed in overlay on screen
-- Check browser console for details
-- Line numbers match original source
+- Shows line numbers and code context
+- Maps common.glsl errors to original lines
 
 **Runtime errors**:
 - Browser console shows stack traces
@@ -528,17 +425,5 @@ Every module has a `types.ts` with clear interfaces and types.
 - Use browser DevTools
 
 **Performance**:
-- Press S to screenshot with timestamp
-- Check FPS counter
-- Use browser Performance tab
-
-## Summary
-
-The project structure emphasizes:
-- **Clear organization** - Related files together
-- **Modularity** - Easy to find and modify code
-- **Type safety** - TypeScript throughout
-- **Build efficiency** - Vite handles bundling
-- **Developer experience** - Fast hot reload, good error messages
-
-Understanding this structure will help you navigate the codebase and make modifications confidently.
+- FPS counter in bottom-left
+- Use browser Performance tab for profiling

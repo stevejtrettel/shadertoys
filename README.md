@@ -2,39 +2,37 @@
 
 A lightweight, Shadertoy-compatible GLSL shader playground built for teaching and learning shader programming.
 
-## ✨ Features
+## Features
 
-- 🎯 **Perfect Shadertoy Compatibility** - Copy/paste shaders directly from Shadertoy with zero modifications
+- **Shadertoy Compatibility** - Copy/paste shaders directly from Shadertoy
   - Automatic `mainImage()` wrapper injection
-  - Automatic cubemap → equirectangular texture conversion
+  - Automatic cubemap to equirectangular texture conversion
   - Automatic ping-pong buffer detection for self-referencing passes
-- 🎨 **Full Shadertoy Uniforms** - `iTime`, `iResolution`, `iFrame`, `iMouse`, `iTimeDelta`, `iChannel0-3`
-- 🔄 **Multi-Buffer Rendering** - BufferA-D passes with automatic ping-pong for feedback effects
-- 🖼️ **Texture Support** - Load external images and environment maps
-- ⌨️ **Keyboard Input** - Full keyboard state via Shadertoy-compatible keyboard texture
-- 🎮 **Playback Controls** - Play/pause, reset, and screenshot capture
-- 📐 **Multiple Layout Modes** - Fullscreen, centered, or split-view with live code display
-- 🚀 **Zero Dependencies** - Pure WebGL2, no bloated frameworks
-- 📦 **Tiny Builds** - ~26KB JS (gzipped)
+- **Full Shadertoy Uniforms** - `iTime`, `iResolution`, `iFrame`, `iMouse`, `iTimeDelta`, `iChannel0-3`
+- **Multi-Buffer Rendering** - BufferA-D passes with automatic ping-pong for feedback effects
+- **Texture Support** - Load external images with configurable filtering and wrapping
+- **Keyboard Input** - Full keyboard state via Shadertoy-compatible keyboard texture
+- **Playback Controls** - Play/pause, reset, and screenshot capture
+- **Multiple Layout Modes** - Fullscreen, centered, or split-view with live code display
+- **Zero Runtime Dependencies** - Pure WebGL2
+- **Tiny Builds** - ~26KB JS (gzipped)
 
-## 🚀 Quick Start
+## Quick Start
 
 ```bash
 # Install dependencies
 npm install
 
-# Run a specific demo in development
-npm run dev:demo keyboard-test
+# Run a demo in development
+npm run dev:demo <demo-folder-name>
 
-# Build a specific demo for production
-npm run build:demo simple-gradient
+# Build a demo for production
+npm run build:demo <demo-folder-name>
 ```
 
-Open your browser to `http://localhost:3000` and you'll see the running demo!
+Open your browser to `http://localhost:3000` and you'll see the running shader.
 
-**Available demos**: `simple-gradient`, `ping-pong-test`, `multi-buffer-test`, `demofox-pt2`, `keyboard-test`
-
-## 📚 Documentation
+## Documentation
 
 ### For Students Learning Shaders
 - [**Getting Started**](docs/learn/getting-started.md) - Your first shader in 5 minutes
@@ -47,7 +45,7 @@ Open your browser to `http://localhost:3000` and you'll see the running demo!
 - [**Components**](docs/dev/components.md) - How each component works
 - [**Troubleshooting**](docs/dev/troubleshooting.md) - Common issues and solutions
 
-## 🎯 Creating Your First Shader
+## Creating Your First Shader
 
 ### Simple Single-Pass Shader
 
@@ -66,8 +64,6 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 ```bash
 npm run dev:demo my-shader
 ```
-
-Done! 🎉
 
 ### Multi-Pass Shader with Buffers
 
@@ -93,15 +89,15 @@ Create `demos/feedback-effect/shadertoy.config.json`:
 }
 ```
 
-Then create your shader files in that folder. See [Buffers and Channels](docs/learn/buffers-and-channels.md) for details.
+Then create your shader files (`bufferA.glsl`, `image.glsl`) in that folder. See [Buffers and Channels](docs/learn/buffers-and-channels.md) for details.
 
-## ⌨️ Keyboard Shortcuts
+## Keyboard Shortcuts
 
 - **S** - Save screenshot (PNG)
 - **Space** - Play/Pause (when controls enabled)
 - **R** - Reset (when controls enabled)
 
-## 🏗️ Project Structure
+## Project Structure
 
 ```
 src/
@@ -111,25 +107,10 @@ src/
 ├── layouts/         # Layout modes (fullscreen, centered, split)
 └── main.ts          # Entry point
 
-demos/               # Example shaders
-├── simple-gradient/
-├── ping-pong-test/
-├── multi-buffer-test/
-├── demofox-pt2/     # Path tracer
-└── keyboard-test/   # Keyboard input demo
+demos/               # Your shader projects go here
 ```
 
-## 🎨 Example Demos
-
-- **simple-gradient** - Animated gradient (single-pass)
-- **ping-pong-test** - Self-referencing buffer (feedback)
-- **multi-buffer-test** - Multiple buffers working together
-- **demofox-pt2** - Path tracing accumulation shader
-- **keyboard-test** - Interactive keyboard input
-
-Try different demos with `npm run dev:demo <demo-name>`.
-
-## 🛠️ Architecture
+## Architecture
 
 Built with a clean layered architecture:
 
@@ -138,8 +119,8 @@ Built with a clean layered architecture:
 3. **App Layer** - Browser runtime, animation loop, and UI
 4. **Layout Layer** - Modular display modes
 
-All layers are strongly typed with TypeScript for maintainability.
+All layers are strongly typed with TypeScript.
 
-## 📄 License
+## License
 
 MIT

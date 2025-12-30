@@ -29,8 +29,8 @@ Each layer has a specific responsibility and communicates through well-defined i
 
 **Key Files**:
 - `types.ts` - Type definitions for configs and normalized projects
-- `loadDemo.ts` - Loads demos from the `demos/` folder
-- `preprocess.ts` - GLSL preprocessing (common.glsl injection, cubemap conversion)
+- `loadProject.ts` - Loads projects from disk (Node.js, used by build scripts)
+- `loaderHelper.ts` - Runtime loader for bundled demos in browser
 
 **Input**: Raw config files + GLSL source files
 **Output**: Normalized `ShadertoyProject` object
@@ -38,11 +38,10 @@ Each layer has a specific responsibility and communicates through well-defined i
 **Key Responsibilities**:
 - Parse JSON configs
 - Load GLSL source files
-- Inject `common.glsl` into all passes
-- Convert cubemap texture() calls to equirectangular
-- Detect self-referencing buffers (ping-pong)
+- Detect single-pass vs multi-pass projects
 - Validate configuration
 - Normalize defaults (missing channels → `kind: 'none'`)
+- Set layout and controls defaults
 
 **Design Decision**: This layer ensures the engine always receives **valid, normalized data**. The engine never needs to handle edge cases like missing passes or optional fields.
 
@@ -51,14 +50,17 @@ Each layer has a specific responsibility and communicates through well-defined i
 **Responsibility**: Execute shaders using WebGL with Shadertoy semantics.
 
 **Key Files**:
-- `ShadertoyEngine.ts` - Main engine implementation
-- `types.ts` - Engine-specific types (RuntimePass, etc.)
+- `ShadertoyEngine.ts` - Main engine class
+- `types.ts` - Engine-specific types (RuntimePass, EngineStats, etc.)
 - `glHelpers.ts` - WebGL utility functions
 
 **Input**: `ShadertoyProject` + WebGL context
-**Output**: Renders frames to screen
+**Output**: Renders frames to framebuffers
 
 **Key Responsibilities**:
+- Build fragment shaders with Shadertoy boilerplate
+- Inject common.glsl into all passes
+- Convert cubemap texture() calls to equirectangular
 - Compile GLSL shaders
 - Create WebGL resources (programs, VAOs, framebuffers, textures)
 - Bind Shadertoy uniforms (`iTime`, `iResolution`, `iFrame`, etc.)
@@ -76,6 +78,7 @@ Each layer has a specific responsibility and communicates through well-defined i
 **Key Files**:
 - `App.ts` - Main application class
 - `types.ts` - App-specific types (AppOptions, MouseState)
+- `app.css` - UI styles (FPS counter, controls, error overlay)
 
 **Input**: Container element + `ShadertoyProject`
 **Output**: Running application with UI
@@ -88,8 +91,9 @@ Each layer has a specific responsibility and communicates through well-defined i
 - Handle keyboard events → forward to engine
 - Manage playback state (play/pause/reset)
 - Screenshot functionality
-- Present engine output to screen
+- Present engine output to screen via `blitFramebuffer`
 - Handle resize events
+- Display shader compilation errors
 
 **Design Decision**: App layer handles **all browser APIs** and UI concerns. The engine never touches DOM or browser events.
 
@@ -102,6 +106,7 @@ Each layer has a specific responsibility and communicates through well-defined i
 - `CenteredLayout.ts` - Canvas centered with max-width
 - `SplitLayout.ts` - Canvas + code viewer side-by-side
 - `index.ts` - Factory function
+- `types.ts` - BaseLayout interface
 
 **Input**: Container + project
 **Output**: Layout-specific DOM structure
@@ -121,9 +126,9 @@ Each layer has a specific responsibility and communicates through well-defined i
 ```
 1. main.ts
    ↓
-2. loadDemoProject(demoName)
+2. loadDemoProject() via generatedLoader
    ↓
-3. Project Layer: Load config, load GLSL, preprocess, normalize
+3. Project Layer: Load config, load GLSL, normalize
    ↓
 4. Returns ShadertoyProject
    ↓
@@ -149,9 +154,9 @@ Each layer has a specific responsibility and communicates through well-defined i
    ↓
 2. App.animate(timestamp)
    ↓
-3. App.updateKeyboardTexture()  (writes key states to GPU)
+3. engine.updateKeyboardTexture()
    ↓
-4. App → Engine.step(time, mouse)
+4. engine.step(time, mouse)
    ↓
 5. Engine executes passes in order:
    ├─ For each pass:
@@ -159,11 +164,11 @@ Each layer has a specific responsibility and communicates through well-defined i
    │  ├─ Bind uniforms (iTime, iResolution, etc.)
    │  ├─ Bind channels (iChannel0-3)
    │  ├─ Draw fullscreen triangle
-   │  └─ Swap ping-pong textures if needed
+   │  └─ Swap ping-pong textures
    │
 6. Engine returns
    ↓
-7. App.presentToScreen()  (blits Image pass to canvas)
+7. App.presentToScreen() (blits Image pass to canvas)
    ↓
 8. App.updateFps()
 ```
@@ -182,7 +187,7 @@ When the engine needs to bind `iChannel0` for a pass:
    │  ├─ Use currentTexture or previousTexture
    │  └─ Bind to texture unit 0
    │
-   ├─ kind: 'texture2d'
+   ├─ kind: 'texture2D'
    │  ├─ Find runtime texture by name
    │  └─ Bind to texture unit 0
    │
@@ -216,7 +221,7 @@ When the engine needs to bind `iChannel0` for a pass:
 - Matches Shadertoy behavior exactly
 - No extra configuration needed
 
-**How**: Preprocessor detects `buffer: X, previous: true` where X is current pass name.
+**How**: Engine detects when a pass reads its own buffer and automatically uses the previous texture.
 
 ### 3. Stateless Engine
 
@@ -235,7 +240,7 @@ When the engine needs to bind `iChannel0` for a pass:
 
 **Why**:
 - Clear ownership (engine creates, engine disposes)
-- App never touches WebGL
+- App never touches WebGL directly
 - Prevents resource leaks
 
 **Resources**:
@@ -268,8 +273,6 @@ When the engine needs to bind `iChannel0` for a pass:
 **Code**:
 ```typescript
 const layout = createLayout(project.layout, options);
-// Instead of:
-// const layout = new CenteredLayout(options);
 ```
 
 ## WebGL Resource Management
@@ -282,14 +285,14 @@ const layout = createLayout(project.layout, options);
 - Both are RGBA32F (float precision)
 
 **External Textures**:
-- Loaded once at startup
+- Loaded asynchronously at startup
 - Stored in `_textures` array
 - RGBA8 format (images)
 
 **Keyboard Texture**:
 - 256×3 RGBA32F texture
 - Updated every frame before rendering
-- Stores key states at y=0, toggles at y=2
+- Row 0: current key state, Row 2: toggle state
 
 ### Framebuffer Strategy
 
@@ -302,7 +305,7 @@ The Image pass output is blitted to screen using `gl.blitFramebuffer()`.
 
 ### Vertex Array Objects (VAOs)
 
-Each pass has one VAO for a fullscreen triangle:
+All passes share one VAO for a fullscreen triangle:
 - 3 vertices: (-1,-1), (3,-1), (-1,3)
 - Covers entire clip space
 - More efficient than quad (2 triangles)
@@ -312,7 +315,7 @@ Each pass has one VAO for a fullscreen triangle:
 ### Minimize State Changes
 
 WebGL state changes are expensive. The engine:
-- Binds VAO once per pass (contains all vertex state)
+- Shares VAO across all passes
 - Binds program once per pass
 - Binds textures in order (texture unit 0-3)
 - Minimizes framebuffer binds
@@ -346,15 +349,15 @@ Shader compilation errors are:
 Rare, but possible:
 - Invalid framebuffer configurations → throw Error
 - Missing resources → throw Error
-- WebGL context loss → not currently handled (TODO)
+- WebGL context loss → not currently handled
 
-**Philosophy**: Fail fast and loudly during development. Production use should never hit these.
+**Philosophy**: Fail fast and loudly during development.
 
 ## Type Safety
 
 ### Strong Typing Throughout
 
-- Project layer: `ShadertoyProject`, `ShadertoyPass`, `ChannelSource`
+- Project layer: `ShadertoyProject`, `ShadertoyPass`, `Channels`
 - Engine layer: `RuntimePass`, `RuntimeTexture2D`, `PassUniformLocations`
 - App layer: `AppOptions`, `MouseState`
 
@@ -364,13 +367,23 @@ Channel sources use discriminated unions:
 
 ```typescript
 type ChannelSource =
-  | { kind: 'buffer'; name: PassName; previous: boolean }
-  | { kind: 'texture2d'; name: string; filter: ...; wrap: ... }
-  | { kind: 'keyboard' }
-  | { kind: 'none' };
+  | { kind: 'none' }
+  | { kind: 'buffer'; buffer: PassName; previous: boolean }
+  | { kind: 'texture2D'; name: string }
+  | { kind: 'keyboard' };
 ```
 
 TypeScript ensures exhaustive checking in switch statements.
+
+### Tuple Types
+
+Channels use a fixed-length tuple:
+
+```typescript
+type Channels = [ChannelSource, ChannelSource, ChannelSource, ChannelSource];
+```
+
+This guarantees exactly 4 channels per pass at compile time.
 
 ### Null Safety
 
@@ -383,15 +396,14 @@ TypeScript ensures exhaustive checking in switch statements.
 ### Adding New Uniform Types
 
 1. Add to `PassUniformLocations` type
-2. Query location in `createPassUniforms()`
-3. Bind in `bindUniforms()`
+2. Query location in pass initialization
+3. Bind in `bindBuiltinUniforms()`
 
 ### Adding New Channel Types
 
 1. Add to `ChannelSource` union
 2. Add to `ChannelJSON` union
-3. Handle in `resolveChannelSource()`
-4. Handle in `bindChannel()`
+3. Handle in `resolveChannelTexture()`
 
 ### Adding New Layout Modes
 
@@ -400,70 +412,7 @@ TypeScript ensures exhaustive checking in switch statements.
 3. Add to factory in `layouts/index.ts`
 4. Add to `LayoutMode` type
 
-## Testing Strategy (Future)
-
-Not currently implemented, but here's the recommended approach:
-
-### Unit Tests
-- Project layer: Config parsing and normalization
-- Preprocessor: GLSL transformations
-- GL helpers: Texture creation, shader compilation
-
-### Integration Tests
-- Engine: Full render pipeline with mock GL context
-- App: Mouse/keyboard event handling
-
-### Visual Regression Tests
-- Render reference shaders
-- Compare screenshots pixel-by-pixel
-- Catch rendering regressions
-
-## Build Process
-
-### Development
-```bash
-npm run dev
-```
-
-Vite development server:
-- Hot module replacement
-- TypeScript compilation
-- CSS bundling
-- Source maps
-
-### Production
-```bash
-npm run build
-```
-
-1. TypeScript compilation (`tsc`)
-2. Vite build (bundling, minification)
-3. Output to `dist/`:
-   - `index.html` (0.37 kB)
-   - `assets/main.js` (~100 kB, ~26 kB gzipped)
-   - `assets/index.css` (~6 kB)
-   - Static assets (images)
-
-### Key Optimizations
-
-- Tree-shaking removes unused code
-- CSS is extracted and minified
-- Assets are hashed for cache busting
-- Gzip compression on text files
-
-## Future Improvements
-
-### Potential Additions
-
-1. **WebGL context loss handling** - Restore resources on context lost/restored
-2. **Multiple textures per channel** - Cubemaps, 3D textures, video
-3. **Audio input** - FFT texture for music visualization
-4. **Hot reload for shaders** - Watch GLSL files and recompile
-5. **Performance profiling** - GPU timer queries for per-pass timing
-6. **WASM preprocessing** - Faster GLSL parsing/transformation
-7. **Unit tests** - Full test coverage
-
-### Known Limitations
+## Known Limitations
 
 - No cubemap textures (converted to equirectangular)
 - No video textures
@@ -472,7 +421,7 @@ npm run build
 - Fixed 4 channels per pass
 - Maximum 5 passes (BufferA-D + Image)
 
-These match Shadertoy's current feature set and can be added if needed.
+These match Shadertoy's feature set and can be added if needed.
 
 ## Summary
 
@@ -482,5 +431,3 @@ The architecture emphasizes:
 - **Predictable data flow** - One-way flow from config to rendering
 - **Modularity** - Easy to extend and maintain
 - **Performance** - Minimal overhead, efficient WebGL usage
-
-This design makes the codebase easy to understand, test, and extend while maintaining high performance and compatibility with Shadertoy.

@@ -1,0 +1,158 @@
+/**
+ * Tabbed Layout Styles
+ * Single window with tabs switching between shader and code views
+ */
+
+.layout-tabbed {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 60px 80px;
+  box-sizing: border-box;
+}
+
+/* ===== Tab Bar ===== */
+.tabbed-tab-bar {
+  display: flex;
+  background: #1a1a1a;
+  border-radius: 8px 8px 0 0;
+  padding: 8px 8px 0 8px;
+  gap: 4px;
+}
+
+.tabbed-tab-button {
+  padding: 10px 20px;
+  background: transparent;
+  border: none;
+  border-radius: 6px 6px 0 0;
+  font-size: 13px;
+  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  color: #888;
+}
+
+.tabbed-tab-button:hover {
+  background: #333;
+  color: #ccc;
+}
+
+.tabbed-tab-button.active {
+  background: #000;
+  color: #fff;
+  font-weight: 500;
+}
+
+.tabbed-tab-button.shader-tab {
+  font-family: system-ui, -apple-system, sans-serif;
+  font-weight: 500;
+}
+
+.tabbed-tab-button.shader-tab.active {
+  background: #000;
+}
+
+/* ===== Content Area ===== */
+.tabbed-content {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  background: #000;
+  border-radius: 0 0 8px 8px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.tabbed-canvas-container {
+  width: 100%;
+  height: 100%;
+}
+
+/* ===== Code Viewer ===== */
+.tabbed-code-viewer {
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background: #1e1e1e;
+}
+
+.tabbed-code-viewer pre {
+  margin: 0;
+  padding: 20px;
+  font-size: 14px;
+  line-height: 1.6;
+  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+  background: #1e1e1e;
+  color: #d4d4d4;
+}
+
+.tabbed-code-viewer code {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+/* ===== Copy Button ===== */
+.tabbed-copy-button {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 6px;
+  color: #888;
+  cursor: pointer;
+  transition: all 0.2s;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tabbed-copy-button:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+.tabbed-copy-button:active {
+  transform: scale(0.9);
+}
+
+.tabbed-copy-button.copied {
+  color: #4caf50;
+}
+
+/* ===== Dark Prism Theme ===== */
+.tabbed-code-viewer .token.comment { color: #6a9955; }
+.tabbed-code-viewer .token.keyword { color: #569cd6; }
+.tabbed-code-viewer .token.string { color: #ce9178; }
+.tabbed-code-viewer .token.number { color: #b5cea8; }
+.tabbed-code-viewer .token.operator { color: #d4d4d4; }
+.tabbed-code-viewer .token.function { color: #dcdcaa; }
+.tabbed-code-viewer .token.class-name { color: #4ec9b0; }
+.tabbed-code-viewer .token.punctuation { color: #d4d4d4; }
+
+/* ===== Responsive ===== */
+@media (max-width: 1200px) {
+  .layout-tabbed {
+    padding: 40px 60px;
+  }
+}
+
+@media (max-width: 900px) {
+  .layout-tabbed {
+    padding: 30px 40px;
+  }
+}
+
+@media (max-width: 600px) {
+  .layout-tabbed {
+    padding: 20px;
+  }
+
+  .tabbed-tab-button {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+}

@@ -135,6 +135,11 @@ export type ChannelSource =
   | { kind: 'texture2D'; name: string }  // Internal texture ID (e.g., "tex0")
   | { kind: 'keyboard' };
 
+/**
+ * Exactly 4 channels (iChannel0-3), matching Shadertoy's fixed channel count.
+ */
+export type Channels = [ChannelSource, ChannelSource, ChannelSource, ChannelSource];
+
 // =============================================================================
 // Texture Definitions
 // =============================================================================
@@ -160,7 +165,7 @@ export interface ShadertoyTexture2D {
 export interface ShadertoyPass {
   name: PassName;
   glslSource: string;  // Full GLSL source code
-  channels: ChannelSource[];  // Always length 4 (iChannel0..3)
+  channels: Channels;  // iChannel0..3
 }
 
 // =============================================================================
