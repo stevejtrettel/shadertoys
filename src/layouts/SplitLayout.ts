@@ -7,7 +7,7 @@
 
 import './split.css';
 
-import Prism from 'prismjs';
+import * as Prism from 'prismjs';
 import 'prismjs/components/prism-c';
 import 'prismjs/components/prism-cpp';
 

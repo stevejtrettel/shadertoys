@@ -96,6 +96,7 @@
 
 .code-viewer {
   flex: 1;
+  min-height: 0; /* Allow shrinking below content size in flexbox */
   overflow: auto;
   position: relative;
   background: white;
@@ -109,7 +110,6 @@
   line-height: 1.5;
   font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
   background: white;
-  overflow: visible;
 }
 
 .code-viewer code {

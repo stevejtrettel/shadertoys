@@ -30,4 +30,4 @@ export interface LayoutOptions {
 /**
  * Available layout modes.
  */
-export type LayoutMode = 'fullscreen' | 'centered' | 'split';
+export type LayoutMode = 'fullscreen' | 'centered' | 'split' | 'tabbed';
