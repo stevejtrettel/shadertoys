@@ -103,6 +103,9 @@ export class App {
     this.resizeObserver = new ResizeObserver(() => {
       this.updateCanvasSize();
       this.engine.resize(this.canvas.width, this.canvas.height);
+      // Reset frame counter so shaders can reinitialize (important for accumulators)
+      this.startTime = performance.now() / 1000;
+      this.engine.reset();
     });
     this.resizeObserver.observe(this.container);
 
