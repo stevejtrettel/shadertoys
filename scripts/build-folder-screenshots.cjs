@@ -109,6 +109,11 @@ function findDemos(dir) {
   return demos;
 }
 
+// Helper to wait (replaces deprecated page.waitForTimeout)
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 // Take screenshot of a built demo
 async function takeScreenshot(browser, htmlPath, outputPath, frames = 60) {
   const page = await browser.newPage();
@@ -121,8 +126,7 @@ async function takeScreenshot(browser, htmlPath, outputPath, frames = 60) {
     await page.goto(`file://${htmlPath}`, { waitUntil: 'networkidle0', timeout: 30000 });
 
     // Wait for shader to render some frames
-    // We'll wait a bit for the shader to initialize and render
-    await page.waitForTimeout(1000 + (frames / 60) * 1000);
+    await sleep(1000 + (frames / 60) * 1000);
 
     // Find the canvas and screenshot it
     const canvas = await page.$('canvas');
