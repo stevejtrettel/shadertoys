@@ -15,7 +15,14 @@ export async function loadDemo(
   const hasConfig = configPath in jsonFiles;
 
   if (hasConfig) {
-    return loadWithConfig(demoName, jsonFiles, glslFiles, imageFiles);
+    const config = await jsonFiles[configPath]();
+    // If config has passes defined, use full config loading
+    // Otherwise, use single-pass with config overrides (for layout, controls, etc.)
+    if (config.passes) {
+      return loadWithConfig(demoName, config, glslFiles, imageFiles);
+    } else {
+      return loadSinglePass(demoName, glslFiles, config);
+    }
   } else {
     return loadSinglePass(demoName, glslFiles);
   }
@@ -23,7 +30,8 @@ export async function loadDemo(
 
 async function loadSinglePass(
   demoName: string,
-  glslFiles: Record<string, () => Promise<string>>
+  glslFiles: Record<string, () => Promise<string>>,
+  configOverrides?: Partial<ShadertoyConfig>
 ): Promise<ShadertoyProject> {
   const imagePath = `/demos/${demoName}/image.glsl`;
 
@@ -33,15 +41,20 @@ async function loadSinglePass(
 
   const imageSource = await glslFiles[imagePath]();
 
+  // Apply config overrides if provided
+  const layout = configOverrides?.layout || 'tabbed';
+  const controls = configOverrides?.controls ?? true;
+  const title = configOverrides?.meta?.title || demoName.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+
   return {
     root: `/demos/${demoName}`,
     meta: {
-      title: demoName.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
-      author: null,
-      description: null,
+      title,
+      author: configOverrides?.meta?.author || null,
+      description: configOverrides?.meta?.description || null,
     },
-    layout: 'tabbed',
-    controls: true,
+    layout,
+    controls,
     commonSource: null,
     passes: {
       Image: {
@@ -61,12 +74,10 @@ async function loadSinglePass(
 
 async function loadWithConfig(
   demoName: string,
-  jsonFiles: Record<string, () => Promise<ShadertoyConfig>>,
+  config: ShadertoyConfig,
   glslFiles: Record<string, () => Promise<string>>,
   imageFiles: Record<string, () => Promise<string>>
 ): Promise<ShadertoyProject> {
-  const configPath = `/demos/${demoName}/shadertoy.config.json`;
-  const config = await jsonFiles[configPath]();
 
   let commonSource: string | null = null;
   if (config.common) {
