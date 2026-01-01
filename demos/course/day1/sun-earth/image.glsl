@@ -8,9 +8,7 @@ vec2 normalize_coord(vec2 coord) {
 void mainImage(out vec4 fragColor, in vec2 fragCoord)
 {
     vec2 p = normalize_coord(fragCoord);
-    
-    // Use iMouse.zw (last click position) so sun stays put
-    vec2 sun = normalize_coord(iMouse.zw);
+    vec2 sun = normalize_coord(iMouse.xy);
     
     // Earth orbits the sun
     float orbit_radius = 0.8;
