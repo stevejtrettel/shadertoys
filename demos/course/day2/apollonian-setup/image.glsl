@@ -1,3 +1,10 @@
+vec2 normalize_coord(vec2 fragCoord) {
+    vec2 uv = fragCoord / iResolution.xy;
+    uv = uv - vec2(0.5, 0.5);
+    uv.x *= iResolution.x / iResolution.y;
+    return uv * 6.0;
+}
+
 struct Circle {
     vec2 center;
     float radius;
@@ -9,10 +16,7 @@ float distToCircle(vec2 p, Circle c) {
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord)
 {
-    vec2 uv = fragCoord / iResolution.xy;
-    uv = uv - vec2(0.5, 0.5);
-    uv.x *= iResolution.x / iResolution.y;
-    vec2 p = uv * 6.0;
+    vec2 p = normalize_coord(fragCoord);
     
     // Three mutually tangent inner circles plus outer circle
     // For three circles of radius r centered at vertices of equilateral triangle:
@@ -21,8 +25,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
     // - Outer circle radius = circumradius + r
     
     float r = 1.0;
-    float triSide = 2.0 * r;  // distance between inner circle centers
-    float circumradius = triSide / sqrt(3.0);  // distance from origin to inner centers
+    float triSide = 2.0 * r;
+    float circumradius = triSide / sqrt(3.0);
     
     // Inner circles at vertices of equilateral triangle
     Circle c1 = Circle(vec2(0.0, circumradius), r);

@@ -1,3 +1,10 @@
+vec2 normalize_coord(vec2 fragCoord) {
+    vec2 uv = fragCoord / iResolution.xy;
+    uv = uv - vec2(0.5, 0.5);
+    uv.x *= iResolution.x / iResolution.y;
+    return uv * 6.0;
+}
+
 struct Circle {
     vec2 center;
     float radius;
@@ -14,10 +21,7 @@ bool isInside(vec2 p, Circle c) {
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord)
 {
-    vec2 uv = fragCoord / iResolution.xy;
-    uv = uv - vec2(0.5, 0.5);
-    uv.x *= iResolution.x / iResolution.y;
-    vec2 p = uv * 6.0;
+    vec2 p = normalize_coord(fragCoord);
     
     // Setup circles with correct geometry
     float r = 1.0;

@@ -6,18 +6,19 @@ float cabs2(vec2 z) {
     return dot(z, z);
 }
 
-void mainImage(out vec4 fragColor, in vec2 fragCoord)
-{
+vec2 normalize_coord(vec2 fragCoord) {
     vec2 uv = fragCoord / iResolution.xy;
     uv = uv - vec2(0.5, 0.5);
     uv.x *= iResolution.x / iResolution.y;
-    vec2 p = uv * 4.0;
+    return uv * 2.5;
+}
+
+void mainImage(out vec4 fragColor, in vec2 fragCoord)
+{
+    vec2 p = normalize_coord(fragCoord);
     
     // Get c from mouse position
-    vec2 mouse_uv = iMouse.xy / iResolution.xy;
-    mouse_uv = mouse_uv - vec2(0.5, 0.5);
-    mouse_uv.x *= iResolution.x / iResolution.y;
-    vec2 c = mouse_uv * 4.0;
+    vec2 c = normalize_coord(iMouse.xy);
     c.x -= 0.5;
     
     // Default to interesting value if no mouse

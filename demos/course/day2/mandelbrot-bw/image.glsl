@@ -6,14 +6,19 @@ float cabs2(vec2 z) {
     return dot(z, z);
 }
 
-void mainImage(out vec4 fragColor, in vec2 fragCoord)
-{
+vec2 normalize_coord(vec2 fragCoord) {
     vec2 uv = fragCoord / iResolution.xy;
     uv = uv - vec2(0.5, 0.5);
     uv.x *= iResolution.x / iResolution.y;
+    return uv * 2.5;
+}
+
+void mainImage(out vec4 fragColor, in vec2 fragCoord)
+{
+    vec2 p = normalize_coord(fragCoord);
     
-    vec2 c = uv * 4.0;
-    c.x -= 0.5;
+    vec2 c = p;
+    c.x -= 0.5;  // shift left to center the interesting part
     
     vec2 z = vec2(0.0, 0.0);
     int max_iter = 100;

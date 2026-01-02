@@ -1,3 +1,10 @@
+vec2 normalize_coord(vec2 fragCoord) {
+    vec2 uv = fragCoord / iResolution.xy;
+    uv = uv - vec2(0.5, 0.5);
+    uv.x *= iResolution.x / iResolution.y;
+    return uv * 4.0;
+}
+
 struct Circle {
     vec2 center;
     float radius;
@@ -10,10 +17,7 @@ vec2 invert(vec2 p, Circle c) {
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord)
 {
-    vec2 uv = fragCoord / iResolution.xy;
-    uv = uv - vec2(0.5, 0.5);
-    uv.x *= iResolution.x / iResolution.y;
-    vec2 p = uv * 4.0;
+    vec2 p = normalize_coord(fragCoord);
     
     // Animate the inversion circle
     Circle inv_circle;
