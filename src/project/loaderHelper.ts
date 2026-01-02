@@ -11,10 +11,17 @@ export async function loadDemo(
   jsonFiles: Record<string, () => Promise<ShadertoyConfig>>,
   imageFiles: Record<string, () => Promise<string>>
 ): Promise<ShadertoyProject> {
-  const configPath = `/demos/${demoName}/shadertoy.config.json`;
-  const hasConfig = configPath in jsonFiles;
+  // Check for config files (shadertoy.config.json takes priority, then config.json)
+  const shadertoyConfigPath = `/demos/${demoName}/shadertoy.config.json`;
+  const simpleConfigPath = `/demos/${demoName}/config.json`;
 
-  if (hasConfig) {
+  const configPath = shadertoyConfigPath in jsonFiles
+    ? shadertoyConfigPath
+    : simpleConfigPath in jsonFiles
+      ? simpleConfigPath
+      : null;
+
+  if (configPath) {
     const config = await jsonFiles[configPath]();
     // If config has passes defined, use full config loading
     // Otherwise, use single-pass with config overrides (for layout, controls, etc.)
