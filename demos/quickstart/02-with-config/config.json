@@ -1,0 +1,10 @@
+{
+  "meta": {
+    "title": "Mouse Circle",
+    "description": "A simple shader with config - move your mouse!"
+  },
+  "controls": true,
+  "passes": {
+    "Image": {}
+  }
+}

@@ -6,7 +6,9 @@ Complete reference for configuring your shader projects.
 
 Every shader project needs either:
 - **Simple**: Just an `image.glsl` file (auto-configured)
-- **Advanced**: A `shadertoy.config.json` file + shader files
+- **Advanced**: A config file + shader files
+
+**Config file names**: You can use either `shadertoy.config.json` or `config.json` - both work identically.
 
 ## File Structure
 
@@ -113,11 +115,13 @@ Controls how the shader is displayed.
 - `"fullscreen"` - Canvas fills entire screen
 - `"centered"` (default) - Canvas is centered with max-width
 - `"split"` - Split view with shader code on the right
+- `"tabbed"` - Tabs to switch between viewing each pass's code
 
 **When to use each**:
 - Fullscreen: Immersive art pieces, games
 - Centered: Most shaders (default is usually fine)
 - Split: When teaching/debugging to see code live
+- Tabbed: For complex multi-pass shaders where you want to browse all the code
 
 ### `controls` (optional)
 

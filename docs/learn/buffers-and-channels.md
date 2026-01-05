@@ -162,28 +162,30 @@ Where:
 
 ## Example: Two-Pass Blur
 
-First pass blurs horizontally, second pass blurs vertically.
+Separable blur: BufferA renders content, BufferB blurs horizontally, Image blurs vertically.
+
+**Important**: Passes execute in order: BufferA → BufferB → BufferC → BufferD → Image. Each pass can only read the current frame from passes that ran *before* it.
 
 `shadertoy.config.json`:
 ```json
 {
   "passes": {
-    "BufferA": {
-      "channels": {
-        "iChannel0": { "buffer": "BufferB" }
-      }
-    },
-    "BufferB": {},
-    "Image": {
+    "BufferA": {},
+    "BufferB": {
       "channels": {
         "iChannel0": { "buffer": "BufferA" }
+      }
+    },
+    "Image": {
+      "channels": {
+        "iChannel0": { "buffer": "BufferB" }
       }
     }
   }
 }
 ```
 
-`bufferB.glsl` - Render something to blur:
+`bufferA.glsl` - Render something to blur:
 ```glsl
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 uv = fragCoord / iResolution.xy;
@@ -193,7 +195,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 }
 ```
 
-`bufferA.glsl` - Horizontal blur:
+`bufferB.glsl` - Horizontal blur:
 ```glsl
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 uv = fragCoord / iResolution.xy;
