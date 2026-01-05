@@ -9,36 +9,45 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
 {
     vec2 p = normalize_coord(fragCoord);
     
-    // Mouse controls the central (a, b) of our family
-    float a_center = mix(-3.0, 1.0, iMouse.x / iResolution.x);
+    // Mouse picks (a, b) in parameter space
+    float a = mix(-2.0, 1.0, iMouse.x / iResolution.x);
     float b_center = mix(-2.0, 2.0, iMouse.y / iResolution.y);
     
-    vec3 color = vec3(0.05, 0.05, 0.1);  // dark background
+    vec3 color = vec3(0.05, 0.05, 0.1);
     
-    // Draw curves for a range of a values around a_center
-    for (float i = -3.0; i <= 3.0; i += 1.0) {
-        float a = a_center + i * 0.5;  // more spacing
-        float b = b_center;
+    vec3 oneComponent = vec3(1.0, 0.85, 0.3);   // gold
+    vec3 twoComponent = vec3(0.3, 0.5, 0.8);    // blue
+    vec3 singularColor = vec3(1.0, 0.2, 0.2);   // red
+    
+    for (int j = -15; j <= 15; j++) {
+        float b = b_center + float(j) * 0.15;
         
-        // Elliptic curve: y² = x³ + ax + b
+        float dist_from_center = abs(float(j));
+        
+        // Discriminant: 4a³ + 27b²
+        float disc = 4.0 * a * a * a + 27.0 * b * b;
+        
         float F = p.y * p.y - p.x * p.x * p.x - a * p.x - b;
-        
-        // Gradient
         vec2 grad = vec2(-3.0 * p.x * p.x - a, 2.0 * p.y);
         float dist = abs(F) / max(length(grad), 0.01);
         
-        // Brightness fades quickly: central curve bright, outer curves fade to background
-        float t = abs(i) / 3.0;  // 0 at center, 1 at edges
-        float brightness = 1.0 - t * t;  // quadratic falloff
+        float thickness = 0.05 / (1.0 + dist_from_center * 0.8);
         
-        if (dist < 0.03 && brightness > 0.05) {
-            // Check discriminant for this specific curve
-            float disc = 4.0 * a * a * a + 27.0 * b * b;
-            if (abs(disc) < 0.3) {
-                color = mix(color, vec3(1.0, 0.3, 0.3), brightness);  // red for singular
-            } else {
-                color = mix(color, vec3(1.0, 1.0, 0.5), brightness);  // yellow for smooth
-            }
+        // Color by topology
+        vec3 curveColor;
+        if (abs(disc) < 0.3) {
+            curveColor = singularColor;
+        } else if (disc > 0.0) {
+            curveColor = oneComponent;
+        } else {
+            curveColor = twoComponent;
+        }
+        
+        float brightness = 1.0 / (1.0 + dist_from_center * 0.4);
+        curveColor *= brightness;
+        
+        if (dist < thickness) {
+            color = curveColor;
         }
     }
     

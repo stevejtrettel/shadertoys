@@ -8,6 +8,8 @@ vec2 normalize_coord(vec2 coord) {
 void mainImage(out vec4 fragColor, in vec2 fragCoord)
 {
     vec2 p = normalize_coord(fragCoord);
+    
+    // Sun follows mouse position
     vec2 sun = normalize_coord(iMouse.xy);
     
     // Earth orbits the sun
