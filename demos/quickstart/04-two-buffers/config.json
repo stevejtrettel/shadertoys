@@ -1,0 +1,21 @@
+{
+  "meta": {
+    "title": "Two Buffer Pipeline",
+    "description": "BufferA renders, BufferB blurs, Image combines them"
+  },
+  "controls": true,
+  "passes": {
+    "BufferA": {},
+    "BufferB": {
+      "channels": {
+        "iChannel0": { "buffer": "BufferA" }
+      }
+    },
+    "Image": {
+      "channels": {
+        "iChannel0": { "buffer": "BufferA" },
+        "iChannel1": { "buffer": "BufferB" }
+      }
+    }
+  }
+}

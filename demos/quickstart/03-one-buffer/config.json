@@ -1,0 +1,19 @@
+{
+  "meta": {
+    "title": "Feedback Trails",
+    "description": "BufferA reads its previous frame to create trails"
+  },
+  "controls": true,
+  "passes": {
+    "BufferA": {
+      "channels": {
+        "iChannel0": { "buffer": "BufferA", "previous": true }
+      }
+    },
+    "Image": {
+      "channels": {
+        "iChannel0": { "buffer": "BufferA" }
+      }
+    }
+  }
+}

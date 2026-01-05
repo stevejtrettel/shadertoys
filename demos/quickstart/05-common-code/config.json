@@ -1,0 +1,15 @@
+{
+  "meta": {
+    "title": "Common Code",
+    "description": "Shared helper functions in common.glsl"
+  },
+  "controls": true,
+  "passes": {
+    "BufferA": {},
+    "Image": {
+      "channels": {
+        "iChannel0": { "buffer": "BufferA" }
+      }
+    }
+  }
+}
