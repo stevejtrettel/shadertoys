@@ -1,7 +1,7 @@
 {
   "meta": {
-    "title": "Feedback Trails",
-    "description": "BufferA reads its previous frame to create trails"
+    "title": "Simple Paint",
+    "description": "Click and drag to draw. Press R to clear."
   },
   "controls": true,
   "passes": {

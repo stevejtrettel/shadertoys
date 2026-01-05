@@ -1,18 +1,21 @@
-// Image: Combine original and blurred versions
-// Shows both BufferA (sharp) and BufferB (blurred) side by side
+// Image: Visualize the wave
+// Maps displacement to color
 
-void mainImage(out vec4 fragColor, in vec2 fragCoord) {
-    vec2 uv = fragCoord / iResolution.xy;
+void mainImage(out vec4 fragColor, in vec2 fragCoord)
+{
+    float u = texelFetch(iChannel0, ivec2(fragCoord), 0).r;
 
-    // Get both versions
-    vec3 sharp = texture(iChannel0, uv).rgb;   // BufferA - original
-    vec3 blurred = texture(iChannel1, uv).rgb; // BufferB - blurred
+    // Amplify for visibility
+    u *= 5.0;
 
-    // Split screen: left = sharp, right = blurred
-    vec3 col = (uv.x < 0.5) ? sharp : blurred;
+    // Map displacement to color:
+    // negative = blue, zero = black, positive = orange
+    vec3 color;
+    if (u > 0.0) {
+        color = mix(vec3(0.0), vec3(1.0, 0.5, 0.0), u);
+    } else {
+        color = mix(vec3(0.0), vec3(0.0, 0.3, 1.0), -u);
+    }
 
-    // Draw a dividing line
-    col += 0.5 * smoothstep(0.003, 0.0, abs(uv.x - 0.5));
-
-    fragColor = vec4(col, 1.0);
+    fragColor = vec4(color, 1.0);
 }
