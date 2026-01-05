@@ -1,20 +1,25 @@
 {
   "meta": {
-    "title": "Two Buffer Pipeline",
-    "description": "BufferA renders, BufferB blurs, Image combines them"
+    "title": "Wave Simulation",
+    "description": "Interactive wave equation. Click to create ripples!"
   },
   "controls": true,
   "passes": {
-    "BufferA": {},
+    "BufferA": {
+      "channels": {
+        "iChannel0": { "buffer": "BufferA", "previous": true },
+        "iChannel1": { "buffer": "BufferB", "previous": true }
+      }
+    },
     "BufferB": {
       "channels": {
-        "iChannel0": { "buffer": "BufferA" }
+        "iChannel0": { "buffer": "BufferA", "previous": true },
+        "iChannel1": { "buffer": "BufferB", "previous": true }
       }
     },
     "Image": {
       "channels": {
-        "iChannel0": { "buffer": "BufferA" },
-        "iChannel1": { "buffer": "BufferB" }
+        "iChannel0": { "buffer": "BufferA" }
       }
     }
   }

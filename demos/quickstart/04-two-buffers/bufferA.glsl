@@ -1,22 +1,28 @@
-// BufferA: Render the source pattern
-// This creates the base image that BufferB will process
+// BufferA: Wave displacement
+// Stores the height of the wave at each point
 
-void mainImage(out vec4 fragColor, in vec2 fragCoord) {
-    vec2 uv = fragCoord / iResolution.xy;
-
-    // Center and correct aspect ratio
-    vec2 p = uv - 0.5;
-    p.x *= iResolution.x / iResolution.y;
-
-    // Create a pattern of circles
-    vec3 col = vec3(0.0);
-
-    for (float i = 0.0; i < 5.0; i++) {
-        float angle = iTime + i * 1.256;
-        vec2 center = 0.25 * vec2(cos(angle), sin(angle));
-        float dist = length(p - center);
-        col += 0.5 * smoothstep(0.08, 0.07, dist) * (0.5 + 0.5 * sin(iTime + i + vec3(0, 2, 4)));
+void mainImage(out vec4 fragColor, in vec2 fragCoord)
+{
+    // Initialize: flat surface
+    if (iFrame == 0) {
+        fragColor = vec4(0.0);
+        return;
     }
 
-    fragColor = vec4(col, 1.0);
+    // Boundary: keep edges at zero
+    if (fragCoord.x < 1.0 || fragCoord.x > iResolution.x - 1.0 ||
+        fragCoord.y < 1.0 || fragCoord.y > iResolution.y - 1.0) {
+        fragColor = vec4(0.0);
+        return;
+    }
+
+    ivec2 p = ivec2(fragCoord);
+    float u = texelFetch(iChannel0, p, 0).r;  // Current displacement
+    float v = texelFetch(iChannel1, p, 0).r;  // Current velocity
+
+    // Update displacement: u' = u + dt * v
+    float dt = 0.5;
+    float newU = u + dt * v;
+
+    fragColor = vec4(newU, 0.0, 0.0, 1.0);
 }
