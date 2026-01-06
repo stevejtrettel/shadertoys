@@ -2,10 +2,6 @@ vec2 cmul(vec2 z, vec2 w) {
     return vec2(z.x * w.x - z.y * w.y, z.x * w.y + z.y * w.x);
 }
 
-float cabs2(vec2 z) {
-    return dot(z, z);
-}
-
 vec2 normalize_coord(vec2 fragCoord) {
     vec2 uv = fragCoord / iResolution.xy;
     uv = uv - vec2(0.5, 0.5);
@@ -15,25 +11,19 @@ vec2 normalize_coord(vec2 fragCoord) {
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord)
 {
-    vec2 p = normalize_coord(fragCoord);
+    vec2 c = normalize_coord(fragCoord);
+    c.x = c.x - 0.5;  // shift left to center the interesting part
     
-    vec2 c = p;
-    c.x -= 0.5;  // shift left to center the interesting part
+    vec3 color = vec3(0.0, 0.0, 0.0);
     
     vec2 z = vec2(0.0, 0.0);
-    int max_iter = 100;
-    int iter;
     
-    for (iter = 0; iter < max_iter; iter++) {
-        if (cabs2(z) > 4.0) break;
+    for (int i = 0; i < 100; i++) {
+        if (length(z) > 2.0) {
+            color = vec3(1.0, 1.0, 1.0);
+            break;
+        }
         z = cmul(z, z) + c;
-    }
-    
-    vec3 color;
-    if (iter == max_iter) {
-        color = vec3(0.0);
-    } else {
-        color = vec3(1.0);
     }
     
     fragColor = vec4(color, 1.0);

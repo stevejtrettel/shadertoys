@@ -2,10 +2,6 @@ vec2 cmul(vec2 z, vec2 w) {
     return vec2(z.x * w.x - z.y * w.y, z.x * w.y + z.y * w.x);
 }
 
-float cabs2(vec2 z) {
-    return dot(z, z);
-}
-
 vec2 normalize_coord(vec2 fragCoord) {
     vec2 uv = fragCoord / iResolution.xy;
     uv = uv - vec2(0.5, 0.5);
@@ -19,7 +15,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
     
     // Get c from mouse position
     vec2 c = normalize_coord(iMouse.xy);
-    c.x -= 0.5;
+    c.x = c.x - 0.5;
     
     // Default to interesting value if no mouse
     if (iMouse.x < 1.0) {
@@ -28,34 +24,44 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
     
     // Mandelbrot iteration (for background)
     vec2 mc = p;
-    mc.x -= 0.5;
-    vec2 mz = vec2(0.0);
-    int m_iter;
-    for (m_iter = 0; m_iter < 100; m_iter++) {
-        if (cabs2(mz) > 4.0) break;
+    mc.x = mc.x - 0.5;
+    vec2 mz = vec2(0.0, 0.0);
+    int m_i;
+    for (m_i = 0; m_i < 100; m_i++) {
+        if (length(mz) > 2.0) break;
         mz = cmul(mz, mz) + mc;
     }
     
     // Julia iteration (for foreground)
     vec2 jz = p;
-    int j_iter;
-    for (j_iter = 0; j_iter < 100; j_iter++) {
-        if (cabs2(jz) > 4.0) break;
+    int j_i;
+    for (j_i = 0; j_i < 100; j_i++) {
+        if (length(jz) > 2.0) break;
         jz = cmul(jz, jz) + c;
     }
     
-    // Color: light background, Mandelbrot in gray, Julia in black
-    vec3 color = vec3(0.9);  // light background (escaped both)
-    if (m_iter == 100) {
-        color = vec3(0.6);  // Mandelbrot set in gray
-    }
-    if (j_iter == 100) {
-        color = vec3(0.0);  // Julia set in black
+    // Mandelbrot grayscale (faded to serve as background)
+    vec3 color = vec3(1.0, 1.0, 1.0);
+    if (m_i < 100) {
+        float t = float(m_i) / 100.0;
+        float gray = 0.6 + 0.4 * (1.0 - t);  // range [0.6, 1.0]
+        color = vec3(gray, gray, gray);
+    } else {
+        color = vec3(0.5, 0.5, 0.5);  // Mandelbrot interior
     }
     
-    // Draw red dot at c position (in Mandelbrot coordinates)
+    // Julia grayscale (overlaid)
+    if (j_i < 100) {
+        float t = float(j_i) / 100.0;
+        float gray = 1.0 - t;
+        color = vec3(gray, gray, gray);
+    } else {
+        color = vec3(0.0, 0.0, 0.0);  // Julia interior
+    }
+    
+    // Draw red dot at c position
     vec2 c_pos = c;
-    c_pos.x += 0.5;  // undo the offset we applied to c
+    c_pos.x = c_pos.x + 0.5;
     if (length(p - c_pos) < 0.05) {
         color = vec3(1.0, 0.0, 0.0);
     }
