@@ -4,6 +4,7 @@
   "description": "Shadertoy playground for students",
   "type": "module",
   "scripts": {
+    "new": "node scripts/new-demo.cjs",
     "dev": "vite",
     "dev:demo": "node scripts/dev-demo.cjs",
     "build": "tsc && vite build",
