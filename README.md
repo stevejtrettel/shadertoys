@@ -73,7 +73,7 @@ demos/my-shader/
 ```json
 {
   "BufferA": {
-    "iChannel0": { "buffer": "BufferA", "previous": true }
+    "iChannel0": "BufferA"
   },
   "Image": {
     "iChannel0": "BufferA"
@@ -129,12 +129,12 @@ demos/my-shader/
 ```json
 {
   "BufferA": {
-    "iChannel0": { "buffer": "BufferA", "previous": true },
-    "iChannel1": { "buffer": "BufferB", "previous": true }
+    "iChannel0": "BufferA",
+    "iChannel1": "BufferB"
   },
   "BufferB": {
     "iChannel0": "BufferA",
-    "iChannel1": { "buffer": "BufferB", "previous": true }
+    "iChannel1": "BufferB"
   },
   "Image": {
     "iChannel0": "BufferA",
@@ -218,7 +218,7 @@ demos/my-shader/
 ```json
 {
   "BufferA": {
-    "iChannel0": { "buffer": "BufferA", "previous": true },
+    "iChannel0": "BufferA",
     "iChannel1": "photo.jpg"
   },
   "Image": {
@@ -252,15 +252,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
 **Execution order:** BufferA → BufferB → BufferC → BufferD → Image
 
-| You are in... | Reading... | You get... |
-|---------------|------------|------------|
-| BufferA | BufferA (self) | **previous frame** |
-| BufferA | BufferB, C, D | **previous frame** (haven't run yet) |
-| BufferB | BufferA | **current frame** (already ran) |
-| BufferB | BufferB (self) | **previous frame** |
-| Image | Any buffer | **current frame** (all have run) |
+All buffer reads default to the **previous frame**. This is safe for all cases:
+- Self-reference (feedback effects)
+- Reading buffers that haven't run yet this frame
+- Reading buffers that have already run (you get their latest output)
 
-The `previous: true` flag explicitly requests the previous frame.
+Use `{ "buffer": "BufferA", "current": true }` only if you specifically need the in-progress current frame (rare).
 
 ---
 

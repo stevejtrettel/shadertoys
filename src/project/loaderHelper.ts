@@ -251,7 +251,7 @@ function normalizeChannel(channelValue: ChannelValue | undefined, texturePathToN
     return {
       kind: 'buffer',
       buffer: parsed.buffer,
-      previous: !!parsed.previous,
+      current: !!parsed.current,
     };
   }
 

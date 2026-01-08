@@ -6,7 +6,7 @@
   "controls": true,
 
   "BufferA": {
-    "iChannel0": { "buffer": "BufferA", "previous": true }
+    "iChannel0": "BufferA"
   },
   "BufferB": {
     "iChannel0": "BufferA"

@@ -17,10 +17,12 @@ export type PassName = 'Image' | 'BufferA' | 'BufferB' | 'BufferC' | 'BufferD';
 
 /**
  * Reference to another buffer pass.
+ * By default, reads the previous frame (safe for all cases).
+ * Use current: true to read from a buffer that has already run this frame.
  */
 export interface ChannelJSONBuffer {
   buffer: PassName;
-  previous?: boolean;  // Default: false (read current frame)
+  current?: boolean;  // Default: false (read previous frame)
 }
 
 /**
@@ -130,7 +132,7 @@ export interface ShadertoyConfig {
  */
 export type ChannelSource =
   | { kind: 'none' }
-  | { kind: 'buffer'; buffer: PassName; previous: boolean }
+  | { kind: 'buffer'; buffer: PassName; current: boolean }
   | { kind: 'texture'; name: string; cubemap: boolean }  // Internal texture ID (e.g., "tex0")
   | { kind: 'keyboard' };
 

@@ -307,7 +307,7 @@ async function loadProjectWithConfig(root: string, config: ShadertoyConfig): Pro
       return {
         kind: 'buffer',
         buffer: buf,
-        previous: !!value.previous,
+        current: !!value.current,
       };
     }
 

@@ -728,7 +728,7 @@ void main() {
 
     for (let i = 0; i < 4; i++) {
       const channelSource = runtimePass.projectChannels[i];
-      const texture = this.resolveChannelTexture(channelSource, runtimePass.name);
+      const texture = this.resolveChannelTexture(channelSource);
 
       // Bind texture to texture unit i
       gl.activeTexture(gl.TEXTURE0 + i);
@@ -745,7 +745,7 @@ void main() {
   /**
    * Resolve a ChannelSource to an actual WebGLTexture to bind.
    */
-  private resolveChannelTexture(source: ChannelSource, currentPassName: PassName): WebGLTexture {
+  private resolveChannelTexture(source: ChannelSource): WebGLTexture {
     switch (source.kind) {
       case 'none':
         // Unused channel → bind black texture
@@ -761,12 +761,9 @@ void main() {
           throw new Error(`Buffer '${source.buffer}' not found`);
         }
 
-        // Use previous frame if:
-        // 1. Self-reference (always, for safety - prevents undefined read-while-write)
-        // 2. Config explicitly requests previous frame (for buffers that run after you)
-        const isSelfReference = source.buffer === currentPassName;
-        const usePrevious = isSelfReference || source.previous;
-        return usePrevious ? targetPass.previousTexture : targetPass.currentTexture;
+        // Default to previous frame (safer, matches common use case)
+        // Only use current frame if explicitly requested with current: true
+        return source.current ? targetPass.currentTexture : targetPass.previousTexture;
       }
 
       case 'texture': {

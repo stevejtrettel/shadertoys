@@ -4,12 +4,12 @@
   "controls": true,
 
   "BufferA": {
-    "iChannel0": { "buffer": "BufferA", "previous": true },
-    "iChannel1": { "buffer": "BufferB", "previous": true }
+    "iChannel0": "BufferA",
+    "iChannel1": "BufferB"
   },
   "BufferB": {
-    "iChannel0": { "buffer": "BufferA", "previous": true },
-    "iChannel1": { "buffer": "BufferB", "previous": true }
+    "iChannel0": "BufferA",
+    "iChannel1": "BufferB"
   },
   "Image": {
     "iChannel0": "BufferA"

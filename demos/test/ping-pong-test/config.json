@@ -3,7 +3,7 @@
   "description": "Tests BufferA reading from its previous frame",
 
   "BufferA": {
-    "iChannel0": { "buffer": "BufferA", "previous": true }
+    "iChannel0": "BufferA"
   },
   "Image": {
     "iChannel0": "BufferA"

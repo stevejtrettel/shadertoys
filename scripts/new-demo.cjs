@@ -210,30 +210,23 @@ if (bufferCount > 0) {
   });
 
   // Build config using new simplified format
-  // Shadertoy execution order: BufferA → BufferB → BufferC → BufferD → Image
-  // - Self-reference: engine auto-forces previous frame, so string shorthand works
-  // - Earlier buffer (j < i): already ran, current frame → string shorthand
-  // - Later buffer (j > i): hasn't run yet, needs previous → object with previous: true
+  // All buffer reads default to previous frame - just use string shorthand
+  // Use { buffer: "X", current: true } only when you need current frame
   config = {
     title,
     controls: true
   };
 
+  // Each buffer reads all buffers (string shorthand = previous frame, the default)
   activeBuffers.forEach((bufName, i) => {
     const passConfig = {};
     activeBuffers.forEach((otherBuf, j) => {
-      // Use string shorthand for self or earlier buffers
-      // Use object with previous: true for later buffers
-      if (j > i) {
-        passConfig[channelNames[j]] = { buffer: otherBuf, previous: true };
-      } else {
-        passConfig[channelNames[j]] = otherBuf;
-      }
+      passConfig[channelNames[j]] = otherBuf;
     });
     config[bufName] = passConfig;
   });
 
-  // Image pass reads all buffers (current frame) - use string shorthand
+  // Image pass reads all buffers (string shorthand works - gets this frame's output)
   const imageConfig = {};
   activeBuffers.forEach((bufName, i) => {
     imageConfig[channelNames[i]] = bufName;
