@@ -1,37 +1,14 @@
 /**
  * Tabbed Layout Styles
  * Single window with tabs switching between shader and code views
- * Supports light/dark mode via CSS custom properties
  */
 
-/* ===== Theme Variables ===== */
+/* ===== Theme Variables (for code viewer) ===== */
 .layout-tabbed {
-  --tab-bg: #f8f8f8;
   --tab-border: #e0e0e0;
-  --tab-text: #666;
-  --tab-text-hover: #333;
-  --tab-hover-bg: #e8e8e8;
-  --tab-active-bg: white;
-  --tab-active-text: #000;
   --code-bg: white;
   --code-text: #000;
   --line-number-text: #999;
-}
-
-/* Dark mode - responds to Quarto's data-bs-theme or .dark class */
-[data-bs-theme="dark"] .layout-tabbed,
-.dark .layout-tabbed,
-:root.dark .layout-tabbed {
-  --tab-bg: #2d2d2d;
-  --tab-border: #444;
-  --tab-text: #999;
-  --tab-text-hover: #ccc;
-  --tab-hover-bg: #3d3d3d;
-  --tab-active-bg: #1e1e1e;
-  --tab-active-text: #fff;
-  --code-bg: #1e1e1e;
-  --code-text: #d4d4d4;
-  --line-number-text: #666;
 }
 
 .layout-tabbed {
@@ -60,23 +37,11 @@
 /* ===== Toolbar (contains tabs + buttons) ===== */
 .tabbed-toolbar {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   flex-shrink: 0;
-  background: var(--tab-bg);
-  padding: 8px 8px 0 8px;
-  position: relative;
-}
-
-/* Border line that sits behind the tabs */
-.tabbed-toolbar::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: var(--tab-border);
-  z-index: 0;
+  background: #f8f8f8;
+  border-bottom: 1px solid #e0e0e0;
+  padding-right: 8px;
 }
 
 /* ===== Tab Bar ===== */
@@ -100,33 +65,26 @@
 }
 
 .tabbed-tab-button {
-  padding: 10px 20px;
+  padding: 10px 16px;
   background: transparent;
   border: none;
-  border-radius: 6px 6px 0 0;
-  font-size: 13px;
+  border-bottom: 2px solid transparent;
+  font-size: 12px;
   font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
   cursor: pointer;
-  transition: background 0.2s, color 0.2s;
-  color: var(--tab-text);
+  transition: color 0.15s, border-color 0.15s;
+  color: #666;
   white-space: nowrap;
   flex-shrink: 0;
 }
 
 .tabbed-tab-button:hover {
-  background: var(--tab-hover-bg);
-  color: var(--tab-text-hover);
+  color: #333;
 }
 
 .tabbed-tab-button.active {
-  background: var(--tab-active-bg);
-  color: var(--tab-active-text);
-  font-weight: 500;
-  /* Connect to content below by extending past the border line */
-  position: relative;
-  z-index: 1;
-  padding-bottom: 11px;
-  margin-bottom: -1px;
+  color: #000;
+  border-bottom-color: #4a9eff;
 }
 
 .tabbed-tab-button.shader-tab {
@@ -139,6 +97,7 @@
 
 .tabbed-tab-button.image-tab.active {
   color: #7c4dff;
+  border-bottom-color: #7c4dff;
 }
 
 /* ===== Content Area ===== */
@@ -217,11 +176,6 @@
   box-sizing: border-box;
 }
 
-[data-bs-theme="dark"] .tabbed-image-viewer,
-.dark .tabbed-image-viewer {
-  background: #2d2d2d;
-}
-
 .tabbed-image-viewer img {
   max-width: 100%;
   max-height: 100%;
@@ -298,37 +252,35 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  padding-bottom: 8px;
   flex-shrink: 0;
 }
 
-/* Copy button (icon only) in editor mode */
-.tabbed-button-container .tabbed-copy-button {
-  position: static;
+/* Copy button (icon only) */
+.tabbed-copy-button {
   display: flex;
   align-items: center;
   justify-content: center;
   background: transparent;
   border: 1px solid #ccc;
   color: #666;
-  width: 34px;
-  height: 34px;
-  border-radius: 6px;
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
 
-.tabbed-button-container .tabbed-copy-button:hover {
+.tabbed-copy-button:hover {
   background: #f0f0f0;
   border-color: #999;
   color: #333;
 }
 
-.tabbed-button-container .tabbed-copy-button:active {
+.tabbed-copy-button:active {
   background: #e0e0e0;
 }
 
-.tabbed-button-container .tabbed-copy-button.copied {
+.tabbed-copy-button.copied {
   background: #e8f5e9;
   border-color: #4caf50;
   color: #4caf50;
@@ -341,8 +293,8 @@
   background: #4a9eff;
   border: none;
   color: #fff;
-  padding: 8px 14px;
-  border-radius: 6px;
+  padding: 6px 12px;
+  border-radius: 4px;
   cursor: pointer;
   font-family: inherit;
   font-size: 12px;
