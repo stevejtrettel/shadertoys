@@ -68,10 +68,10 @@ export class TabbedLayout implements BaseLayout {
     this.editorContainer.style.visibility = 'hidden';
     this.contentArea.appendChild(this.editorContainer);
 
-    // Create button container for copy and recompile
+    // Create button container for copy and recompile (will be added to toolbar)
     this.buttonContainer = document.createElement('div');
     this.buttonContainer.className = 'tabbed-button-container';
-    this.buttonContainer.style.visibility = 'hidden';
+    this.buttonContainer.style.display = 'none';
 
     // Create copy button (icon only)
     this.copyButton = document.createElement('button');
@@ -98,8 +98,6 @@ export class TabbedLayout implements BaseLayout {
     this.recompileButton.title = 'Recompile shader (Ctrl+Enter)';
     this.recompileButton.addEventListener('click', () => this.recompile());
     this.buttonContainer.appendChild(this.recompileButton);
-
-    this.contentArea.appendChild(this.buttonContainer);
 
     // Create error display
     this.errorDisplay = document.createElement('div');
@@ -222,6 +220,11 @@ export class TabbedLayout implements BaseLayout {
   }
 
   private buildTabBar(): HTMLElement {
+    // Create toolbar container (holds tabs + buttons)
+    const toolbar = document.createElement('div');
+    toolbar.className = 'tabbed-toolbar';
+
+    // Create tab bar
     const tabBar = document.createElement('div');
     tabBar.className = 'tabbed-tab-bar';
 
@@ -293,7 +296,7 @@ export class TabbedLayout implements BaseLayout {
       this.canvasContainer.style.visibility = 'hidden';
       this.imageViewer.style.visibility = 'hidden';
       this.editorContainer.style.visibility = 'hidden';
-      this.buttonContainer.style.visibility = 'hidden';
+      this.buttonContainer.style.display = 'none';
 
       // Destroy previous editor instance
       if (this.editorInstance) {
@@ -307,7 +310,7 @@ export class TabbedLayout implements BaseLayout {
       } else if (tab.kind === 'code') {
         // Show editor and buttons
         this.editorContainer.style.visibility = 'visible';
-        this.buttonContainer.style.visibility = 'visible';
+        this.buttonContainer.style.display = 'flex';
 
         // Get source (use modified if available)
         const source = this.modifiedSources.get(tab.passName) ?? tab.source;
@@ -360,6 +363,10 @@ export class TabbedLayout implements BaseLayout {
       tabBar.appendChild(tabButton);
     });
 
-    return tabBar;
+    // Assemble toolbar: tabs + buttons
+    toolbar.appendChild(tabBar);
+    toolbar.appendChild(this.buttonContainer);
+
+    return toolbar;
   }
 }

@@ -57,21 +57,18 @@
   overflow: hidden;
 }
 
-/* ===== Tab Bar ===== */
-.tabbed-tab-bar {
+/* ===== Toolbar (contains tabs + buttons) ===== */
+.tabbed-toolbar {
   display: flex;
+  align-items: flex-end;
   flex-shrink: 0;
   background: var(--tab-bg);
   padding: 8px 8px 0 8px;
-  gap: 4px;
-  overflow-x: auto;
-  overflow-y: hidden;
-  scrollbar-width: thin;
   position: relative;
 }
 
 /* Border line that sits behind the tabs */
-.tabbed-tab-bar::after {
+.tabbed-toolbar::after {
   content: '';
   position: absolute;
   bottom: 0;
@@ -80,6 +77,16 @@
   height: 1px;
   background: var(--tab-border);
   z-index: 0;
+}
+
+/* ===== Tab Bar ===== */
+.tabbed-tab-bar {
+  display: flex;
+  flex: 1;
+  gap: 4px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
 }
 
 /* Hide scrollbar on webkit but keep functionality */
@@ -286,15 +293,13 @@
   background: #ffffff;
 }
 
-/* Button container for copy and recompile */
+/* Button container for copy and recompile (in toolbar) */
 .tabbed-button-container {
-  position: absolute;
-  top: 12px;
-  right: 12px;
   display: flex;
   align-items: center;
   gap: 6px;
-  z-index: 10;
+  padding-bottom: 8px;
+  flex-shrink: 0;
 }
 
 /* Copy button (icon only) in editor mode */
