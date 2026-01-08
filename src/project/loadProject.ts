@@ -173,7 +173,6 @@ async function loadSinglePassProject(root: string): Promise<ShadertoyProject> {
     },
     layout: 'centered',
     controls: false,
-    editor: false,
     commonSource: null,
     passes: {
       Image: {
@@ -407,7 +406,6 @@ async function loadProjectWithConfig(root: string, config: ShadertoyConfig): Pro
     meta: { title, author, description },
     layout: config.layout ?? 'centered',
     controls: config.controls ?? false,
-    editor: config.editor ?? false,
     commonSource,
     passes: {
       Image: imagePass,

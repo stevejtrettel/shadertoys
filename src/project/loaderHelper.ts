@@ -74,7 +74,6 @@ async function loadSinglePass(
 
   const layout = configOverrides?.layout || 'tabbed';
   const controls = configOverrides?.controls ?? true;
-  const editor = configOverrides?.editor ?? false;
   const title = configOverrides?.title ||
                 demoName.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 
@@ -87,7 +86,6 @@ async function loadSinglePass(
     },
     layout,
     controls,
-    editor,
     commonSource: null,
     passes: {
       Image: {
@@ -226,14 +224,12 @@ async function loadWithConfig(
   const description = config.description || null;
   const layout = config.layout || 'tabbed';
   const controls = config.controls ?? true;
-  const editor = config.editor ?? false;
 
   return {
     root: `/demos/${demoName}`,
     meta: { title, author, description },
     layout,
     controls,
-    editor,
     commonSource,
     passes,
     textures,

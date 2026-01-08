@@ -2,8 +2,6 @@ import { defineConfig } from 'vite';
 import path from 'path';
 import cssInjectedByJsPlugin from 'vite-plugin-css-injected-by-js';
 
-const editorEnabled = process.env.VITE_EDITOR_ENABLED === 'true';
-
 export default defineConfig({
   plugins: [
     cssInjectedByJsPlugin(),
@@ -11,16 +9,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      // When editor is disabled, swap editor modules for empty stubs
-      ...(editorEnabled ? {} : {
-        '../editor/prism-editor': path.resolve(__dirname, './src/editor/stub.ts'),
-        '../editor/EditorPanel': path.resolve(__dirname, './src/editor/stub.ts'),
-      }),
     },
-  },
-  define: {
-    // Compile-time flag to enable/disable editor code
-    __EDITOR_ENABLED__: JSON.stringify(editorEnabled),
   },
   server: {
     port: 3000,
