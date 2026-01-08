@@ -314,8 +314,9 @@ async function loadProjectWithConfig(root: string, config: ShadertoyConfig): Pro
       if ('texture' in value) {
         const internalName = registerTexture(value);
         channelSources.push({
-          kind: 'texture2D',
+          kind: 'texture',
           name: internalName,
+          cubemap: value.type === 'cubemap',
         });
         continue;
       }

@@ -201,10 +201,21 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
 **Texture options (all optional):**
 ```json
-{ "texture": "photo.jpg", "filter": "linear", "wrap": "repeat" }
+{ "texture": "photo.jpg", "filter": "linear", "wrap": "repeat", "type": "2d" }
 ```
 - `filter`: `"linear"` (smooth, default) or `"nearest"` (pixelated)
 - `wrap`: `"repeat"` (tile, default) or `"clamp"` (stretch edges)
+- `type`: `"2d"` (standard, default) or `"cubemap"` (equirectangular environment map)
+
+**Cubemap textures:** Use `"type": "cubemap"` for equirectangular environment maps (360° panoramas). The engine will automatically convert 3D direction lookups to 2D coordinates:
+```json
+{ "texture": "environment.jpg", "type": "cubemap" }
+```
+```glsl
+// In your shader, sample with a 3D direction:
+vec3 dir = normalize(rayDirection);
+vec4 sky = texture(iChannel0, dir);  // Automatically converted
+```
 
 ---
 

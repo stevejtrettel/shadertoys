@@ -475,7 +475,7 @@ export class ShadertoyEngine {
       if (!projectPass) continue;
 
       // Build fragment shader source (outside try so we can access in catch)
-      const fragmentSource = this.buildFragmentShader(projectPass.glslSource);
+      const fragmentSource = this.buildFragmentShader(projectPass.glslSource, projectPass.channels);
 
       try {
         // Compile program
@@ -567,8 +567,11 @@ export class ShadertoyEngine {
 
   /**
    * Build complete fragment shader source with Shadertoy boilerplate.
+   *
+   * @param userSource - The user's GLSL source code
+   * @param channels - Channel configuration for this pass (to detect cubemap textures)
    */
-  private buildFragmentShader(userSource: string): string {
+  private buildFragmentShader(userSource: string, channels: ChannelSource[]): string {
     const parts: string[] = [FRAGMENT_PREAMBLE];
 
     // Common code (if any)
@@ -592,7 +595,7 @@ uniform sampler2D iChannel3;
 `);
 
     // Preprocess user shader code to handle cubemap-style texture sampling
-    const processedSource = this.preprocessCubemapTextures(userSource);
+    const processedSource = this.preprocessCubemapTextures(userSource, channels);
 
     // User shader code
     parts.push('// User shader code');
@@ -612,31 +615,36 @@ void main() {
 
   /**
    * Preprocess shader to convert cubemap-style texture() calls to equirectangular.
-   * Detects: texture(iChannelN, vec3_expr) and converts to texture(iChannelN, _st_dirToEquirect(vec3_expr))
+   *
+   * Uses the channel configuration to determine which channels are cubemaps.
+   * Only channels explicitly marked as `type: 'cubemap'` in config.json will have
+   * their texture() calls wrapped with _st_dirToEquirect().
+   *
+   * @param source - User's GLSL source code
+   * @param channels - Channel configuration for this pass
    */
-  private preprocessCubemapTextures(source: string): string {
+  private preprocessCubemapTextures(source: string, channels: ChannelSource[]): string {
+    // Build set of channel names that are cubemaps
+    const cubemapChannels = new Set<string>();
+    channels.forEach((ch, i) => {
+      if (ch.kind === 'texture' && ch.cubemap) {
+        cubemapChannels.add(`iChannel${i}`);
+      }
+    });
+
+    // If no cubemap channels, return source unchanged
+    if (cubemapChannels.size === 0) {
+      return source;
+    }
+
     // Match: texture(iChannelN, ...)
     const textureCallRegex = /texture\s*\(\s*(iChannel[0-3])\s*,\s*([^)]+)\)/g;
 
     return source.replace(textureCallRegex, (match, channel, coord) => {
-      const trimmedCoord = coord.trim();
-
-      // Heuristic: only convert to cubemap if it clearly looks like a 3D direction
-      // This is safer than assuming everything else is 3D
-      const is3DDirection =
-        /^vec3\s*\(/.test(trimmedCoord) ||           // Starts with vec3(
-        /^normalize\s*\(/.test(trimmedCoord) ||      // Starts with normalize(
-        /^reflect\s*\(/.test(trimmedCoord) ||        // Starts with reflect(
-        /^refract\s*\(/.test(trimmedCoord) ||        // Starts with refract(
-        /\.xyz\s*$/.test(trimmedCoord) ||            // Ends with .xyz swizzle
-        /\.xzy\s*$/.test(trimmedCoord) ||            // Ends with other 3-component swizzles
-        /\.zyx\s*$/.test(trimmedCoord);
-
-      if (is3DDirection) {
-        // Wrap 3D direction with equirectangular conversion
+      // Only wrap if this channel is explicitly marked as cubemap
+      if (cubemapChannels.has(channel)) {
         return `texture(${channel}, _st_dirToEquirect(${coord}))`;
       } else {
-        // Assume 2D texture coordinates - leave unchanged
         return match;
       }
     });
@@ -759,8 +767,8 @@ void main() {
         return isSelfReference ? targetPass.previousTexture : targetPass.currentTexture;
       }
 
-      case 'texture2D': {
-        // External texture → find RuntimeTexture2D by name
+      case 'texture': {
+        // External texture → find RuntimeTexture by name
         const tex = this._textures.find((t) => t.name === source.name);
         if (!tex) {
           throw new Error(`Texture '${source.name}' not found`);

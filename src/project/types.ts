@@ -24,12 +24,13 @@ export interface ChannelJSONBuffer {
 }
 
 /**
- * Reference to external 2D texture (image file).
+ * Reference to external texture (image file).
  */
 export interface ChannelJSONTexture {
   texture: string;  // Path to image file
   filter?: 'nearest' | 'linear';  // Default: 'linear'
   wrap?: 'clamp' | 'repeat';      // Default: 'repeat'
+  type?: '2d' | 'cubemap';        // Default: '2d'. Cubemap uses equirectangular projection.
 }
 
 /**
@@ -133,7 +134,7 @@ export interface ShadertoyConfig {
 export type ChannelSource =
   | { kind: 'none' }
   | { kind: 'buffer'; buffer: PassName; previous: boolean }
-  | { kind: 'texture2D'; name: string }  // Internal texture ID (e.g., "tex0")
+  | { kind: 'texture'; name: string; cubemap: boolean }  // Internal texture ID (e.g., "tex0")
   | { kind: 'keyboard' };
 
 /**
