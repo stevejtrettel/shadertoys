@@ -1,3 +1,4 @@
 {
-  "layout": "centered"
+  "layout": "centered",
+  "controls": true
 }

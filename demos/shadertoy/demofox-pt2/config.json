@@ -1,7 +1,6 @@
 {
-  "title": "Path Tracing II",
-  "description": "From Demofox's Blog",
   "layout": "fullscreen",
+  "controls": true,
   "common": "common.glsl",
 
   "BufferA": {

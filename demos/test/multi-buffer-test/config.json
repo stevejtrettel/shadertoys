@@ -1,6 +1,6 @@
 {
-  "title": "Multi-Buffer Test",
-  "description": "Tests multiple buffers reading from each other",
+  "layout": "tabbed",
+  "controls": true,
 
   "BufferA": {},
   "BufferB": {

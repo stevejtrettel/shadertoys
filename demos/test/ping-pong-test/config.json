@@ -1,6 +1,6 @@
 {
-  "title": "Ping-Pong Buffer Test",
-  "description": "Tests BufferA reading from its previous frame",
+  "layout": "tabbed",
+  "controls": true,
 
   "BufferA": {
     "iChannel0": "BufferA"

@@ -1,7 +1,6 @@
 {
-  "title": "Path Tracing I",
-  "description": "From Demofox's Blog",
   "layout": "tabbed",
+  "controls": true,
 
   "BufferA": {
     "iChannel0": "BufferA",
