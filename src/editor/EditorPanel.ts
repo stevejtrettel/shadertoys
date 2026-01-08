@@ -158,10 +158,9 @@ export class EditorPanel {
 
     // 4. Textures (images) - not editable
     for (const texture of this.project.textures) {
-      const filename = texture.source.split('/').pop() || texture.source;
       this.tabs.push({
         kind: 'image',
-        name: filename,
+        name: texture.filename || texture.name,
         url: texture.source,
       });
     }

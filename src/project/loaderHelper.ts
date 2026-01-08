@@ -189,10 +189,12 @@ async function loadWithConfig(
     }
 
     const imageUrl = await imageFiles[actualPath]();
-    const textureName = texturePath.split('/').pop()!.replace(/\.[^.]+$/, '');
+    const textureFilename = texturePath.split('/').pop()!;
+    const textureName = textureFilename.replace(/\.[^.]+$/, '');
 
     textures.push({
       name: textureName,
+      filename: textureFilename,  // Preserve original filename for display
       source: imageUrl,
       filter: 'linear' as const,
       wrap: 'repeat' as const,
