@@ -1,0 +1,14 @@
+{
+  "meta": {
+    "title": "Texture Input"
+  },
+  "layout": "split",
+  "controls": true,
+  "passes": {
+    "Image": {
+      "channels": {
+        "iChannel0": { "texture": "texture.png" }
+      }
+    }
+  }
+}
