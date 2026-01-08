@@ -1,6 +1,4 @@
 {
-  "title": "Simple Paint",
-  "description": "Click and drag to draw. Press R to clear.",
   "controls": true,
 
   "BufferA": {

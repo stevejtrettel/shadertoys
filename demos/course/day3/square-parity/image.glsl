@@ -1,3 +1,7 @@
+// Color palette
+const vec3 CREAM = vec3(0.85, 0.8, 0.75);
+const vec3 SLATE = vec3(0.35, 0.4, 0.45);
+
 vec2 normalize_coord(vec2 fragCoord) {
     vec2 uv = fragCoord / iResolution.xy;
     uv = uv - vec2(0.5, 0.5);
@@ -20,6 +24,6 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
     }
     
     float parity = mod(float(foldCount), 2.0);
-    vec3 color = (parity < 0.5) ? vec3(0.9, 0.85, 0.8) : vec3(0.3, 0.35, 0.4);
+    vec3 color = (parity < 0.5) ? CREAM : SLATE;
     fragColor = vec4(color, 1.0);
 }

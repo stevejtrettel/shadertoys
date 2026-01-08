@@ -1,8 +1,6 @@
 // Color palette
 const vec3 CREAM = vec3(0.85, 0.8, 0.75);
 const vec3 SLATE = vec3(0.35, 0.4, 0.45);
-const vec3 MAROON = vec3(0.6, 0.2, 0.2);
-const vec3 NAVY = vec3(0.2, 0.2, 0.6);
 const vec3 BLACK = vec3(0.05, 0.05, 0.05);
 
 struct HalfSpaceVert {
@@ -54,15 +52,6 @@ vec2 diskToUHP(vec2 w) {
     return cmul(i, cdiv(one + w, one - w));
 }
 
-vec3 drawF(vec2 p, vec3 bgColor, vec3 fgColor) {
-    vec3 color = bgColor;
-    // Smaller F scaled for hyperbolic cells
-    if (p.x > -0.06 && p.x < -0.02 && p.y > -0.08 && p.y < 0.08) color = fgColor;
-    if (p.x > -0.06 && p.x < 0.06 && p.y > 0.04 && p.y < 0.08) color = fgColor;
-    if (p.x > -0.06 && p.x < 0.03 && p.y > -0.01 && p.y < 0.03) color = fgColor;
-    return color;
-}
-
 vec2 normalize_coord(vec2 fragCoord) {
     vec2 uv = fragCoord / iResolution.xy;
     uv = uv - vec2(0.5, 0.5);
@@ -75,25 +64,23 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
     vec2 w = normalize_coord(fragCoord);
     vec2 z = diskToUHP(w);
     
-    HalfSpaceVert left = HalfSpaceVert(0.0, -1.0);
-    HalfSpaceVert right = HalfSpaceVert(0.5, 1.0);
-    HalfSpaceCirc bottom = HalfSpaceCirc(0.0, 1.0, 1.0);
+    // The (2,3,7) triangle
+    HalfSpaceVert left = HalfSpaceVert(0.0, -1.0);             // x > 0
+    HalfSpaceCirc bottom = HalfSpaceCirc(0.0, 1.0, 1.0);       // outside unit circle
+    HalfSpaceCirc third = HalfSpaceCirc(-0.7665, 1.533, -1.0); // inside this circle
     
     int foldCount = 0;
     for (int i = 0; i < 100; i++) {
         vec2 z0 = z;
         z = reflectInto(z, left, foldCount);
-        z = reflectInto(z, right, foldCount);
         z = reflectInto(z, bottom, foldCount);
+        z = reflectInto(z, third, foldCount);
         if (length(z - z0) < 0.0001) break;
     }
     
-    // Color by parity, with F markers
+    // Color by parity
     float parity = mod(float(foldCount), 2.0);
-    vec3 bg = (parity < 0.5) ? CREAM : SLATE;
-    vec3 fg = (parity < 0.5) ? MAROON : NAVY;
-    
-    vec3 color = drawF(z - vec2(0.25, 1.2), bg, fg);
+    vec3 color = (parity < 0.5) ? CREAM : SLATE;
     
     // Darken outside the disk
     if (length(w) > 1.0) {

@@ -1,7 +1,10 @@
 vec3 drawF(vec2 p, vec3 bgColor, vec3 fgColor) {
     vec3 color = bgColor;
+    // Vertical stroke
     if (p.x > -0.2 && p.x < -0.05 && p.y > -0.3 && p.y < 0.3) color = fgColor;
+    // Top horizontal stroke
     if (p.x > -0.2 && p.x < 0.2 && p.y > 0.15 && p.y < 0.3) color = fgColor;
+    // Middle horizontal stroke
     if (p.x > -0.2 && p.x < 0.1 && p.y > -0.05 && p.y < 0.1) color = fgColor;
     return color;
 }
@@ -17,6 +20,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
 {
     vec2 p = normalize_coord(fragCoord);
     
+    // Fold into the strip [0, 1]
     for (int i = 0; i < 20; i++) {
         if (p.x < 0.0) p.x = -p.x;
         if (p.x > 1.0) p.x = 2.0 - p.x;

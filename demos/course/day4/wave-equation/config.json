@@ -1,0 +1,19 @@
+{
+  "meta": {
+    "title": "Simple Paint",
+    "description": "Click and drag to draw. Press R to clear."
+  },
+  "controls": true,
+  "passes": {
+    "BufferA": {
+      "channels": {
+        "iChannel0": { "buffer": "BufferA", "previous": true }
+      }
+    },
+    "Image": {
+      "channels": {
+        "iChannel0": { "buffer": "BufferA" }
+      }
+    }
+  }
+}

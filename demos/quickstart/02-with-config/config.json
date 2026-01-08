@@ -1,5 +1,11 @@
 {
-  "title": "Mouse Circle",
-  "description": "A simple shader with config - move your mouse!",
-  "controls": true
+  "meta": {
+    "title": "Mouse Circle",
+    "description": "A simple shader with config - move your mouse!"
+  },
+  "layout": "tabbed",
+  "controls": true,
+  "passes": {
+    "Image": {}
+  }
 }
