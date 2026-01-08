@@ -277,6 +277,46 @@ The `previous: true` flag explicitly requests the previous frame.
 
 ---
 
+## Layouts
+
+Control how the shader is displayed with the `layout` option in `config.json`:
+
+```json
+{
+  "layout": "split",
+  "passes": { ... }
+}
+```
+
+| Layout | Description | Best for |
+|--------|-------------|----------|
+| `fullscreen` | Canvas fills entire viewport | Immersive art, games, installations |
+| `centered` | Canvas centered with max-width | General viewing (default without config) |
+| `tabbed` | Tabs to switch between shader and code | Exploring/debugging |
+| `split` | Side-by-side: shader left, code right | Teaching, presentations, tutorials |
+
+**`fullscreen`** - No chrome, canvas fills the screen:
+```json
+{ "layout": "fullscreen" }
+```
+
+**`centered`** - Clean centered view with rounded corners:
+```json
+{ "layout": "centered" }
+```
+
+**`tabbed`** - Click tabs to switch between live shader and source code:
+```json
+{ "layout": "tabbed" }
+```
+
+**`split`** - See shader and code simultaneously (code panel has tabs for multi-file projects):
+```json
+{ "layout": "split" }
+```
+
+---
+
 ## Keyboard Shortcuts
 
 | Key | Action |
