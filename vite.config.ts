@@ -18,7 +18,7 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        // Single JS bundle - inline all dynamic imports
+        // Single JS bundle
         inlineDynamicImports: true,
         entryFileNames: 'assets/main.js',
         // Keep original names for images

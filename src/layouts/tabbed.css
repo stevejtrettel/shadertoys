@@ -1,41 +1,14 @@
 /**
  * Tabbed Layout Styles
  * Single window with tabs switching between shader and code views
- * Supports light/dark mode via CSS custom properties
  */
 
-/* ===== Theme Variables ===== */
+/* ===== Theme Variables (for code viewer) ===== */
 .layout-tabbed {
-  --tab-bg: #f8f8f8;
   --tab-border: #e0e0e0;
-  --tab-text: #666;
-  --tab-text-hover: #333;
-  --tab-hover-bg: #e8e8e8;
-  --tab-active-bg: white;
-  --tab-active-text: #000;
   --code-bg: white;
   --code-text: #000;
   --line-number-text: #999;
-  --copy-btn-bg: rgba(0, 0, 0, 0.05);
-  --copy-btn-hover-bg: rgba(0, 0, 0, 0.1);
-}
-
-/* Dark mode - responds to Quarto's data-bs-theme or .dark class */
-[data-bs-theme="dark"] .layout-tabbed,
-.dark .layout-tabbed,
-:root.dark .layout-tabbed {
-  --tab-bg: #2d2d2d;
-  --tab-border: #444;
-  --tab-text: #999;
-  --tab-text-hover: #ccc;
-  --tab-hover-bg: #3d3d3d;
-  --tab-active-bg: #1e1e1e;
-  --tab-active-text: #fff;
-  --code-bg: #1e1e1e;
-  --code-text: #d4d4d4;
-  --line-number-text: #666;
-  --copy-btn-bg: rgba(255, 255, 255, 0.1);
-  --copy-btn-hover-bg: rgba(255, 255, 255, 0.15);
 }
 
 .layout-tabbed {
@@ -61,29 +34,24 @@
   overflow: hidden;
 }
 
+/* ===== Toolbar (contains tabs + buttons) ===== */
+.tabbed-toolbar {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  background: #f8f8f8;
+  border-bottom: 1px solid #e0e0e0;
+  padding-right: 8px;
+}
+
 /* ===== Tab Bar ===== */
 .tabbed-tab-bar {
   display: flex;
-  flex-shrink: 0;
-  background: var(--tab-bg);
-  padding: 8px 8px 0 8px;
+  flex: 1;
   gap: 4px;
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: thin;
-  position: relative;
-}
-
-/* Border line that sits behind the tabs */
-.tabbed-tab-bar::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: var(--tab-border);
-  z-index: 0;
 }
 
 /* Hide scrollbar on webkit but keep functionality */
@@ -97,33 +65,26 @@
 }
 
 .tabbed-tab-button {
-  padding: 10px 20px;
+  padding: 10px 16px;
   background: transparent;
   border: none;
-  border-radius: 6px 6px 0 0;
-  font-size: 13px;
+  border-bottom: 2px solid transparent;
+  font-size: 12px;
   font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
   cursor: pointer;
-  transition: background 0.2s, color 0.2s;
-  color: var(--tab-text);
+  transition: color 0.15s, border-color 0.15s;
+  color: #666;
   white-space: nowrap;
   flex-shrink: 0;
 }
 
 .tabbed-tab-button:hover {
-  background: var(--tab-hover-bg);
-  color: var(--tab-text-hover);
+  color: #333;
 }
 
 .tabbed-tab-button.active {
-  background: var(--tab-active-bg);
-  color: var(--tab-active-text);
-  font-weight: 500;
-  /* Connect to content below by extending past the border line */
-  position: relative;
-  z-index: 1;
-  padding-bottom: 11px;
-  margin-bottom: -1px;
+  color: #000;
+  border-bottom-color: #4a9eff;
 }
 
 .tabbed-tab-button.shader-tab {
@@ -136,6 +97,7 @@
 
 .tabbed-tab-button.image-tab.active {
   color: #7c4dff;
+  border-bottom-color: #7c4dff;
 }
 
 /* ===== Content Area ===== */
@@ -199,37 +161,6 @@
   overflow-x: auto;
 }
 
-/* ===== Copy Button ===== */
-.tabbed-copy-button {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  padding: 8px;
-  background: var(--copy-btn-bg);
-  border: none;
-  border-radius: 6px;
-  color: var(--tab-text);
-  cursor: pointer;
-  transition: all 0.2s;
-  z-index: 10;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.tabbed-copy-button:hover {
-  background: var(--copy-btn-hover-bg);
-  color: var(--tab-text-hover);
-}
-
-.tabbed-copy-button:active {
-  transform: scale(0.9);
-}
-
-.tabbed-copy-button.copied {
-  color: #4caf50;
-}
-
 /* ===== Image Viewer ===== */
 .tabbed-image-viewer {
   position: absolute;
@@ -243,11 +174,6 @@
   background: #f5f5f5;
   padding: 20px;
   box-sizing: border-box;
-}
-
-[data-bs-theme="dark"] .tabbed-image-viewer,
-.dark .tabbed-image-viewer {
-  background: #2d2d2d;
 }
 
 .tabbed-image-viewer img {
@@ -318,35 +244,70 @@
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background: #1a1a2e;
+  background: #ffffff;
 }
 
-.tabbed-recompile-button {
-  position: absolute;
-  top: 12px;
-  right: 12px;
+/* Button container for copy and recompile (in toolbar) */
+.tabbed-button-container {
   display: flex;
   align-items: center;
   gap: 6px;
-  background: #2d5a27;
+  flex-shrink: 0;
+}
+
+/* Copy button (icon only) */
+.tabbed-copy-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid #ccc;
+  color: #666;
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.tabbed-copy-button:hover {
+  background: #f0f0f0;
+  border-color: #999;
+  color: #333;
+}
+
+.tabbed-copy-button:active {
+  background: #e0e0e0;
+}
+
+.tabbed-copy-button.copied {
+  background: #e8f5e9;
+  border-color: #4caf50;
+  color: #4caf50;
+}
+
+.tabbed-recompile-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #4a9eff;
   border: none;
   color: #fff;
-  padding: 8px 14px;
-  border-radius: 6px;
+  padding: 6px 12px;
+  border-radius: 4px;
   cursor: pointer;
   font-family: inherit;
   font-size: 12px;
   font-weight: 500;
   transition: background 0.15s;
-  z-index: 10;
 }
 
 .tabbed-recompile-button:hover {
-  background: #3a7a32;
+  background: #3a8eef;
 }
 
 .tabbed-recompile-button:active {
-  background: #245020;
+  background: #2a7edf;
 }
 
 .tabbed-recompile-button svg {
@@ -358,26 +319,26 @@
   bottom: 0;
   left: 0;
   right: 0;
-  background: #3d1f1f;
-  color: #ff8080;
+  background: #fff0f0;
+  color: #c00;
   padding: 10px 14px;
-  font-family: 'Fira Code', 'Monaco', 'Menlo', monospace;
+  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
   font-size: 12px;
   white-space: pre-wrap;
   overflow: auto;
   max-height: 120px;
-  border-top: 1px solid #5a2020;
+  border-top: 1px solid #fcc;
   z-index: 10;
 }
 
 .tabbed-fallback-textarea {
   width: 100%;
   height: 100%;
-  background: #1a1a2e;
-  color: #e0e0e0;
+  background: #ffffff;
+  color: #000;
   border: none;
   padding: 12px;
-  font-family: 'Fira Code', 'Monaco', 'Menlo', monospace;
+  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
   font-size: 13px;
   resize: none;
   outline: none;

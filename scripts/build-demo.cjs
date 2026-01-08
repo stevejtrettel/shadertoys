@@ -8,6 +8,7 @@
 
 const { execSync, writeFileSync } = require('child_process');
 const fs = require('fs');
+const path = require('path');
 
 const demo = process.argv[2];
 
@@ -58,7 +59,10 @@ export async function loadDemoProject() {
   console.log(`Building with Vite...`);
   execSync(`vite build`, {
     stdio: 'inherit',
-    env: { ...process.env, VITE_DEMO: demo }
+    env: {
+      ...process.env,
+      VITE_DEMO: demo
+    }
   });
 
   console.log(`✓ Build complete for demo: ${demo}`);

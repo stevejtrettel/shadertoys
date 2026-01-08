@@ -50,9 +50,12 @@ export async function loadDemoProject() {
 
   fs.writeFileSync('src/project/generatedLoader.ts', loaderContent);
 
-  execSync(`VITE_DEMO=${demo} npx vite`, {
+  execSync(`npx vite`, {
     stdio: 'inherit',
-    env: { ...process.env, VITE_DEMO: demo }
+    env: {
+      ...process.env,
+      VITE_DEMO: demo
+    }
   });
 } catch (error) {
   process.exit(error.status || 1);

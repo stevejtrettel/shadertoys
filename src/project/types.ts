@@ -112,7 +112,6 @@ export interface ShadertoyConfig {
   // Settings
   layout?: 'fullscreen' | 'centered' | 'split' | 'tabbed';
   controls?: boolean;
-  editor?: boolean;  // Enable live code editing (only works in split/tabbed layouts)
   common?: string;
 
   // Passes (at top level)
@@ -217,12 +216,6 @@ export interface ShadertoyProject {
    * Whether to show playback controls (play/pause, reset).
    */
   controls: boolean;
-
-  /**
-   * Whether to enable live code editing.
-   * Only functional in split and tabbed layouts.
-   */
-  editor: boolean;
 
   /**
    * Common GLSL code (prepended to all shaders), or null if none.

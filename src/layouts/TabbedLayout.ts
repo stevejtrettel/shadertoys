@@ -1,18 +1,11 @@
 /**
  * Tabbed Layout
  *
- * Single window with tabs to switch between shader output, code views, and textures.
- * First tab shows the live shader, remaining tabs show GLSL source files and images.
- *
- * When editor mode is enabled (project.editor = true), uses CodeMirror
- * for live code editing with a recompile button.
+ * Single window with tabs to switch between shader output, editable code, and textures.
+ * First tab shows the live shader, remaining tabs show editable GLSL source files and images.
  */
 
 import './tabbed.css';
-
-import * as Prism from 'prismjs';
-import 'prismjs/components/prism-c';
-import 'prismjs/components/prism-cpp';
 
 import { BaseLayout, LayoutOptions, RecompileHandler } from './types';
 import { ShadertoyProject, PassName } from '../project/types';
@@ -22,24 +15,20 @@ type CodeTab = { kind: 'code'; name: string; passName: 'common' | PassName; sour
 type ImageTab = { kind: 'image'; name: string; url: string };
 type Tab = ShaderTab | CodeTab | ImageTab;
 
-// Lazy-loaded editor types
-type EditorInstanceType = import('../editor/codemirror').EditorInstance;
-
 export class TabbedLayout implements BaseLayout {
   private container: HTMLElement;
   private project: ShadertoyProject;
   private root: HTMLElement;
   private canvasContainer: HTMLElement;
   private contentArea: HTMLElement;
-  private codeViewer: HTMLElement;
   private imageViewer: HTMLElement;
-  private copyButton: HTMLElement;
 
-  // Editor mode support
-  private editorContainer: HTMLElement | null = null;
-  private editorInstance: EditorInstanceType | null = null;
-  private recompileButton: HTMLElement | null = null;
-  private errorDisplay: HTMLElement | null = null;
+  private editorContainer: HTMLElement;
+  private editorInstance: any = null;
+  private buttonContainer: HTMLElement;
+  private copyButton: HTMLElement;
+  private recompileButton: HTMLElement;
+  private errorDisplay: HTMLElement;
   private recompileHandler: RecompileHandler | null = null;
   private modifiedSources: Map<string, string> = new Map();
   private tabs: Tab[] = [];
@@ -65,17 +54,26 @@ export class TabbedLayout implements BaseLayout {
     this.canvasContainer = document.createElement('div');
     this.canvasContainer.className = 'tabbed-canvas-container';
 
-    // Create code viewer (shown when code tabs are active)
-    this.codeViewer = document.createElement('div');
-    this.codeViewer.className = 'tabbed-code-viewer';
-    this.codeViewer.style.visibility = 'hidden';
-
     // Create image viewer (shown when image tabs are active)
     this.imageViewer = document.createElement('div');
     this.imageViewer.className = 'tabbed-image-viewer';
     this.imageViewer.style.visibility = 'hidden';
 
-    // Create copy button (for non-editor mode)
+    this.contentArea.appendChild(this.canvasContainer);
+    this.contentArea.appendChild(this.imageViewer);
+
+    // Create editor container
+    this.editorContainer = document.createElement('div');
+    this.editorContainer.className = 'tabbed-editor-container';
+    this.editorContainer.style.visibility = 'hidden';
+    this.contentArea.appendChild(this.editorContainer);
+
+    // Create button container for copy and recompile (will be added to toolbar)
+    this.buttonContainer = document.createElement('div');
+    this.buttonContainer.className = 'tabbed-button-container';
+    this.buttonContainer.style.display = 'none';
+
+    // Create copy button (icon only)
     this.copyButton = document.createElement('button');
     this.copyButton.className = 'tabbed-copy-button';
     this.copyButton.innerHTML = `
@@ -85,43 +83,30 @@ export class TabbedLayout implements BaseLayout {
       </svg>
     `;
     this.copyButton.title = 'Copy code to clipboard';
-    this.copyButton.style.visibility = 'hidden';
+    this.copyButton.addEventListener('click', () => this.copyToClipboard());
+    this.buttonContainer.appendChild(this.copyButton);
 
-    this.contentArea.appendChild(this.canvasContainer);
-    this.contentArea.appendChild(this.codeViewer);
-    this.contentArea.appendChild(this.imageViewer);
-    this.contentArea.appendChild(this.copyButton);
+    // Create recompile button
+    this.recompileButton = document.createElement('button');
+    this.recompileButton.className = 'tabbed-recompile-button';
+    this.recompileButton.innerHTML = `
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+        <path d="M4 3v10l8-5-8-5z"/>
+      </svg>
+      Recompile
+    `;
+    this.recompileButton.title = 'Recompile shader (Ctrl+Enter)';
+    this.recompileButton.addEventListener('click', () => this.recompile());
+    this.buttonContainer.appendChild(this.recompileButton);
 
-    // Create editor container (for editor mode)
-    if (this.project.editor) {
-      this.editorContainer = document.createElement('div');
-      this.editorContainer.className = 'tabbed-editor-container';
-      this.editorContainer.style.visibility = 'hidden';
-      this.contentArea.appendChild(this.editorContainer);
+    // Create error display
+    this.errorDisplay = document.createElement('div');
+    this.errorDisplay.className = 'tabbed-error-display';
+    this.errorDisplay.style.display = 'none';
+    this.contentArea.appendChild(this.errorDisplay);
 
-      // Create recompile button
-      this.recompileButton = document.createElement('button');
-      this.recompileButton.className = 'tabbed-recompile-button';
-      this.recompileButton.innerHTML = `
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-          <path d="M4 3v10l8-5-8-5z"/>
-        </svg>
-        Recompile
-      `;
-      this.recompileButton.title = 'Recompile shader (Ctrl+Enter)';
-      this.recompileButton.style.visibility = 'hidden';
-      this.recompileButton.addEventListener('click', () => this.recompile());
-      this.contentArea.appendChild(this.recompileButton);
-
-      // Create error display
-      this.errorDisplay = document.createElement('div');
-      this.errorDisplay.className = 'tabbed-error-display';
-      this.errorDisplay.style.display = 'none';
-      this.contentArea.appendChild(this.errorDisplay);
-
-      // Set up keyboard shortcut for recompile
-      this.setupKeyboardShortcut();
-    }
+    // Set up keyboard shortcut for recompile
+    this.setupKeyboardShortcut();
 
     // Build tab bar
     const tabBar = this.buildTabBar();
@@ -162,7 +147,7 @@ export class TabbedLayout implements BaseLayout {
   }
 
   private saveCurrentEditorContent(): void {
-    if (this.editorInstance && this.project.editor) {
+    if (this.editorInstance) {
       const tab = this.tabs[this.activeTabIndex];
       if (tab.kind === 'code') {
         const source = this.editorInstance.getSource();
@@ -206,7 +191,40 @@ export class TabbedLayout implements BaseLayout {
     }
   }
 
+  private async copyToClipboard(): Promise<void> {
+    const tab = this.tabs[this.activeTabIndex];
+    if (tab.kind !== 'code') return;
+
+    // Get current source (modified or original)
+    const source = this.editorInstance
+      ? this.editorInstance.getSource()
+      : (this.modifiedSources.get(tab.passName) ?? tab.source);
+
+    try {
+      await navigator.clipboard.writeText(source);
+      // Show checkmark feedback
+      const originalHTML = this.copyButton.innerHTML;
+      this.copyButton.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"/>
+        </svg>
+      `;
+      this.copyButton.classList.add('copied');
+      setTimeout(() => {
+        this.copyButton.innerHTML = originalHTML;
+        this.copyButton.classList.remove('copied');
+      }, 1500);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  }
+
   private buildTabBar(): HTMLElement {
+    // Create toolbar container (holds tabs + buttons)
+    const toolbar = document.createElement('div');
+    toolbar.className = 'tabbed-toolbar';
+
+    // Create tab bar
     const tabBar = document.createElement('div');
     tabBar.className = 'tabbed-tab-bar';
 
@@ -261,33 +279,6 @@ export class TabbedLayout implements BaseLayout {
       });
     }
 
-    // Track current source for copying (non-editor mode)
-    let currentSource = '';
-
-    // Icon SVGs
-    const clipboardIcon = this.copyButton.innerHTML;
-    const checkIcon = `
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-        <path d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"/>
-      </svg>
-    `;
-
-    // Copy button handler
-    this.copyButton.addEventListener('click', async () => {
-      if (!currentSource) return;
-      try {
-        await navigator.clipboard.writeText(currentSource);
-        this.copyButton.innerHTML = checkIcon;
-        this.copyButton.classList.add('copied');
-        setTimeout(() => {
-          this.copyButton.innerHTML = clipboardIcon;
-          this.copyButton.classList.remove('copied');
-        }, 1500);
-      } catch (err) {
-        console.error('Failed to copy:', err);
-      }
-    });
-
     // Function to show a specific tab
     const showTab = async (tabIndex: number) => {
       // Save current editor content before switching
@@ -303,11 +294,9 @@ export class TabbedLayout implements BaseLayout {
 
       // Hide all content first
       this.canvasContainer.style.visibility = 'hidden';
-      this.codeViewer.style.visibility = 'hidden';
       this.imageViewer.style.visibility = 'hidden';
-      this.copyButton.style.visibility = 'hidden';
-      if (this.editorContainer) this.editorContainer.style.visibility = 'hidden';
-      if (this.recompileButton) this.recompileButton.style.visibility = 'hidden';
+      this.editorContainer.style.visibility = 'hidden';
+      this.buttonContainer.style.display = 'none';
 
       // Destroy previous editor instance
       if (this.editorInstance) {
@@ -319,69 +308,33 @@ export class TabbedLayout implements BaseLayout {
         // Show shader canvas
         this.canvasContainer.style.visibility = 'visible';
       } else if (tab.kind === 'code') {
-        if (this.project.editor && this.editorContainer) {
-          // Editor mode: use CodeMirror
-          this.editorContainer.style.visibility = 'visible';
-          if (this.recompileButton) this.recompileButton.style.visibility = 'visible';
+        // Show editor and buttons
+        this.editorContainer.style.visibility = 'visible';
+        this.buttonContainer.style.display = 'flex';
 
-          // Get source (use modified if available)
-          const source = this.modifiedSources.get(tab.passName) ?? tab.source;
+        // Get source (use modified if available)
+        const source = this.modifiedSources.get(tab.passName) ?? tab.source;
 
-          // Clear and load editor
-          this.editorContainer.innerHTML = '';
-          try {
-            const { createEditor } = await import('../editor/codemirror');
-            this.editorInstance = createEditor(this.editorContainer, source, (newSource) => {
-              this.modifiedSources.set(tab.passName, newSource);
-            });
-          } catch (err) {
-            console.error('Failed to load CodeMirror:', err);
-            // Fallback to textarea
-            const textarea = document.createElement('textarea');
-            textarea.className = 'tabbed-fallback-textarea';
-            textarea.value = source;
-            textarea.addEventListener('input', () => {
-              this.modifiedSources.set(tab.passName, textarea.value);
-            });
-            this.editorContainer.appendChild(textarea);
-          }
-        } else {
-          // Non-editor mode: use Prism syntax highlighting
-          this.codeViewer.style.visibility = 'visible';
-          this.copyButton.style.visibility = 'visible';
-
-          currentSource = tab.source;
-          const lines = currentSource.split('\n');
-
-          // Create pre element
-          const pre = document.createElement('pre');
-
-          // Line numbers column
-          const lineNumbers = document.createElement('div');
-          lineNumbers.className = 'tabbed-line-numbers';
-          lineNumbers.innerHTML = lines.map((_, i) => i + 1).join('\n');
-
-          // Code content column
-          const codeContent = document.createElement('div');
-          codeContent.className = 'tabbed-code-content';
-          const code = document.createElement('code');
-          code.className = 'language-cpp';
-          code.textContent = currentSource;
-          codeContent.appendChild(code);
-
-          pre.appendChild(lineNumbers);
-          pre.appendChild(codeContent);
-
-          // Clear and append
-          this.codeViewer.innerHTML = '';
-          this.codeViewer.appendChild(pre);
-
-          // Highlight with Prism
-          Prism.highlightElement(code);
+        // Clear and load editor
+        this.editorContainer.innerHTML = '';
+        try {
+          const { createEditor } = await import('../editor/prism-editor');
+          this.editorInstance = createEditor(this.editorContainer, source, (newSource) => {
+            this.modifiedSources.set(tab.passName, newSource);
+          });
+        } catch (err) {
+          console.error('Failed to load editor:', err);
+          // Fallback to textarea
+          const textarea = document.createElement('textarea');
+          textarea.className = 'tabbed-fallback-textarea';
+          textarea.value = source;
+          textarea.addEventListener('input', () => {
+            this.modifiedSources.set(tab.passName, textarea.value);
+          });
+          this.editorContainer.appendChild(textarea);
         }
       } else {
         // Show image
-        currentSource = '';
         this.imageViewer.style.visibility = 'visible';
 
         const img = document.createElement('img');
@@ -410,6 +363,10 @@ export class TabbedLayout implements BaseLayout {
       tabBar.appendChild(tabButton);
     });
 
-    return tabBar;
+    // Assemble toolbar: tabs + buttons
+    toolbar.appendChild(tabBar);
+    toolbar.appendChild(this.buttonContainer);
+
+    return toolbar;
   }
 }

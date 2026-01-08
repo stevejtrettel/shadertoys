@@ -18,7 +18,6 @@ type ImageTab = { kind: 'image'; name: string; url: string };
 type Tab = CodeTab | ImageTab;
 
 interface EditorInstance {
-  view: any;
   getSource: () => string;
   setSource: (source: string) => void;
   destroy: () => void;
@@ -31,6 +30,7 @@ export class EditorPanel {
 
   private tabBar: HTMLElement;
   private contentArea: HTMLElement;
+  private copyButton: HTMLElement;
   private recompileButton: HTMLElement;
   private errorDisplay: HTMLElement;
 
@@ -59,6 +59,18 @@ export class EditorPanel {
     this.contentArea = document.createElement('div');
     this.contentArea.className = 'editor-content-area';
 
+    // Create copy button (icon only)
+    this.copyButton = document.createElement('button');
+    this.copyButton.className = 'editor-copy-button';
+    this.copyButton.innerHTML = `
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+        <path d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V2z" opacity="0.4"/>
+        <path d="M2 5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H2zm0 1h7a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z"/>
+      </svg>
+    `;
+    this.copyButton.title = 'Copy code to clipboard';
+    this.copyButton.addEventListener('click', () => this.copyToClipboard());
+
     // Create recompile button
     this.recompileButton = document.createElement('button');
     this.recompileButton.className = 'editor-recompile-button';
@@ -80,6 +92,7 @@ export class EditorPanel {
     const toolbar = document.createElement('div');
     toolbar.className = 'editor-toolbar';
     toolbar.appendChild(this.tabBar);
+    toolbar.appendChild(this.copyButton);
     toolbar.appendChild(this.recompileButton);
 
     this.container.appendChild(toolbar);
@@ -195,7 +208,8 @@ export class EditorPanel {
     }
 
     if (tab.kind === 'code') {
-      // Show recompile button
+      // Show buttons
+      this.copyButton.style.display = '';
       this.recompileButton.style.display = '';
 
       // Get source (use modified if available, otherwise original)
@@ -203,18 +217,18 @@ export class EditorPanel {
 
       // Create editor container
       const editorContainer = document.createElement('div');
-      editorContainer.className = 'editor-codemirror-container';
+      editorContainer.className = 'editor-prism-container';
       this.contentArea.appendChild(editorContainer);
 
-      // Dynamically load CodeMirror and create editor
+      // Dynamically load editor and create instance
       try {
-        const { createEditor } = await import('./codemirror');
+        const { createEditor } = await import('./prism-editor');
         this.editorInstance = createEditor(editorContainer, source, (newSource) => {
           // Track modifications
           this.modifiedSources.set(tab.passName, newSource);
         });
       } catch (err) {
-        console.error('Failed to load CodeMirror:', err);
+        console.error('Failed to load editor:', err);
         // Fallback to textarea
         const textarea = document.createElement('textarea');
         textarea.className = 'editor-fallback-textarea';
@@ -225,7 +239,8 @@ export class EditorPanel {
         editorContainer.appendChild(textarea);
       }
     } else {
-      // Hide recompile button for image tabs
+      // Hide buttons for image tabs
+      this.copyButton.style.display = 'none';
       this.recompileButton.style.display = 'none';
 
       // Show image
@@ -284,6 +299,34 @@ export class EditorPanel {
 
   private hideError(): void {
     this.errorDisplay.style.display = 'none';
+  }
+
+  private async copyToClipboard(): Promise<void> {
+    const tab = this.tabs[this.activeTabIndex];
+    if (tab.kind !== 'code') return;
+
+    // Get current source (modified or original)
+    const source = this.editorInstance
+      ? this.editorInstance.getSource()
+      : (this.modifiedSources.get(tab.passName) ?? tab.source);
+
+    try {
+      await navigator.clipboard.writeText(source);
+      // Show checkmark feedback
+      const originalHTML = this.copyButton.innerHTML;
+      this.copyButton.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"/>
+        </svg>
+      `;
+      this.copyButton.classList.add('copied');
+      setTimeout(() => {
+        this.copyButton.innerHTML = originalHTML;
+        this.copyButton.classList.remove('copied');
+      }, 1500);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
   }
 
   private setupKeyboardShortcut(): void {

@@ -30,9 +30,6 @@ async function main() {
 
     console.log(`Loaded project: ${project.meta.title}`);
     console.log(`Passes:`, Object.keys(project.passes).filter(k => project.passes[k as keyof typeof project.passes]));
-    if (project.editor) {
-      console.log('Editor mode enabled');
-    }
 
     // Get root container element
     const rootContainer = document.getElementById('app');
@@ -56,8 +53,8 @@ async function main() {
       pixelRatio: window.devicePixelRatio,
     });
 
-    // Wire up recompile handler if editor mode is enabled and layout supports it
-    if (project.editor && layout.setRecompileHandler) {
+    // Wire up recompile handler for layouts that support it (split, tabbed)
+    if (layout.setRecompileHandler) {
       layout.setRecompileHandler((passName: 'common' | PassName, newSource: string): RecompileResult => {
         const engine = app.getEngine();
         if (!engine) {

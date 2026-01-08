@@ -14,12 +14,7 @@
     "build:embed:screenshots": "node scripts/build-folder-screenshots.cjs",
     "preview": "vite preview"
   },
-  "dependencies": {
-    "@codemirror/lang-cpp": "^6.0.2",
-    "@codemirror/state": "^6.4.1",
-    "@codemirror/view": "^6.26.0",
-    "codemirror": "^6.0.1"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@types/node": "^20.10.0",
     "@types/prismjs": "^1.26.5",
