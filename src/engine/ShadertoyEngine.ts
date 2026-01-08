@@ -761,10 +761,12 @@ void main() {
           throw new Error(`Buffer '${source.buffer}' not found`);
         }
 
-        // Auto-detect self-reference: if a buffer references itself, always use previous texture
-        // This prevents feedback loops and enables temporal accumulation (like path tracers)
+        // Use previous frame if:
+        // 1. Self-reference (always, for safety - prevents undefined read-while-write)
+        // 2. Config explicitly requests previous frame (for buffers that run after you)
         const isSelfReference = source.buffer === currentPassName;
-        return isSelfReference ? targetPass.previousTexture : targetPass.currentTexture;
+        const usePrevious = isSelfReference || source.previous;
+        return usePrevious ? targetPass.previousTexture : targetPass.currentTexture;
       }
 
       case 'texture': {
