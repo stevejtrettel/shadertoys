@@ -18,9 +18,14 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        // Single JS bundle - inline all dynamic imports
-        inlineDynamicImports: true,
         entryFileNames: 'assets/main.js',
+        chunkFileNames: 'assets/[name].js',
+        // Separate CodeMirror into its own chunk (only loaded when editor=true)
+        manualChunks(id) {
+          if (id.includes('codemirror') || id.includes('@lezer') || id.includes('src/editor/')) {
+            return 'editor';
+          }
+        },
         // Keep original names for images
         assetFileNames: (assetInfo) => {
           const name = assetInfo.name || '';
