@@ -6,6 +6,7 @@ export default defineConfig({
   plugins: [
     cssInjectedByJsPlugin(),
   ],
+  base: './',  // Use relative paths so builds are portable
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
