@@ -151,7 +151,8 @@ export type Channels = [ChannelSource, ChannelSource, ChannelSource, ChannelSour
  */
 export interface ShadertoyTexture2D {
   name: string;  // Internal ID (e.g., "tex0", "tex1")
-  source: string;  // Path to image file
+  filename?: string;  // Original filename for display (e.g., "texture.png")
+  source: string;  // Path/URL to image file
   filter: 'nearest' | 'linear';
   wrap: 'clamp' | 'repeat';
 }
