@@ -334,6 +334,120 @@ export class ShadertoyEngine {
   }
 
   /**
+   * Recompile a single pass with new GLSL source code.
+   * Used for live editing - keeps the old shader running if compilation fails.
+   *
+   * @param passName - Name of the pass to recompile ('Image', 'BufferA', etc.)
+   * @param newSource - New GLSL source code for the pass
+   * @returns Object with success status and error message if failed
+   */
+  recompilePass(passName: PassName, newSource: string): { success: boolean; error?: string } {
+    const gl = this.gl;
+
+    // Find the runtime pass
+    const runtimePass = this._passes.find((p) => p.name === passName);
+    if (!runtimePass) {
+      return { success: false, error: `Pass '${passName}' not found` };
+    }
+
+    // Update the project's pass source (so buildFragmentShader uses it)
+    const projectPass = this.project.passes[passName];
+    if (!projectPass) {
+      return { success: false, error: `Project pass '${passName}' not found` };
+    }
+
+    // Build new fragment shader
+    const fragmentSource = this.buildFragmentShader(newSource, projectPass.channels);
+
+    try {
+      // Try to compile new program
+      const newProgram = createProgramFromSources(gl, VERTEX_SHADER_SOURCE, fragmentSource);
+
+      // Success! Delete old program and update runtime pass
+      gl.deleteProgram(runtimePass.uniforms.program);
+
+      // Cache new uniform locations
+      const uniforms: PassUniformLocations = {
+        program: newProgram,
+        iResolution: gl.getUniformLocation(newProgram, 'iResolution'),
+        iTime: gl.getUniformLocation(newProgram, 'iTime'),
+        iTimeDelta: gl.getUniformLocation(newProgram, 'iTimeDelta'),
+        iFrame: gl.getUniformLocation(newProgram, 'iFrame'),
+        iMouse: gl.getUniformLocation(newProgram, 'iMouse'),
+        iChannel: [
+          gl.getUniformLocation(newProgram, 'iChannel0'),
+          gl.getUniformLocation(newProgram, 'iChannel1'),
+          gl.getUniformLocation(newProgram, 'iChannel2'),
+          gl.getUniformLocation(newProgram, 'iChannel3'),
+        ],
+      };
+
+      runtimePass.uniforms = uniforms;
+
+      // Update the stored source in the project
+      projectPass.glslSource = newSource;
+
+      // Clear any previous compilation errors for this pass
+      this._compilationErrors = this._compilationErrors.filter(e => e.passName !== passName);
+
+      return { success: true };
+    } catch (err) {
+      // Compilation failed - keep old shader running
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      return { success: false, error: errorMessage };
+    }
+  }
+
+  /**
+   * Recompile common.glsl and all passes that use it.
+   * Used for live editing of common code.
+   *
+   * @param newCommonSource - New GLSL source code for common.glsl
+   * @returns Object with success status and errors for each failed pass
+   */
+  recompileCommon(newCommonSource: string): { success: boolean; errors: Array<{ passName: PassName; error: string }> } {
+    const oldCommonSource = this.project.commonSource;
+
+    // Temporarily update common source
+    this.project.commonSource = newCommonSource;
+
+    const errors: Array<{ passName: PassName; error: string }> = [];
+    const passOrder: PassName[] = ['BufferA', 'BufferB', 'BufferC', 'BufferD', 'Image'];
+
+    // Try to recompile all passes
+    for (const passName of passOrder) {
+      const projectPass = this.project.passes[passName];
+      if (!projectPass) continue;
+
+      const result = this.recompilePass(passName, projectPass.glslSource);
+      if (!result.success) {
+        errors.push({ passName, error: result.error || 'Unknown error' });
+      }
+    }
+
+    // If any failed, restore old common source and recompile successful ones back
+    if (errors.length > 0) {
+      this.project.commonSource = oldCommonSource;
+
+      // Recompile passes back to working state
+      for (const passName of passOrder) {
+        const projectPass = this.project.passes[passName];
+        if (!projectPass) continue;
+
+        // Skip passes that failed (they still have old shader)
+        if (errors.some(e => e.passName === passName)) continue;
+
+        // Recompile with old common source
+        this.recompilePass(passName, projectPass.glslSource);
+      }
+
+      return { success: false, errors };
+    }
+
+    return { success: true, errors: [] };
+  }
+
+  /**
    * Delete all GL resources.
    */
   dispose(): void {

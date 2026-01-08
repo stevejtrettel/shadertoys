@@ -1,0 +1,8 @@
+{
+  "title": "Live Editor",
+  "description": "Edit shader code live and see changes instantly",
+  "layout": "split",
+  "editor": true,
+  "controls": true,
+  "Image": {}
+}

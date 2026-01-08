@@ -1,0 +1,13 @@
+/**
+ * CodeMirror Editor Styles
+ */
+
+.cm-editor {
+  height: 100%;
+  overflow: hidden;
+}
+
+.cm-scroller {
+  overflow: auto;
+  font-family: 'Fira Code', 'Source Code Pro', 'Consolas', monospace;
+}

@@ -3,6 +3,9 @@
  *
  * Single window with tabs to switch between shader output, code views, and textures.
  * First tab shows the live shader, remaining tabs show GLSL source files and images.
+ *
+ * When editor mode is enabled (project.editor = true), uses CodeMirror
+ * for live code editing with a recompile button.
  */
 
 import './tabbed.css';
@@ -11,13 +14,16 @@ import * as Prism from 'prismjs';
 import 'prismjs/components/prism-c';
 import 'prismjs/components/prism-cpp';
 
-import { BaseLayout, LayoutOptions } from './types';
-import { ShadertoyProject } from '../project/types';
+import { BaseLayout, LayoutOptions, RecompileHandler } from './types';
+import { ShadertoyProject, PassName } from '../project/types';
 
 type ShaderTab = { kind: 'shader'; name: string };
-type CodeTab = { kind: 'code'; name: string; source: string };
+type CodeTab = { kind: 'code'; name: string; passName: 'common' | PassName; source: string };
 type ImageTab = { kind: 'image'; name: string; url: string };
 type Tab = ShaderTab | CodeTab | ImageTab;
+
+// Lazy-loaded editor types
+type EditorInstanceType = import('../editor/codemirror').EditorInstance;
 
 export class TabbedLayout implements BaseLayout {
   private container: HTMLElement;
@@ -28,6 +34,16 @@ export class TabbedLayout implements BaseLayout {
   private codeViewer: HTMLElement;
   private imageViewer: HTMLElement;
   private copyButton: HTMLElement;
+
+  // Editor mode support
+  private editorContainer: HTMLElement | null = null;
+  private editorInstance: EditorInstanceType | null = null;
+  private recompileButton: HTMLElement | null = null;
+  private errorDisplay: HTMLElement | null = null;
+  private recompileHandler: RecompileHandler | null = null;
+  private modifiedSources: Map<string, string> = new Map();
+  private tabs: Tab[] = [];
+  private activeTabIndex: number = 0;
 
   constructor(opts: LayoutOptions) {
     this.container = opts.container;
@@ -59,7 +75,7 @@ export class TabbedLayout implements BaseLayout {
     this.imageViewer.className = 'tabbed-image-viewer';
     this.imageViewer.style.visibility = 'hidden';
 
-    // Create copy button
+    // Create copy button (for non-editor mode)
     this.copyButton = document.createElement('button');
     this.copyButton.className = 'tabbed-copy-button';
     this.copyButton.innerHTML = `
@@ -76,6 +92,37 @@ export class TabbedLayout implements BaseLayout {
     this.contentArea.appendChild(this.imageViewer);
     this.contentArea.appendChild(this.copyButton);
 
+    // Create editor container (for editor mode)
+    if (this.project.editor) {
+      this.editorContainer = document.createElement('div');
+      this.editorContainer.className = 'tabbed-editor-container';
+      this.editorContainer.style.visibility = 'hidden';
+      this.contentArea.appendChild(this.editorContainer);
+
+      // Create recompile button
+      this.recompileButton = document.createElement('button');
+      this.recompileButton.className = 'tabbed-recompile-button';
+      this.recompileButton.innerHTML = `
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M4 3v10l8-5-8-5z"/>
+        </svg>
+        Recompile
+      `;
+      this.recompileButton.title = 'Recompile shader (Ctrl+Enter)';
+      this.recompileButton.style.visibility = 'hidden';
+      this.recompileButton.addEventListener('click', () => this.recompile());
+      this.contentArea.appendChild(this.recompileButton);
+
+      // Create error display
+      this.errorDisplay = document.createElement('div');
+      this.errorDisplay.className = 'tabbed-error-display';
+      this.errorDisplay.style.display = 'none';
+      this.contentArea.appendChild(this.errorDisplay);
+
+      // Set up keyboard shortcut for recompile
+      this.setupKeyboardShortcut();
+    }
+
     // Build tab bar
     const tabBar = this.buildTabBar();
 
@@ -90,8 +137,73 @@ export class TabbedLayout implements BaseLayout {
     return this.canvasContainer;
   }
 
+  setRecompileHandler(handler: RecompileHandler): void {
+    this.recompileHandler = handler;
+  }
+
   dispose(): void {
+    if (this.editorInstance) {
+      this.editorInstance.destroy();
+      this.editorInstance = null;
+    }
     this.container.innerHTML = '';
+  }
+
+  private setupKeyboardShortcut(): void {
+    document.addEventListener('keydown', (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        const tab = this.tabs[this.activeTabIndex];
+        if (tab.kind === 'code') {
+          e.preventDefault();
+          this.recompile();
+        }
+      }
+    });
+  }
+
+  private saveCurrentEditorContent(): void {
+    if (this.editorInstance && this.project.editor) {
+      const tab = this.tabs[this.activeTabIndex];
+      if (tab.kind === 'code') {
+        const source = this.editorInstance.getSource();
+        this.modifiedSources.set(tab.passName, source);
+      }
+    }
+  }
+
+  private recompile(): void {
+    if (!this.recompileHandler) {
+      console.warn('No recompile handler set');
+      return;
+    }
+
+    this.saveCurrentEditorContent();
+
+    const tab = this.tabs[this.activeTabIndex];
+    if (tab.kind !== 'code') return;
+
+    const source = this.modifiedSources.get(tab.passName) ?? tab.source;
+    const result = this.recompileHandler(tab.passName, source);
+
+    if (result.success) {
+      this.hideError();
+      tab.source = source;
+    } else {
+      this.showError(result.error || 'Compilation failed');
+    }
+  }
+
+  private showError(message: string): void {
+    if (this.errorDisplay) {
+      this.errorDisplay.textContent = message;
+      this.errorDisplay.style.display = 'block';
+    }
+  }
+
+  private hideError(): void {
+    if (this.errorDisplay) {
+      this.errorDisplay.style.display = 'none';
+    }
   }
 
   private buildTabBar(): HTMLElement {
@@ -99,14 +211,19 @@ export class TabbedLayout implements BaseLayout {
     tabBar.className = 'tabbed-tab-bar';
 
     // Build tabs: Shader first, then code files, then textures
-    const tabs: Tab[] = [];
+    this.tabs = [];
 
     // 1. Shader output tab
-    tabs.push({ kind: 'shader', name: 'Shader' });
+    this.tabs.push({ kind: 'shader', name: 'Shader' });
 
     // 2. Common (if exists)
     if (this.project.commonSource) {
-      tabs.push({ kind: 'code', name: 'common.glsl', source: this.project.commonSource });
+      this.tabs.push({
+        kind: 'code',
+        name: 'common.glsl',
+        passName: 'common',
+        source: this.project.commonSource,
+      });
     }
 
     // 3. Buffers in order
@@ -116,9 +233,10 @@ export class TabbedLayout implements BaseLayout {
     for (const bufferName of bufferOrder) {
       const pass = this.project.passes[bufferName];
       if (pass) {
-        tabs.push({
+        this.tabs.push({
           kind: 'code',
           name: `${bufferName.toLowerCase()}.glsl`,
+          passName: bufferName,
           source: pass.glslSource,
         });
       }
@@ -126,19 +244,24 @@ export class TabbedLayout implements BaseLayout {
 
     // 4. Image pass
     const imagePass = this.project.passes.Image;
-    tabs.push({ kind: 'code', name: 'image.glsl', source: imagePass.glslSource });
+    this.tabs.push({
+      kind: 'code',
+      name: 'image.glsl',
+      passName: 'Image',
+      source: imagePass.glslSource,
+    });
 
     // 5. Textures (images)
     for (const texture of this.project.textures) {
       const filename = texture.source.split('/').pop() || texture.source;
-      tabs.push({
+      this.tabs.push({
         kind: 'image',
         name: filename,
         url: texture.source,
       });
     }
 
-    // Track current source for copying
+    // Track current source for copying (non-editor mode)
     let currentSource = '';
 
     // Icon SVGs
@@ -166,8 +289,12 @@ export class TabbedLayout implements BaseLayout {
     });
 
     // Function to show a specific tab
-    const showTab = (tabIndex: number) => {
-      const tab = tabs[tabIndex];
+    const showTab = async (tabIndex: number) => {
+      // Save current editor content before switching
+      this.saveCurrentEditorContent();
+
+      const tab = this.tabs[tabIndex];
+      this.activeTabIndex = tabIndex;
 
       // Update active tab styling
       tabBar.querySelectorAll('.tabbed-tab-button').forEach((b, i) => {
@@ -179,43 +306,79 @@ export class TabbedLayout implements BaseLayout {
       this.codeViewer.style.visibility = 'hidden';
       this.imageViewer.style.visibility = 'hidden';
       this.copyButton.style.visibility = 'hidden';
+      if (this.editorContainer) this.editorContainer.style.visibility = 'hidden';
+      if (this.recompileButton) this.recompileButton.style.visibility = 'hidden';
+
+      // Destroy previous editor instance
+      if (this.editorInstance) {
+        this.editorInstance.destroy();
+        this.editorInstance = null;
+      }
 
       if (tab.kind === 'shader') {
         // Show shader canvas
         this.canvasContainer.style.visibility = 'visible';
       } else if (tab.kind === 'code') {
-        // Show code
-        this.codeViewer.style.visibility = 'visible';
-        this.copyButton.style.visibility = 'visible';
+        if (this.project.editor && this.editorContainer) {
+          // Editor mode: use CodeMirror
+          this.editorContainer.style.visibility = 'visible';
+          if (this.recompileButton) this.recompileButton.style.visibility = 'visible';
 
-        currentSource = tab.source;
-        const lines = currentSource.split('\n');
+          // Get source (use modified if available)
+          const source = this.modifiedSources.get(tab.passName) ?? tab.source;
 
-        // Create pre element
-        const pre = document.createElement('pre');
+          // Clear and load editor
+          this.editorContainer.innerHTML = '';
+          try {
+            const { createEditor } = await import('../editor/codemirror');
+            this.editorInstance = createEditor(this.editorContainer, source, (newSource) => {
+              this.modifiedSources.set(tab.passName, newSource);
+            });
+          } catch (err) {
+            console.error('Failed to load CodeMirror:', err);
+            // Fallback to textarea
+            const textarea = document.createElement('textarea');
+            textarea.className = 'tabbed-fallback-textarea';
+            textarea.value = source;
+            textarea.addEventListener('input', () => {
+              this.modifiedSources.set(tab.passName, textarea.value);
+            });
+            this.editorContainer.appendChild(textarea);
+          }
+        } else {
+          // Non-editor mode: use Prism syntax highlighting
+          this.codeViewer.style.visibility = 'visible';
+          this.copyButton.style.visibility = 'visible';
 
-        // Line numbers column
-        const lineNumbers = document.createElement('div');
-        lineNumbers.className = 'tabbed-line-numbers';
-        lineNumbers.innerHTML = lines.map((_, i) => i + 1).join('\n');
+          currentSource = tab.source;
+          const lines = currentSource.split('\n');
 
-        // Code content column
-        const codeContent = document.createElement('div');
-        codeContent.className = 'tabbed-code-content';
-        const code = document.createElement('code');
-        code.className = 'language-cpp';
-        code.textContent = currentSource;
-        codeContent.appendChild(code);
+          // Create pre element
+          const pre = document.createElement('pre');
 
-        pre.appendChild(lineNumbers);
-        pre.appendChild(codeContent);
+          // Line numbers column
+          const lineNumbers = document.createElement('div');
+          lineNumbers.className = 'tabbed-line-numbers';
+          lineNumbers.innerHTML = lines.map((_, i) => i + 1).join('\n');
 
-        // Clear and append
-        this.codeViewer.innerHTML = '';
-        this.codeViewer.appendChild(pre);
+          // Code content column
+          const codeContent = document.createElement('div');
+          codeContent.className = 'tabbed-code-content';
+          const code = document.createElement('code');
+          code.className = 'language-cpp';
+          code.textContent = currentSource;
+          codeContent.appendChild(code);
 
-        // Highlight with Prism
-        Prism.highlightElement(code);
+          pre.appendChild(lineNumbers);
+          pre.appendChild(codeContent);
+
+          // Clear and append
+          this.codeViewer.innerHTML = '';
+          this.codeViewer.appendChild(pre);
+
+          // Highlight with Prism
+          Prism.highlightElement(code);
+        }
       } else {
         // Show image
         currentSource = '';
@@ -231,7 +394,7 @@ export class TabbedLayout implements BaseLayout {
     };
 
     // Create tab buttons
-    tabs.forEach((tab, index) => {
+    this.tabs.forEach((tab, index) => {
       const tabButton = document.createElement('button');
       tabButton.className = 'tabbed-tab-button';
       if (tab.kind === 'shader') {
