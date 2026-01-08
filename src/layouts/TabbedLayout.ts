@@ -25,6 +25,8 @@ export class TabbedLayout implements BaseLayout {
 
   private editorContainer: HTMLElement;
   private editorInstance: any = null;
+  private buttonContainer: HTMLElement;
+  private copyButton: HTMLElement;
   private recompileButton: HTMLElement;
   private errorDisplay: HTMLElement;
   private recompileHandler: RecompileHandler | null = null;
@@ -66,6 +68,24 @@ export class TabbedLayout implements BaseLayout {
     this.editorContainer.style.visibility = 'hidden';
     this.contentArea.appendChild(this.editorContainer);
 
+    // Create button container for copy and recompile
+    this.buttonContainer = document.createElement('div');
+    this.buttonContainer.className = 'tabbed-button-container';
+    this.buttonContainer.style.visibility = 'hidden';
+
+    // Create copy button (icon only)
+    this.copyButton = document.createElement('button');
+    this.copyButton.className = 'tabbed-copy-button';
+    this.copyButton.innerHTML = `
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+        <path d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V2z" opacity="0.4"/>
+        <path d="M2 5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H2zm0 1h7a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z"/>
+      </svg>
+    `;
+    this.copyButton.title = 'Copy code to clipboard';
+    this.copyButton.addEventListener('click', () => this.copyToClipboard());
+    this.buttonContainer.appendChild(this.copyButton);
+
     // Create recompile button
     this.recompileButton = document.createElement('button');
     this.recompileButton.className = 'tabbed-recompile-button';
@@ -76,9 +96,10 @@ export class TabbedLayout implements BaseLayout {
       Recompile
     `;
     this.recompileButton.title = 'Recompile shader (Ctrl+Enter)';
-    this.recompileButton.style.visibility = 'hidden';
     this.recompileButton.addEventListener('click', () => this.recompile());
-    this.contentArea.appendChild(this.recompileButton);
+    this.buttonContainer.appendChild(this.recompileButton);
+
+    this.contentArea.appendChild(this.buttonContainer);
 
     // Create error display
     this.errorDisplay = document.createElement('div');
@@ -172,6 +193,34 @@ export class TabbedLayout implements BaseLayout {
     }
   }
 
+  private async copyToClipboard(): Promise<void> {
+    const tab = this.tabs[this.activeTabIndex];
+    if (tab.kind !== 'code') return;
+
+    // Get current source (modified or original)
+    const source = this.editorInstance
+      ? this.editorInstance.getSource()
+      : (this.modifiedSources.get(tab.passName) ?? tab.source);
+
+    try {
+      await navigator.clipboard.writeText(source);
+      // Show checkmark feedback
+      const originalHTML = this.copyButton.innerHTML;
+      this.copyButton.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"/>
+        </svg>
+      `;
+      this.copyButton.classList.add('copied');
+      setTimeout(() => {
+        this.copyButton.innerHTML = originalHTML;
+        this.copyButton.classList.remove('copied');
+      }, 1500);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  }
+
   private buildTabBar(): HTMLElement {
     const tabBar = document.createElement('div');
     tabBar.className = 'tabbed-tab-bar';
@@ -244,7 +293,7 @@ export class TabbedLayout implements BaseLayout {
       this.canvasContainer.style.visibility = 'hidden';
       this.imageViewer.style.visibility = 'hidden';
       this.editorContainer.style.visibility = 'hidden';
-      this.recompileButton.style.visibility = 'hidden';
+      this.buttonContainer.style.visibility = 'hidden';
 
       // Destroy previous editor instance
       if (this.editorInstance) {
@@ -256,9 +305,9 @@ export class TabbedLayout implements BaseLayout {
         // Show shader canvas
         this.canvasContainer.style.visibility = 'visible';
       } else if (tab.kind === 'code') {
-        // Show editor
+        // Show editor and buttons
         this.editorContainer.style.visibility = 'visible';
-        this.recompileButton.style.visibility = 'visible';
+        this.buttonContainer.style.visibility = 'visible';
 
         // Get source (use modified if available)
         const source = this.modifiedSources.get(tab.passName) ?? tab.source;
