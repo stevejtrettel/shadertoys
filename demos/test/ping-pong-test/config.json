@@ -1,18 +1,11 @@
 {
-  "meta": {
-    "title": "Ping-Pong Buffer Test",
-    "description": "Tests BufferA reading from its previous frame"
+  "title": "Ping-Pong Buffer Test",
+  "description": "Tests BufferA reading from its previous frame",
+
+  "BufferA": {
+    "iChannel0": { "buffer": "BufferA", "previous": true }
   },
-  "passes": {
-    "BufferA": {
-      "channels": {
-        "iChannel0": { "buffer": "BufferA", "previous": true }
-      }
-    },
-    "Image": {
-      "channels": {
-        "iChannel0": { "buffer": "BufferA" }
-      }
-    }
+  "Image": {
+    "iChannel0": "BufferA"
   }
 }

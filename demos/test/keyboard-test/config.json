@@ -1,17 +1,10 @@
 {
-  "meta": {
-    "title": "Keyboard Test",
-    "description": "Test keyboard input via keyboard texture. Press WASD, 1-5, and C to interact."
-  },
+  "title": "Keyboard Test",
+  "description": "Test keyboard input via keyboard texture. Press WASD, 1-5, and C to interact.",
   "layout": "centered",
   "controls": true,
-  "passes": {
-    "Image": {
-      "channels": {
-        "iChannel0": {
-          "keyboard": true
-        }
-      }
-    }
+
+  "Image": {
+    "iChannel0": { "keyboard": true }
   }
 }

@@ -41,85 +41,109 @@ export interface ChannelJSONKeyboard {
 }
 
 /**
- * Union type for channel sources in JSON config.
+ * Union type for channel sources in JSON config (object form).
  */
-export type ChannelJSON =
+export type ChannelJSONObject =
   | ChannelJSONBuffer
   | ChannelJSONTexture
   | ChannelJSONKeyboard;
 
+/**
+ * Channel value in simplified config format.
+ * Can be a string shorthand or full object:
+ * - "BufferA", "BufferB", etc. → buffer reference
+ * - "keyboard" → keyboard input
+ * - "photo.jpg" (with extension) → texture file
+ * - { buffer: "BufferA" } → explicit buffer with options
+ * - { texture: "photo.jpg", filter: "nearest" } → texture with options
+ */
+export type ChannelValue = string | ChannelJSONObject;
+
 // =============================================================================
-// Config Format (config.json)
+// Config Format (config.json) - Simplified flat format
 // =============================================================================
 
 /**
- * Per-pass configuration in JSON.
+ * Pass configuration in simplified format.
+ * Channel bindings are directly on the pass object.
+ *
+ * Example:
+ * {
+ *   "iChannel0": "BufferA",
+ *   "iChannel1": "photo.jpg",
+ *   "source": "custom.glsl"  // optional
+ * }
  */
-export interface PassConfig {
-  /**
-   * Path to GLSL source file (relative to project root).
-   * Optional - defaults to standard names (image.glsl, bufferA.glsl, etc.)
-   */
+export interface PassConfigSimplified {
+  /** Optional custom source file path */
   source?: string;
-
-  /**
-   * Channel bindings for iChannel0..3.
-   * Any omitted channel defaults to unused (none).
-   */
-  channels?: {
-    iChannel0?: ChannelJSON;
-    iChannel1?: ChannelJSON;
-    iChannel2?: ChannelJSON;
-    iChannel3?: ChannelJSON;
-  };
+  /** Channel bindings - string shorthand or full object */
+  iChannel0?: ChannelValue;
+  iChannel1?: ChannelValue;
+  iChannel2?: ChannelValue;
+  iChannel3?: ChannelValue;
 }
 
 /**
- * Top-level config.json structure.
+ * Top-level config.json structure (simplified flat format).
+ *
+ * Example:
+ * {
+ *   "title": "My Shader",
+ *   "layout": "split",
+ *   "controls": true,
+ *
+ *   "BufferA": {
+ *     "iChannel0": "BufferA"
+ *   },
+ *   "Image": {
+ *     "iChannel0": "BufferA"
+ *   }
+ * }
  */
 export interface ShadertoyConfig {
-  /**
-   * Optional project metadata.
-   */
+  // Metadata (flat, not nested)
+  title?: string;
+  author?: string;
+  description?: string;
+
+  // Settings
+  layout?: 'fullscreen' | 'centered' | 'split' | 'tabbed';
+  controls?: boolean;
+  common?: string;
+
+  // Passes (at top level, not under "passes")
+  Image?: PassConfigSimplified;
+  BufferA?: PassConfigSimplified;
+  BufferB?: PassConfigSimplified;
+  BufferC?: PassConfigSimplified;
+  BufferD?: PassConfigSimplified;
+
+  // Legacy support: old nested format
   meta?: {
     title?: string;
     author?: string;
     description?: string;
   };
+  passes?: {
+    Image?: PassConfigLegacy;
+    BufferA?: PassConfigLegacy;
+    BufferB?: PassConfigLegacy;
+    BufferC?: PassConfigLegacy;
+    BufferD?: PassConfigLegacy;
+  };
+}
 
-  /**
-   * Optional layout mode for the shader viewer.
-   * - 'fullscreen': Canvas fills entire viewport, no styling
-   * - 'centered': Centered canvas with rounded corners and drop shadow
-   * - 'split': Shader on left, code viewer on right with syntax highlighting
-   * - 'tabbed': Single window with tabs for shader and code (default)
-   * If omitted, defaults to 'tabbed'.
-   */
-  layout?: 'fullscreen' | 'centered' | 'split' | 'tabbed';
-
-  /**
-   * Optional controls for playback.
-   * If true, shows play/pause and reset buttons with keyboard shortcuts.
-   * If omitted, defaults to true.
-   */
-  controls?: boolean;
-
-  /**
-   * Optional path to common GLSL code (shared across all passes).
-   * If omitted, loader checks for 'common.glsl' automatically.
-   */
-  common?: string;
-
-  /**
-   * Pass definitions.
-   * Image is required, BufferA-D are optional.
-   */
-  passes: {
-    Image: PassConfig;
-    BufferA?: PassConfig;
-    BufferB?: PassConfig;
-    BufferC?: PassConfig;
-    BufferD?: PassConfig;
+/**
+ * Legacy pass config format (for backward compatibility).
+ */
+export interface PassConfigLegacy {
+  source?: string;
+  channels?: {
+    iChannel0?: ChannelJSONObject;
+    iChannel1?: ChannelJSONObject;
+    iChannel2?: ChannelJSONObject;
+    iChannel3?: ChannelJSONObject;
   };
 }
 

@@ -1,26 +1,17 @@
 {
-  "meta": {
-    "title": "Multi-Buffer Test",
-    "description": "Tests multiple buffers reading from each other"
+  "title": "Multi-Buffer Test",
+  "description": "Tests multiple buffers reading from each other",
+
+  "BufferA": {},
+  "BufferB": {
+    "iChannel0": "BufferA"
   },
-  "passes": {
-    "BufferA": {},
-    "BufferB": {
-      "channels": {
-        "iChannel0": { "buffer": "BufferA" }
-      }
-    },
-    "BufferC": {
-      "channels": {
-        "iChannel0": { "buffer": "BufferB" }
-      }
-    },
-    "Image": {
-      "channels": {
-        "iChannel0": { "buffer": "BufferA" },
-        "iChannel1": { "buffer": "BufferB" },
-        "iChannel2": { "buffer": "BufferC" }
-      }
-    }
+  "BufferC": {
+    "iChannel0": "BufferB"
+  },
+  "Image": {
+    "iChannel0": "BufferA",
+    "iChannel1": "BufferB",
+    "iChannel2": "BufferC"
   }
 }

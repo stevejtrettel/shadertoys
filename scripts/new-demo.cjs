@@ -209,37 +209,36 @@ if (bufferCount > 0) {
     content: templates.imageWithBuffers(bufferCount)
   });
 
-  // Build config where all buffers are available to all passes
+  // Build config using new simplified format
   // Shadertoy execution order: BufferA → BufferB → BufferC → BufferD → Image
-  // - Self-reference (i === j): always previous frame (ping-pong)
-  // - Reading buffer that runs BEFORE you (j < i): current frame
-  // - Reading buffer that runs AFTER you (j > i): previous frame
-  const passes = {};
-
-  activeBuffers.forEach((bufName, i) => {
-    const channels = {};
-    activeBuffers.forEach((otherBuf, j) => {
-      const needsPrevious = j >= i; // self or runs after = previous frame
-      channels[channelNames[j]] = {
-        buffer: otherBuf,
-        ...(needsPrevious ? { previous: true } : {})
-      };
-    });
-    passes[bufName] = { channels };
-  });
-
-  // Image pass reads all buffers (current frame)
-  const imageChannels = {};
-  activeBuffers.forEach((bufName, i) => {
-    imageChannels[channelNames[i]] = { buffer: bufName };
-  });
-  passes.Image = { channels: imageChannels };
-
+  // - Self-reference: engine auto-forces previous frame, so string shorthand works
+  // - Earlier buffer (j < i): already ran, current frame → string shorthand
+  // - Later buffer (j > i): hasn't run yet, needs previous → object with previous: true
   config = {
-    meta: { title },
-    controls: true,
-    passes
+    title,
+    controls: true
   };
+
+  activeBuffers.forEach((bufName, i) => {
+    const passConfig = {};
+    activeBuffers.forEach((otherBuf, j) => {
+      // Use string shorthand for self or earlier buffers
+      // Use object with previous: true for later buffers
+      if (j > i) {
+        passConfig[channelNames[j]] = { buffer: otherBuf, previous: true };
+      } else {
+        passConfig[channelNames[j]] = otherBuf;
+      }
+    });
+    config[bufName] = passConfig;
+  });
+
+  // Image pass reads all buffers (current frame) - use string shorthand
+  const imageConfig = {};
+  activeBuffers.forEach((bufName, i) => {
+    imageConfig[channelNames[i]] = bufName;
+  });
+  config.Image = imageConfig;
 } else {
   // Simple mode: just image.glsl
   files = [

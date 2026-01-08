@@ -3,7 +3,57 @@
  * Called by the generated loader
  */
 
-import { ShadertoyProject, ShadertoyConfig } from './types';
+import {
+  ShadertoyProject,
+  ShadertoyConfig,
+  PassName,
+  ChannelValue,
+  ChannelJSONObject,
+  PassConfigSimplified,
+  PassConfigLegacy,
+} from './types';
+
+/**
+ * Type guard for PassName.
+ */
+function isPassName(s: string): s is PassName {
+  return s === 'Image' || s === 'BufferA' || s === 'BufferB' || s === 'BufferC' || s === 'BufferD';
+}
+
+/**
+ * Parse a channel value (string shorthand or object) into normalized ChannelJSONObject.
+ */
+function parseChannelValue(value: ChannelValue): ChannelJSONObject | null {
+  if (typeof value === 'string') {
+    if (isPassName(value)) {
+      return { buffer: value };
+    }
+    if (value === 'keyboard') {
+      return { keyboard: true };
+    }
+    return { texture: value };
+  }
+  return value;
+}
+
+/**
+ * Convert legacy pass config to simplified format.
+ */
+function convertLegacyPassConfig(legacy: PassConfigLegacy | undefined): PassConfigSimplified | undefined {
+  if (!legacy) return undefined;
+
+  const result: PassConfigSimplified = {};
+  if (legacy.source) result.source = legacy.source;
+
+  if (legacy.channels) {
+    if (legacy.channels.iChannel0) result.iChannel0 = legacy.channels.iChannel0;
+    if (legacy.channels.iChannel1) result.iChannel1 = legacy.channels.iChannel1;
+    if (legacy.channels.iChannel2) result.iChannel2 = legacy.channels.iChannel2;
+    if (legacy.channels.iChannel3) result.iChannel3 = legacy.channels.iChannel3;
+  }
+
+  return result;
+}
 
 export async function loadDemo(
   demoName: string,
@@ -11,17 +61,20 @@ export async function loadDemo(
   jsonFiles: Record<string, () => Promise<ShadertoyConfig>>,
   imageFiles: Record<string, () => Promise<string>>
 ): Promise<ShadertoyProject> {
-  // Check for config.json
   const configPath = `/demos/${demoName}/config.json`;
   const hasConfig = configPath in jsonFiles;
 
   if (hasConfig) {
     const config = await jsonFiles[configPath]();
-    // If config has passes defined, use full config loading
-    // Otherwise, use single-pass with config overrides (for layout, controls, etc.)
-    if (config.passes) {
+    // Detect format: legacy has "passes" key, new format has passes at top level
+    const isLegacyFormat = !!config.passes;
+    const hasNewFormatPasses = config.Image || config.BufferA || config.BufferB ||
+                               config.BufferC || config.BufferD;
+
+    if (isLegacyFormat || hasNewFormatPasses) {
       return loadWithConfig(demoName, config, glslFiles, imageFiles);
     } else {
+      // Config with only settings (layout, controls, etc.) but no passes
       return loadSinglePass(demoName, glslFiles, config);
     }
   } else {
@@ -42,17 +95,18 @@ async function loadSinglePass(
 
   const imageSource = await glslFiles[imagePath]();
 
-  // Apply config overrides if provided
+  // Support both flat and nested metadata
   const layout = configOverrides?.layout || 'tabbed';
   const controls = configOverrides?.controls ?? true;
-  const title = configOverrides?.meta?.title || demoName.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+  const title = configOverrides?.title || configOverrides?.meta?.title ||
+                demoName.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 
   return {
     root: `/demos/${demoName}`,
     meta: {
       title,
-      author: configOverrides?.meta?.author || null,
-      description: configOverrides?.meta?.description || null,
+      author: configOverrides?.author || configOverrides?.meta?.author || null,
+      description: configOverrides?.description || configOverrides?.meta?.description || null,
     },
     layout,
     controls,
@@ -80,6 +134,36 @@ async function loadWithConfig(
   imageFiles: Record<string, () => Promise<string>>
 ): Promise<ShadertoyProject> {
 
+  // Detect format and normalize pass configs
+  const isLegacyFormat = !!config.passes;
+
+  let passConfigs: {
+    Image?: PassConfigSimplified;
+    BufferA?: PassConfigSimplified;
+    BufferB?: PassConfigSimplified;
+    BufferC?: PassConfigSimplified;
+    BufferD?: PassConfigSimplified;
+  };
+
+  if (isLegacyFormat) {
+    passConfigs = {
+      Image: convertLegacyPassConfig(config.passes!.Image),
+      BufferA: convertLegacyPassConfig(config.passes!.BufferA),
+      BufferB: convertLegacyPassConfig(config.passes!.BufferB),
+      BufferC: convertLegacyPassConfig(config.passes!.BufferC),
+      BufferD: convertLegacyPassConfig(config.passes!.BufferD),
+    };
+  } else {
+    passConfigs = {
+      Image: config.Image,
+      BufferA: config.BufferA,
+      BufferB: config.BufferB,
+      BufferC: config.BufferC,
+      BufferD: config.BufferD,
+    };
+  }
+
+  // Load common source
   let commonSource: string | null = null;
   if (config.common) {
     const commonPath = `/demos/${demoName}/${config.common}`;
@@ -93,21 +177,26 @@ async function loadWithConfig(
     }
   }
 
+  // Collect all texture paths
   const texturePathsSet = new Set<string>();
   const passOrder = ['Image', 'BufferA', 'BufferB', 'BufferC', 'BufferD'] as const;
 
   for (const passName of passOrder) {
-    const passConfig = config.passes[passName];
+    const passConfig = passConfigs[passName];
     if (!passConfig) continue;
 
     for (const channelKey of ['iChannel0', 'iChannel1', 'iChannel2', 'iChannel3'] as const) {
-      const channelConfig = passConfig.channels?.[channelKey];
-      if (channelConfig && 'texture' in channelConfig) {
-        texturePathsSet.add(channelConfig.texture);
+      const channelValue = passConfig[channelKey];
+      if (!channelValue) continue;
+
+      const parsed = parseChannelValue(channelValue);
+      if (parsed && 'texture' in parsed) {
+        texturePathsSet.add(parsed.texture);
       }
     }
   }
 
+  // Load textures
   const textures: any[] = [];
   const texturePathToName = new Map<string, string>();
 
@@ -131,10 +220,11 @@ async function loadWithConfig(
     texturePathToName.set(texturePath, textureName);
   }
 
+  // Build passes
   const passes: any = {};
 
   for (const passName of passOrder) {
-    const passConfig = config.passes[passName];
+    const passConfig = passConfigs[passName];
     if (!passConfig) continue;
 
     const defaultNames: Record<string, string> = {
@@ -155,10 +245,10 @@ async function loadWithConfig(
     const glslSource = await glslFiles[sourcePath]();
 
     const channels = [
-      normalizeChannel(passConfig.channels?.iChannel0, texturePathToName),
-      normalizeChannel(passConfig.channels?.iChannel1, texturePathToName),
-      normalizeChannel(passConfig.channels?.iChannel2, texturePathToName),
-      normalizeChannel(passConfig.channels?.iChannel3, texturePathToName),
+      normalizeChannel(passConfig.iChannel0, texturePathToName),
+      normalizeChannel(passConfig.iChannel1, texturePathToName),
+      normalizeChannel(passConfig.iChannel2, texturePathToName),
+      normalizeChannel(passConfig.iChannel3, texturePathToName),
     ];
 
     passes[passName] = {
@@ -172,9 +262,11 @@ async function loadWithConfig(
     throw new Error(`Demo '${demoName}' must have an Image pass`);
   }
 
-  const title = config.meta?.title || demoName.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-  const author = config.meta?.author || null;
-  const description = config.meta?.description || null;
+  // Support both flat and nested metadata
+  const title = config.title || config.meta?.title ||
+                demoName.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+  const author = config.author || config.meta?.author || null;
+  const description = config.description || config.meta?.description || null;
   const layout = config.layout || 'tabbed';
   const controls = config.controls ?? true;
 
@@ -189,28 +281,35 @@ async function loadWithConfig(
   };
 }
 
-function normalizeChannel(channelJson: any, texturePathToName?: Map<string, string>): any {
-  if (!channelJson) {
+function normalizeChannel(channelValue: ChannelValue | undefined, texturePathToName?: Map<string, string>): any {
+  if (!channelValue) {
     return { kind: 'none' };
   }
 
-  if ('buffer' in channelJson) {
+  // Parse string shorthand
+  const parsed = parseChannelValue(channelValue);
+  if (!parsed) {
+    return { kind: 'none' };
+  }
+
+  if ('buffer' in parsed) {
     return {
       kind: 'buffer',
-      buffer: channelJson.buffer,
-      previous: !!channelJson.previous,
+      buffer: parsed.buffer,
+      previous: !!parsed.previous,
     };
   }
 
-  if ('texture' in channelJson) {
-    const textureName = texturePathToName?.get(channelJson.texture) || channelJson.texture;
+  if ('texture' in parsed) {
+    const textureName = texturePathToName?.get(parsed.texture) || parsed.texture;
     return {
-      kind: 'texture2D',
+      kind: 'texture',
       name: textureName,
+      cubemap: parsed.type === 'cubemap',
     };
   }
 
-  if ('keyboard' in channelJson) {
+  if ('keyboard' in parsed) {
     return { kind: 'keyboard' };
   }
 

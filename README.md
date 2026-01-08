@@ -72,17 +72,11 @@ demos/my-shader/
 **config.json:**
 ```json
 {
-  "passes": {
-    "BufferA": {
-      "channels": {
-        "iChannel0": { "buffer": "BufferA", "previous": true }
-      }
-    },
-    "Image": {
-      "channels": {
-        "iChannel0": { "buffer": "BufferA" }
-      }
-    }
+  "BufferA": {
+    "iChannel0": { "buffer": "BufferA", "previous": true }
+  },
+  "Image": {
+    "iChannel0": "BufferA"
   }
 }
 ```
@@ -134,25 +128,17 @@ demos/my-shader/
 **config.json:**
 ```json
 {
-  "passes": {
-    "BufferA": {
-      "channels": {
-        "iChannel0": { "buffer": "BufferA", "previous": true },
-        "iChannel1": { "buffer": "BufferB", "previous": true }
-      }
-    },
-    "BufferB": {
-      "channels": {
-        "iChannel0": { "buffer": "BufferA" },
-        "iChannel1": { "buffer": "BufferB", "previous": true }
-      }
-    },
-    "Image": {
-      "channels": {
-        "iChannel0": { "buffer": "BufferA" },
-        "iChannel1": { "buffer": "BufferB" }
-      }
-    }
+  "BufferA": {
+    "iChannel0": { "buffer": "BufferA", "previous": true },
+    "iChannel1": { "buffer": "BufferB", "previous": true }
+  },
+  "BufferB": {
+    "iChannel0": "BufferA",
+    "iChannel1": { "buffer": "BufferB", "previous": true }
+  },
+  "Image": {
+    "iChannel0": "BufferA",
+    "iChannel1": "BufferB"
   }
 }
 ```
@@ -176,12 +162,8 @@ demos/my-shader/
 **config.json:**
 ```json
 {
-  "passes": {
-    "Image": {
-      "channels": {
-        "iChannel0": { "texture": "photo.jpg" }
-      }
-    }
+  "Image": {
+    "iChannel0": "photo.jpg"
   }
 }
 ```
@@ -235,19 +217,13 @@ demos/my-shader/
 **config.json:**
 ```json
 {
-  "passes": {
-    "BufferA": {
-      "channels": {
-        "iChannel0": { "buffer": "BufferA", "previous": true },
-        "iChannel1": { "texture": "photo.jpg" }
-      }
-    },
-    "Image": {
-      "channels": {
-        "iChannel0": { "buffer": "BufferA" },
-        "iChannel1": { "texture": "photo.jpg" }
-      }
-    }
+  "BufferA": {
+    "iChannel0": { "buffer": "BufferA", "previous": true },
+    "iChannel1": "photo.jpg"
+  },
+  "Image": {
+    "iChannel0": "BufferA",
+    "iChannel1": "photo.jpg"
   }
 }
 ```
@@ -295,7 +271,8 @@ Control how the shader is displayed with the `layout` option in `config.json`:
 ```json
 {
   "layout": "split",
-  "passes": { ... }
+  "BufferA": { ... },
+  "Image": { ... }
 }
 ```
 

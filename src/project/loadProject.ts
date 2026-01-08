@@ -13,11 +13,14 @@ import {
   PassName,
   ChannelSource,
   Channels,
+  ChannelValue,
+  ChannelJSONObject,
   ShadertoyConfig,
   ShadertoyPass,
   ShadertoyProject,
   ShadertoyTexture2D,
-  PassConfig,
+  PassConfigSimplified,
+  PassConfigLegacy,
 } from './types';
 
 // =============================================================================
@@ -195,25 +198,85 @@ async function loadSinglePassProject(root: string): Promise<ShadertoyProject> {
 // =============================================================================
 
 /**
+ * Check if a string looks like a file path (has extension).
+ */
+function looksLikeFilePath(s: string): boolean {
+  return /\.[a-zA-Z0-9]+$/.test(s);
+}
+
+/**
+ * Parse a channel value (string shorthand or object) into normalized ChannelJSONObject.
+ *
+ * String shortcuts:
+ * - "BufferA", "BufferB", etc. → buffer reference
+ * - "keyboard" → keyboard input
+ * - "photo.jpg" (with extension) → texture file
+ */
+function parseChannelValue(value: ChannelValue): ChannelJSONObject | null {
+  if (typeof value === 'string') {
+    // Check for buffer names
+    if (isPassName(value)) {
+      return { buffer: value };
+    }
+    // Check for keyboard
+    if (value === 'keyboard') {
+      return { keyboard: true };
+    }
+    // Assume texture (file path)
+    return { texture: value };
+  }
+  // Already an object
+  return value;
+}
+
+/**
  * Load a project with config.json.
+ * Supports both new simplified format and legacy nested format.
  *
  * @param root - Project directory
  * @param config - Parsed JSON config
  * @returns Normalized ShadertoyProject
  */
 async function loadProjectWithConfig(root: string, config: ShadertoyConfig): Promise<ShadertoyProject> {
-  // Validate passes
-  if (!config.passes || !config.passes.Image) {
-    throw new Error(`config.json at '${root}' must define passes.Image.`);
+  // Detect format: legacy has "passes" key, new format has passes at top level
+  const isLegacyFormat = !!config.passes;
+
+  // Extract pass configs based on format
+  let passConfigs: {
+    Image?: PassConfigSimplified;
+    BufferA?: PassConfigSimplified;
+    BufferB?: PassConfigSimplified;
+    BufferC?: PassConfigSimplified;
+    BufferD?: PassConfigSimplified;
+  };
+
+  if (isLegacyFormat) {
+    // Legacy format: convert from nested channels to flat iChannel format
+    passConfigs = {
+      Image: convertLegacyPassConfig(config.passes!.Image),
+      BufferA: convertLegacyPassConfig(config.passes!.BufferA),
+      BufferB: convertLegacyPassConfig(config.passes!.BufferB),
+      BufferC: convertLegacyPassConfig(config.passes!.BufferC),
+      BufferD: convertLegacyPassConfig(config.passes!.BufferD),
+    };
+  } else {
+    // New format: passes are at top level
+    passConfigs = {
+      Image: config.Image,
+      BufferA: config.BufferA,
+      BufferB: config.BufferB,
+      BufferC: config.BufferC,
+      BufferD: config.BufferD,
+    };
   }
 
-  const allowedPassKeys = new Set<PassName>(['Image', 'BufferA', 'BufferB', 'BufferC', 'BufferD']);
-  for (const key of Object.keys(config.passes)) {
-    if (!allowedPassKeys.has(key as PassName)) {
-      throw new Error(
-        `config.json at '${root}' contains unknown pass '${key}'. Allowed passes are Image, BufferA, BufferB, BufferC, BufferD.`
-      );
-    }
+  // Validate: must have Image pass (or be empty config for simple shader)
+  const hasAnyPass = passConfigs.Image || passConfigs.BufferA || passConfigs.BufferB ||
+                     passConfigs.BufferC || passConfigs.BufferD;
+
+  if (!hasAnyPass) {
+    // Empty config = simple Image pass with no channels
+    passConfigs.Image = {};
   }
 
   // Resolve commonSource
@@ -262,11 +325,50 @@ async function loadProjectWithConfig(root: string, config: ShadertoyConfig): Pro
   }
 
   /**
-   * Load a single pass from config.
+   * Parse a channel object into ChannelSource.
+   */
+  function parseChannelObject(value: ChannelJSONObject, passName: PassName, channelKey: string): ChannelSource {
+    // Buffer channel
+    if ('buffer' in value) {
+      const buf = value.buffer;
+      if (!isPassName(buf)) {
+        throw new Error(
+          `Invalid buffer name '${buf}' for ${channelKey} in pass '${passName}' at '${root}'.`
+        );
+      }
+      return {
+        kind: 'buffer',
+        buffer: buf,
+        previous: !!value.previous,
+      };
+    }
+
+    // Texture channel
+    if ('texture' in value) {
+      const internalName = registerTexture(value);
+      return {
+        kind: 'texture',
+        name: internalName,
+        cubemap: value.type === 'cubemap',
+      };
+    }
+
+    // Keyboard channel
+    if ('keyboard' in value) {
+      return { kind: 'keyboard' };
+    }
+
+    throw new Error(
+      `Invalid channel object for ${channelKey} in pass '${passName}' at '${root}'.`
+    );
+  }
+
+  /**
+   * Load a single pass from simplified config.
    */
   async function loadPass(
     name: PassName,
-    passConfig: PassConfig | undefined
+    passConfig: PassConfigSimplified | undefined
   ): Promise<ShadertoyPass | undefined> {
     if (!passConfig) return undefined;
 
@@ -283,59 +385,23 @@ async function loadProjectWithConfig(root: string, config: ShadertoyConfig): Pro
 
     // Normalize channels (always 4 channels)
     const channelSources: ChannelSource[] = [];
-    const ch = passConfig.channels ?? {};
+    const channelKeys = ['iChannel0', 'iChannel1', 'iChannel2', 'iChannel3'] as const;
 
-    const keys = ['iChannel0', 'iChannel1', 'iChannel2', 'iChannel3'] as const;
-
-    for (const key of keys) {
-      const value = ch[key];
-      if (!value) {
+    for (const key of channelKeys) {
+      const rawValue = passConfig[key];
+      if (!rawValue) {
         channelSources.push({ kind: 'none' });
         continue;
       }
 
-      // Buffer channel
-      if ('buffer' in value) {
-        const buf = value.buffer;
-        if (!isPassName(buf)) {
-          throw new Error(
-            `Invalid buffer name '${buf}' for ${key} in pass '${name}' at '${root}'.`
-          );
-        }
-        channelSources.push({
-          kind: 'buffer',
-          buffer: buf,
-          previous: !!value.previous,
-        });
+      // Parse string shorthand or use object directly
+      const parsed = parseChannelValue(rawValue);
+      if (!parsed) {
+        channelSources.push({ kind: 'none' });
         continue;
       }
 
-      // Texture channel
-      if ('texture' in value) {
-        const internalName = registerTexture(value);
-        channelSources.push({
-          kind: 'texture',
-          name: internalName,
-          cubemap: value.type === 'cubemap',
-        });
-        continue;
-      }
-
-      // Keyboard channel
-      if ('keyboard' in value) {
-        if (value.keyboard !== true) {
-          throw new Error(
-            `Invalid keyboard value for ${key} in pass '${name}' at '${root}'. Expected { "keyboard": true }.`
-          );
-        }
-        channelSources.push({ kind: 'keyboard' });
-        continue;
-      }
-
-      // Unknown channel type
-      throw new Error(
-        `Invalid channel object for ${key} in pass '${name}' at '${root}'.`
-      );
+      channelSources.push(parseChannelObject(parsed, name, key));
     }
 
     return {
@@ -346,20 +412,26 @@ async function loadProjectWithConfig(root: string, config: ShadertoyConfig): Pro
   }
 
   // Load all passes
-  const imagePass = await loadPass('Image', config.passes.Image);
-  if (!imagePass) {
-    throw new Error(`passes.Image must be defined in config.json at '${root}'.`);
+  const imagePass = await loadPass('Image', passConfigs.Image);
+  const bufferAPass = await loadPass('BufferA', passConfigs.BufferA);
+  const bufferBPass = await loadPass('BufferB', passConfigs.BufferB);
+  const bufferCPass = await loadPass('BufferC', passConfigs.BufferC);
+  const bufferDPass = await loadPass('BufferD', passConfigs.BufferD);
+
+  // If no Image pass was loaded but we have buffers, that's an error
+  if (!imagePass && (bufferAPass || bufferBPass || bufferCPass || bufferDPass)) {
+    throw new Error(`config.json at '${root}' has buffers but no Image pass.`);
   }
 
-  const bufferAPass = await loadPass('BufferA', config.passes.BufferA);
-  const bufferBPass = await loadPass('BufferB', config.passes.BufferB);
-  const bufferCPass = await loadPass('BufferC', config.passes.BufferC);
-  const bufferDPass = await loadPass('BufferD', config.passes.BufferD);
+  // If still no Image pass, create empty one
+  if (!imagePass) {
+    throw new Error(`config.json at '${root}' must define an Image pass.`);
+  }
 
-  // Build metadata
-  const title = config.meta?.title ?? path.basename(root);
-  const author = config.meta?.author ?? null;
-  const description = config.meta?.description ?? null;
+  // Build metadata - support both flat and nested formats
+  const title = config.title ?? config.meta?.title ?? path.basename(root);
+  const author = config.author ?? config.meta?.author ?? null;
+  const description = config.description ?? config.meta?.description ?? null;
 
   const project: ShadertoyProject = {
     root,
@@ -378,4 +450,23 @@ async function loadProjectWithConfig(root: string, config: ShadertoyConfig): Pro
   };
 
   return project;
+}
+
+/**
+ * Convert legacy pass config (with nested channels) to simplified format.
+ */
+function convertLegacyPassConfig(legacy: PassConfigLegacy | undefined): PassConfigSimplified | undefined {
+  if (!legacy) return undefined;
+
+  const result: PassConfigSimplified = {};
+  if (legacy.source) result.source = legacy.source;
+
+  if (legacy.channels) {
+    if (legacy.channels.iChannel0) result.iChannel0 = legacy.channels.iChannel0;
+    if (legacy.channels.iChannel1) result.iChannel1 = legacy.channels.iChannel1;
+    if (legacy.channels.iChannel2) result.iChannel2 = legacy.channels.iChannel2;
+    if (legacy.channels.iChannel3) result.iChannel3 = legacy.channels.iChannel3;
+  }
+
+  return result;
 }
