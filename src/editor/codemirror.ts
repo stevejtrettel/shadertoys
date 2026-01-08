@@ -8,7 +8,8 @@
 import { EditorState } from '@codemirror/state';
 import { EditorView, keymap, lineNumbers, highlightActiveLineGutter, highlightSpecialChars, drawSelection, highlightActiveLine } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
-import { syntaxHighlighting, defaultHighlightStyle, bracketMatching } from '@codemirror/language';
+import { syntaxHighlighting, HighlightStyle, bracketMatching } from '@codemirror/language';
+import { tags } from '@lezer/highlight';
 import { cpp } from '@codemirror/lang-cpp';
 
 import './codemirror.css';
@@ -21,44 +22,76 @@ export interface EditorInstance {
 }
 
 /**
- * Dark theme for CodeMirror matching the shadertoy aesthetic.
+ * Light theme for CodeMirror matching the non-editor code viewer style.
  */
-const darkTheme = EditorView.theme({
+const lightTheme = EditorView.theme({
   '&': {
     height: '100%',
     fontSize: '13px',
-    backgroundColor: '#1a1a2e',
+    backgroundColor: '#ffffff',
   },
   '.cm-content': {
-    fontFamily: '"Fira Code", "Source Code Pro", "Consolas", monospace',
-    caretColor: '#fff',
+    fontFamily: "'Monaco', 'Menlo', 'Courier New', monospace",
+    caretColor: '#000',
   },
   '.cm-cursor': {
-    borderLeftColor: '#fff',
+    borderLeftColor: '#000',
   },
   '.cm-gutters': {
-    backgroundColor: '#16162a',
-    color: '#666',
+    backgroundColor: '#ffffff',
+    color: '#999',
     border: 'none',
-    borderRight: '1px solid #333',
+    borderRight: '1px solid #e0e0e0',
+    paddingRight: '8px',
   },
   '.cm-activeLineGutter': {
-    backgroundColor: '#1f1f3a',
+    backgroundColor: '#f5f5f5',
   },
   '.cm-activeLine': {
-    backgroundColor: '#1f1f3a',
+    backgroundColor: '#f8f8f8',
   },
   '.cm-selectionBackground': {
-    backgroundColor: '#3a3a5c !important',
+    backgroundColor: '#d7d4f0 !important',
   },
   '&.cm-focused .cm-selectionBackground': {
-    backgroundColor: '#3a3a5c !important',
+    backgroundColor: '#d7d4f0 !important',
   },
   '.cm-matchingBracket': {
-    backgroundColor: '#3a3a5c',
-    outline: '1px solid #666',
+    backgroundColor: '#e0e0e0',
+    outline: '1px solid #999',
   },
-}, { dark: true });
+}, { dark: false });
+
+/**
+ * Syntax highlighting colors matching the Prism theme used in non-editor mode.
+ */
+const lightHighlightStyle = HighlightStyle.define([
+  { tag: tags.comment, color: '#6a9955' },
+  { tag: tags.lineComment, color: '#6a9955' },
+  { tag: tags.blockComment, color: '#6a9955' },
+  { tag: tags.keyword, color: '#0000ff' },
+  { tag: tags.controlKeyword, color: '#0000ff' },
+  { tag: tags.operatorKeyword, color: '#0000ff' },
+  { tag: tags.definitionKeyword, color: '#0000ff' },
+  { tag: tags.moduleKeyword, color: '#0000ff' },
+  { tag: tags.string, color: '#a31515' },
+  { tag: tags.number, color: '#098658' },
+  { tag: tags.integer, color: '#098658' },
+  { tag: tags.float, color: '#098658' },
+  { tag: tags.operator, color: '#000000' },
+  { tag: tags.function(tags.variableName), color: '#795e26' },
+  { tag: tags.typeName, color: '#267f99' },
+  { tag: tags.className, color: '#267f99' },
+  { tag: tags.definition(tags.variableName), color: '#001080' },
+  { tag: tags.variableName, color: '#001080' },
+  { tag: tags.punctuation, color: '#000000' },
+  { tag: tags.paren, color: '#000000' },
+  { tag: tags.brace, color: '#000000' },
+  { tag: tags.bracket, color: '#000000' },
+  { tag: tags.propertyName, color: '#001080' },
+  { tag: tags.macroName, color: '#0000ff' },
+  { tag: tags.labelName, color: '#795e26' },
+]);
 
 /**
  * Create a CodeMirror editor instance.
@@ -89,13 +122,13 @@ export function createEditor(
       drawSelection(),
       bracketMatching(),
       highlightActiveLine(),
-      syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
+      syntaxHighlighting(lightHighlightStyle, { fallback: true }),
       cpp(),  // C/C++ syntax works well for GLSL
       keymap.of([
         ...defaultKeymap,
         ...historyKeymap,
       ]),
-      darkTheme,
+      lightTheme,
       updateListener,
       EditorView.lineWrapping,
     ],

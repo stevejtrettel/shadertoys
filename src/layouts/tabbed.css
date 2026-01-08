@@ -318,7 +318,7 @@
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background: #1a1a2e;
+  background: #ffffff;
 }
 
 .tabbed-recompile-button {
@@ -328,7 +328,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  background: #2d5a27;
+  background: #4a9eff;
   border: none;
   color: #fff;
   padding: 8px 14px;
@@ -342,11 +342,11 @@
 }
 
 .tabbed-recompile-button:hover {
-  background: #3a7a32;
+  background: #3a8eef;
 }
 
 .tabbed-recompile-button:active {
-  background: #245020;
+  background: #2a7edf;
 }
 
 .tabbed-recompile-button svg {
@@ -358,26 +358,26 @@
   bottom: 0;
   left: 0;
   right: 0;
-  background: #3d1f1f;
-  color: #ff8080;
+  background: #fff0f0;
+  color: #c00;
   padding: 10px 14px;
-  font-family: 'Fira Code', 'Monaco', 'Menlo', monospace;
+  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
   font-size: 12px;
   white-space: pre-wrap;
   overflow: auto;
   max-height: 120px;
-  border-top: 1px solid #5a2020;
+  border-top: 1px solid #fcc;
   z-index: 10;
 }
 
 .tabbed-fallback-textarea {
   width: 100%;
   height: 100%;
-  background: #1a1a2e;
-  color: #e0e0e0;
+  background: #ffffff;
+  color: #000;
   border: none;
   padding: 12px;
-  font-family: 'Fira Code', 'Monaco', 'Menlo', monospace;
+  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
   font-size: 13px;
   resize: none;
   outline: none;
