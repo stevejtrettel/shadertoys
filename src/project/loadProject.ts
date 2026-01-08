@@ -90,14 +90,14 @@ function defaultSourceForPass(name: PassName): string {
  *
  * Automatically detects:
  * - Single-pass mode (no config, just image.glsl)
- * - Multi-pass mode (shadertoy.config.json present)
+ * - Multi-pass mode (config.json present)
  *
  * @param root - Absolute path to project directory
  * @returns Fully normalized ShadertoyProject
  * @throws Error with descriptive message if project is invalid
  */
 export async function loadProject(root: string): Promise<ShadertoyProject> {
-  const configPath = path.join(root, 'shadertoy.config.json');
+  const configPath = path.join(root, 'config.json');
   const hasConfig = await fileExists(configPath);
 
   if (hasConfig) {
@@ -108,7 +108,7 @@ export async function loadProject(root: string): Promise<ShadertoyProject> {
       config = JSON.parse(raw);
     } catch (err: any) {
       throw new Error(
-        `Invalid JSON in shadertoy.config.json at '${root}': ${err?.message ?? String(err)}`
+        `Invalid JSON in config.json at '${root}': ${err?.message ?? String(err)}`
       );
     }
     return await loadProjectWithConfig(root, config);
@@ -147,14 +147,14 @@ async function loadSinglePassProject(root: string): Promise<ShadertoyProject> {
     throw new Error(
       `Project at '${root}' contains multiple GLSL files (${glslFiles.join(
         ', '
-      )}) but no 'shadertoy.config.json'. Add a config file to use multiple passes.`
+      )}) but no 'config.json'. Add a config file to use multiple passes.`
     );
   }
 
   // Check for textures
   if (await hasTexturesDirWithFiles(root)) {
     throw new Error(
-      `Project at '${root}' uses textures (in 'textures/' folder) but has no 'shadertoy.config.json'. Add a config file to define texture bindings.`
+      `Project at '${root}' uses textures (in 'textures/' folder) but has no 'config.json'. Add a config file to define texture bindings.`
     );
   }
 
@@ -195,7 +195,7 @@ async function loadSinglePassProject(root: string): Promise<ShadertoyProject> {
 // =============================================================================
 
 /**
- * Load a project with shadertoy.config.json.
+ * Load a project with config.json.
  *
  * @param root - Project directory
  * @param config - Parsed JSON config
@@ -204,14 +204,14 @@ async function loadSinglePassProject(root: string): Promise<ShadertoyProject> {
 async function loadProjectWithConfig(root: string, config: ShadertoyConfig): Promise<ShadertoyProject> {
   // Validate passes
   if (!config.passes || !config.passes.Image) {
-    throw new Error(`shadertoy.config.json at '${root}' must define passes.Image.`);
+    throw new Error(`config.json at '${root}' must define passes.Image.`);
   }
 
   const allowedPassKeys = new Set<PassName>(['Image', 'BufferA', 'BufferB', 'BufferC', 'BufferD']);
   for (const key of Object.keys(config.passes)) {
     if (!allowedPassKeys.has(key as PassName)) {
       throw new Error(
-        `shadertoy.config.json at '${root}' contains unknown pass '${key}'. Allowed passes are Image, BufferA, BufferB, BufferC, BufferD.`
+        `config.json at '${root}' contains unknown pass '${key}'. Allowed passes are Image, BufferA, BufferB, BufferC, BufferD.`
       );
     }
   }
@@ -347,7 +347,7 @@ async function loadProjectWithConfig(root: string, config: ShadertoyConfig): Pro
   // Load all passes
   const imagePass = await loadPass('Image', config.passes.Image);
   if (!imagePass) {
-    throw new Error(`passes.Image must be defined in shadertoy.config.json at '${root}'.`);
+    throw new Error(`passes.Image must be defined in config.json at '${root}'.`);
   }
 
   const bufferAPass = await loadPass('BufferA', config.passes.BufferA);

@@ -92,7 +92,7 @@ function findDemos(dir) {
     if (entry.isDirectory()) {
       const subdir = path.join(dir, entry.name);
       const hasImageGlsl = fs.existsSync(path.join(subdir, 'image.glsl'));
-      const hasConfig = fs.existsSync(path.join(subdir, 'shadertoy.config.json'));
+      const hasConfig = fs.existsSync(path.join(subdir, 'config.json'));
 
       if (hasImageGlsl || hasConfig) {
         demos.push({
@@ -242,9 +242,9 @@ async function main() {
         }
 
         // Copy config if exists
-        const configFile = path.join(demo.path, 'shadertoy.config.json');
+        const configFile = path.join(demo.path, 'config.json');
         if (fs.existsSync(configFile)) {
-          fs.copyFileSync(configFile, path.join(outputDir, 'shadertoy.config.json'));
+          fs.copyFileSync(configFile, path.join(outputDir, 'config.json'));
         }
 
         // Take screenshot using dist/index.html

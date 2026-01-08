@@ -268,7 +268,7 @@ demos/my-shader/
 **Complex** (with config):
 ```
 demos/my-shader/
-├── shadertoy.config.json
+├── config.json
 ├── common.glsl          (optional)
 ├── bufferA.glsl         (if BufferA defined)
 ├── bufferB.glsl         (if BufferB defined)

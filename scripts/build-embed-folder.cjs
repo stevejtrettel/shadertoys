@@ -35,7 +35,7 @@ function findDemos(dir) {
     if (entry.isDirectory()) {
       const subdir = path.join(dir, entry.name);
       const hasImageGlsl = fs.existsSync(path.join(subdir, 'image.glsl'));
-      const hasConfig = fs.existsSync(path.join(subdir, 'shadertoy.config.json'));
+      const hasConfig = fs.existsSync(path.join(subdir, 'config.json'));
 
       if (hasImageGlsl || hasConfig) {
         demos.push({

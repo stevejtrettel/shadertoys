@@ -48,7 +48,7 @@ export type ChannelJSON =
   | ChannelJSONKeyboard;
 
 // =============================================================================
-// Config Format (shadertoy.config.json)
+// Config Format (config.json)
 // =============================================================================
 
 /**
@@ -74,7 +74,7 @@ export interface PassConfig {
 }
 
 /**
- * Top-level shadertoy.config.json structure.
+ * Top-level config.json structure.
  */
 export interface ShadertoyConfig {
   /**
