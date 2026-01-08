@@ -12,6 +12,27 @@ import {
 } from './types';
 
 /**
+ * Case-insensitive file lookup helper.
+ * Returns the actual key from the record that matches the path (case-insensitive).
+ */
+function findFileCaseInsensitive<T>(
+  files: Record<string, T>,
+  path: string
+): string | null {
+  // First try exact match
+  if (path in files) return path;
+
+  // Try case-insensitive match
+  const lowerPath = path.toLowerCase();
+  for (const key of Object.keys(files)) {
+    if (key.toLowerCase() === lowerPath) {
+      return key;
+    }
+  }
+  return null;
+}
+
+/**
  * Type guard for PassName.
  */
 function isPassName(s: string): s is PassName {
@@ -65,12 +86,13 @@ async function loadSinglePass(
   configOverrides?: Partial<ShadertoyConfig>
 ): Promise<ShadertoyProject> {
   const imagePath = `/demos/${demoName}/image.glsl`;
+  const actualImagePath = findFileCaseInsensitive(glslFiles, imagePath);
 
-  if (!(imagePath in glslFiles)) {
+  if (!actualImagePath) {
     throw new Error(`Demo '${demoName}' not found. Expected ${imagePath}`);
   }
 
-  const imageSource = await glslFiles[imagePath]();
+  const imageSource = await glslFiles[actualImagePath]();
 
   const layout = configOverrides?.layout || 'tabbed';
   const controls = configOverrides?.controls ?? true;
@@ -123,13 +145,15 @@ async function loadWithConfig(
   let commonSource: string | null = null;
   if (config.common) {
     const commonPath = `/demos/${demoName}/${config.common}`;
-    if (commonPath in glslFiles) {
-      commonSource = await glslFiles[commonPath]();
+    const actualCommonPath = findFileCaseInsensitive(glslFiles, commonPath);
+    if (actualCommonPath) {
+      commonSource = await glslFiles[actualCommonPath]();
     }
   } else {
     const defaultCommonPath = `/demos/${demoName}/common.glsl`;
-    if (defaultCommonPath in glslFiles) {
-      commonSource = await glslFiles[defaultCommonPath]();
+    const actualCommonPath = findFileCaseInsensitive(glslFiles, defaultCommonPath);
+    if (actualCommonPath) {
+      commonSource = await glslFiles[actualCommonPath]();
     }
   }
 
@@ -158,12 +182,13 @@ async function loadWithConfig(
 
   for (const texturePath of texturePathsSet) {
     const fullPath = `/demos/${demoName}/${texturePath.replace(/^\.\//, '')}`;
+    const actualPath = findFileCaseInsensitive(imageFiles, fullPath);
 
-    if (!(fullPath in imageFiles)) {
+    if (!actualPath) {
       throw new Error(`Texture not found: ${texturePath} (expected at ${fullPath})`);
     }
 
-    const imageUrl = await imageFiles[fullPath]();
+    const imageUrl = await imageFiles[actualPath]();
     const textureName = texturePath.split('/').pop()!.replace(/\.[^.]+$/, '');
 
     textures.push({
@@ -193,12 +218,13 @@ async function loadWithConfig(
 
     const sourceFile = passConfig.source || defaultNames[passName];
     const sourcePath = `/demos/${demoName}/${sourceFile}`;
+    const actualSourcePath = findFileCaseInsensitive(glslFiles, sourcePath);
 
-    if (!(sourcePath in glslFiles)) {
+    if (!actualSourcePath) {
       throw new Error(`Missing shader file: ${sourcePath}`);
     }
 
-    const glslSource = await glslFiles[sourcePath]();
+    const glslSource = await glslFiles[actualSourcePath]();
 
     const channels = [
       normalizeChannel(passConfig.iChannel0, texturePathToName),
