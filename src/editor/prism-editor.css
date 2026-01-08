@@ -66,8 +66,11 @@
 }
 
 .prism-editor-textarea::selection {
-  background: #d7d4f0;
-  -webkit-text-fill-color: transparent;
+  background: rgba(173, 214, 255, 0.4);
+}
+
+.prism-editor-textarea::-moz-selection {
+  background: rgba(173, 214, 255, 0.4);
 }
 
 /* Highlighted code overlay */
