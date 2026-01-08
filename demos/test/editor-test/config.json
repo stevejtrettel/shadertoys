@@ -1,0 +1,7 @@
+{
+  "title": "Editor Test",
+  "layout": "split",
+  "editor": true,
+  "controls": true,
+  "Image": {}
+}

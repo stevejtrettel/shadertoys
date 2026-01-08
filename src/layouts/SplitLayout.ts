@@ -3,6 +3,9 @@
  *
  * Shader on left, code viewer on right with syntax highlighting.
  * Ideal for teaching and presentations where viewers need to see the code.
+ *
+ * When editor mode is enabled (project.editor = true), uses CodeMirror
+ * for live code editing with a recompile button.
  */
 
 import './split.css';
@@ -11,12 +14,15 @@ import * as Prism from 'prismjs';
 import 'prismjs/components/prism-c';
 import 'prismjs/components/prism-cpp';
 
-import { BaseLayout, LayoutOptions } from './types';
+import { BaseLayout, LayoutOptions, RecompileHandler } from './types';
 import { ShadertoyProject } from '../project/types';
 
 type CodeTab = { kind: 'code'; name: string; source: string };
 type ImageTab = { kind: 'image'; name: string; url: string };
 type Tab = CodeTab | ImageTab;
+
+// Lazy-loaded EditorPanel type
+type EditorPanelType = import('../editor/EditorPanel').EditorPanel;
 
 export class SplitLayout implements BaseLayout {
   private container: HTMLElement;
@@ -24,6 +30,10 @@ export class SplitLayout implements BaseLayout {
   private root: HTMLElement;
   private canvasContainer: HTMLElement;
   private codePanel: HTMLElement;
+
+  // Editor mode support
+  private editorPanel: EditorPanelType | null = null;
+  private recompileHandler: RecompileHandler | null = null;
 
   constructor(opts: LayoutOptions) {
     this.container = opts.container;
@@ -40,7 +50,13 @@ export class SplitLayout implements BaseLayout {
     // Create code panel (right side)
     this.codePanel = document.createElement('div');
     this.codePanel.className = 'code-panel';
-    this.buildCodePanel();
+
+    // Build code panel based on editor mode
+    if (this.project.editor) {
+      this.buildEditorPanel();
+    } else {
+      this.buildCodePanel();
+    }
 
     // Assemble and append to DOM
     this.root.appendChild(this.canvasContainer);
@@ -52,8 +68,36 @@ export class SplitLayout implements BaseLayout {
     return this.canvasContainer;
   }
 
+  setRecompileHandler(handler: RecompileHandler): void {
+    this.recompileHandler = handler;
+    if (this.editorPanel) {
+      this.editorPanel.setRecompileHandler(handler);
+    }
+  }
+
   dispose(): void {
+    if (this.editorPanel) {
+      this.editorPanel.dispose();
+      this.editorPanel = null;
+    }
     this.container.innerHTML = '';
+  }
+
+  /**
+   * Build editor panel with CodeMirror (dynamically loaded).
+   */
+  private async buildEditorPanel(): Promise<void> {
+    try {
+      const { EditorPanel } = await import('../editor/EditorPanel');
+      this.editorPanel = new EditorPanel(this.codePanel, this.project);
+      if (this.recompileHandler) {
+        this.editorPanel.setRecompileHandler(this.recompileHandler);
+      }
+    } catch (err) {
+      console.error('Failed to load editor panel:', err);
+      // Fallback to static code viewer
+      this.buildCodePanel();
+    }
   }
 
   /**

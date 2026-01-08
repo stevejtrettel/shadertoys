@@ -151,6 +151,14 @@ export class App {
   }
 
   /**
+   * Get the underlying engine instance.
+   * Used for live recompilation in editor mode.
+   */
+  getEngine(): ShadertoyEngine {
+    return this.engine;
+  }
+
+  /**
    * Start the animation loop.
    */
   start(): void {

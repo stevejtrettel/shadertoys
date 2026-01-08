@@ -17,6 +17,8 @@ import './styles/base.css';
 import { App } from './app/App';
 import { createLayout } from './layouts';
 import { loadDemoProject, DEMO_NAME } from './project/generatedLoader';
+import { PassName } from './project/types';
+import { RecompileResult } from './layouts/types';
 
 async function main() {
   try {
@@ -28,6 +30,9 @@ async function main() {
 
     console.log(`Loaded project: ${project.meta.title}`);
     console.log(`Passes:`, Object.keys(project.passes).filter(k => project.passes[k as keyof typeof project.passes]));
+    if (project.editor) {
+      console.log('Editor mode enabled');
+    }
 
     // Get root container element
     const rootContainer = document.getElementById('app');
@@ -50,6 +55,32 @@ async function main() {
       project,
       pixelRatio: window.devicePixelRatio,
     });
+
+    // Wire up recompile handler if editor mode is enabled and layout supports it
+    if (project.editor && layout.setRecompileHandler) {
+      layout.setRecompileHandler((passName: 'common' | PassName, newSource: string): RecompileResult => {
+        const engine = app.getEngine();
+        if (!engine) {
+          return { success: false, error: 'Engine not initialized' };
+        }
+
+        if (passName === 'common') {
+          const result = engine.recompileCommon(newSource);
+          if (result.success) {
+            return { success: true };
+          } else {
+            // Return first error
+            const firstError = result.errors[0];
+            return {
+              success: false,
+              error: firstError ? `${firstError.passName}: ${firstError.error}` : 'Unknown error',
+            };
+          }
+        } else {
+          return engine.recompilePass(passName, newSource);
+        }
+      });
+    }
 
     // Only start animation loop if there are no compilation errors
     // If there are errors, the error overlay is already shown by App constructor
