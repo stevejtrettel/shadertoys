@@ -130,6 +130,14 @@
   font-family: system-ui, -apple-system, sans-serif;
 }
 
+.tabbed-tab-button.image-tab {
+  color: #7c4dff;
+}
+
+.tabbed-tab-button.image-tab.active {
+  color: #7c4dff;
+}
+
 /* ===== Content Area ===== */
 .tabbed-content {
   flex: 1;
@@ -220,6 +228,34 @@
 
 .tabbed-copy-button.copied {
   color: #4caf50;
+}
+
+/* ===== Image Viewer ===== */
+.tabbed-image-viewer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f5f5f5;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+[data-bs-theme="dark"] .tabbed-image-viewer,
+.dark .tabbed-image-viewer {
+  background: #2d2d2d;
+}
+
+.tabbed-image-viewer img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 /* ===== Prism Theme (Light) ===== */

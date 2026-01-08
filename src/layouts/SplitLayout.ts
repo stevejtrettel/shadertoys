@@ -14,6 +14,10 @@ import 'prismjs/components/prism-cpp';
 import { BaseLayout, LayoutOptions } from './types';
 import { ShadertoyProject } from '../project/types';
 
+type CodeTab = { kind: 'code'; name: string; source: string };
+type ImageTab = { kind: 'image'; name: string; url: string };
+type Tab = CodeTab | ImageTab;
+
 export class SplitLayout implements BaseLayout {
   private container: HTMLElement;
   private project: ShadertoyProject;
@@ -53,16 +57,16 @@ export class SplitLayout implements BaseLayout {
   }
 
   /**
-   * Build the code panel with tabs for each shader pass.
+   * Build the code panel with tabs for each shader pass and texture.
    * Uses Prism.js with C++ syntax highlighting (lightweight, works well for GLSL).
    */
   private buildCodePanel(): void {
-    // Build tabs in order: common, BufferA-D, Image
-    const tabs: Array<{ name: string; source: string }> = [];
+    // Build tabs in order: common, BufferA-D, Image, textures
+    const tabs: Tab[] = [];
 
     // 1. Common first (if exists)
     if (this.project.commonSource) {
-      tabs.push({ name: 'common.glsl', source: this.project.commonSource });
+      tabs.push({ kind: 'code', name: 'common.glsl', source: this.project.commonSource });
     }
 
     // 2. Buffers in order (A, B, C, D)
@@ -76,23 +80,35 @@ export class SplitLayout implements BaseLayout {
       const pass = this.project.passes[bufferName];
       if (pass) {
         tabs.push({
+          kind: 'code',
           name: `${bufferName.toLowerCase()}.glsl`,
           source: pass.glslSource,
         });
       }
     }
 
-    // 3. Image last
+    // 3. Image pass
     const imagePass = this.project.passes.Image;
-    tabs.push({ name: 'image.glsl', source: imagePass.glslSource });
+    tabs.push({ kind: 'code', name: 'image.glsl', source: imagePass.glslSource });
+
+    // 4. Textures (images)
+    for (const texture of this.project.textures) {
+      // Extract filename from source path
+      const filename = texture.source.split('/').pop() || texture.source;
+      tabs.push({
+        kind: 'image',
+        name: filename,
+        url: texture.source,
+      });
+    }
 
     // Create tab bar
     const tabBar = document.createElement('div');
     tabBar.className = 'tab-bar';
 
-    // Create code viewer container
-    const codeViewer = document.createElement('div');
-    codeViewer.className = 'code-viewer';
+    // Create content viewer container
+    const contentViewer = document.createElement('div');
+    contentViewer.className = 'code-viewer';
 
     // Create copy button with clipboard icon
     const copyButton = document.createElement('button');
@@ -119,25 +135,44 @@ export class SplitLayout implements BaseLayout {
     // Function to show a specific tab
     const showTab = (tabIndex: number) => {
       const tab = tabs[tabIndex];
-      currentSource = tab.source;
 
-      // Create pre/code elements for Prism
-      const pre = document.createElement('pre');
-      const code = document.createElement('code');
-      code.className = 'language-cpp';
-      code.textContent = tab.source;
-      pre.appendChild(code);
+      // Clear viewer
+      contentViewer.innerHTML = '';
 
-      // Clear and append
-      codeViewer.innerHTML = '';
-      codeViewer.appendChild(pre);
+      if (tab.kind === 'code') {
+        // Show code with syntax highlighting
+        currentSource = tab.source;
+        copyButton.style.display = '';
 
-      // Highlight with Prism
-      Prism.highlightElement(code);
+        const pre = document.createElement('pre');
+        const code = document.createElement('code');
+        code.className = 'language-cpp';
+        code.textContent = tab.source;
+        pre.appendChild(code);
+        contentViewer.appendChild(pre);
+
+        // Highlight with Prism
+        Prism.highlightElement(code);
+      } else {
+        // Show image
+        currentSource = '';
+        copyButton.style.display = 'none';
+
+        const imgContainer = document.createElement('div');
+        imgContainer.className = 'image-viewer';
+
+        const img = document.createElement('img');
+        img.src = tab.url;
+        img.alt = tab.name;
+
+        imgContainer.appendChild(img);
+        contentViewer.appendChild(imgContainer);
+      }
     };
 
     // Copy button handler
     copyButton.addEventListener('click', async () => {
+      if (!currentSource) return;
       try {
         await navigator.clipboard.writeText(currentSource);
         // Visual feedback - show checkmark
@@ -156,6 +191,9 @@ export class SplitLayout implements BaseLayout {
     tabs.forEach((tab, index) => {
       const tabButton = document.createElement('button');
       tabButton.className = 'tab-button';
+      if (tab.kind === 'image') {
+        tabButton.classList.add('image-tab');
+      }
       tabButton.textContent = tab.name;
       if (index === 0) tabButton.classList.add('active');
 
@@ -166,7 +204,7 @@ export class SplitLayout implements BaseLayout {
           .forEach((b) => b.classList.remove('active'));
         tabButton.classList.add('active');
 
-        // Update code viewer
+        // Update content viewer
         showTab(index);
       });
 
@@ -176,7 +214,7 @@ export class SplitLayout implements BaseLayout {
     // Assemble code panel
     this.codePanel.appendChild(tabBar);
     this.codePanel.appendChild(copyButton);
-    this.codePanel.appendChild(codeViewer);
+    this.codePanel.appendChild(contentViewer);
 
     // Show first tab
     if (tabs.length > 0) {
