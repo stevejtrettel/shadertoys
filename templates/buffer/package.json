@@ -1,0 +1,15 @@
+{
+  "name": "my-shader",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "shadertoy dev",
+    "build": "shadertoy build"
+  },
+  "dependencies": {
+    "shadertoy-runner": "^0.1.0"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
+  }
+}

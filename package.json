@@ -1,8 +1,25 @@
 {
-  "name": "shadertoys",
-  "version": "1.0.0",
-  "description": "Shadertoy playground for students",
+  "name": "shadertoy-runner",
+  "version": "0.1.0",
+  "description": "Local Shadertoy-style GLSL shader development environment with live editing",
   "type": "module",
+  "main": "./src/index.ts",
+  "types": "./dist-lib/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./dist-lib/index.d.ts"
+    }
+  },
+  "bin": {
+    "shadertoy": "./bin/cli.js"
+  },
+  "files": [
+    "bin",
+    "dist-lib",
+    "templates",
+    "src"
+  ],
   "scripts": {
     "new": "node scripts/new-demo.cjs",
     "dev": "vite",
@@ -12,16 +29,22 @@
     "build:embed": "node scripts/build-embed.cjs",
     "build:embed:folder": "node scripts/build-embed-folder.cjs",
     "build:embed:screenshots": "node scripts/build-folder-screenshots.cjs",
+    "build:lib": "node scripts/build-lib.cjs",
+    "prepublishOnly": "npm run build:lib",
     "preview": "vite preview"
   },
-  "dependencies": {},
+  "dependencies": {
+    "prismjs": "^1.30.0",
+    "vite-plugin-css-injected-by-js": "^3.5.2"
+  },
+  "peerDependencies": {
+    "vite": "^5.0.0"
+  },
   "devDependencies": {
     "@types/node": "^20.10.0",
     "@types/prismjs": "^1.26.5",
-    "prismjs": "^1.30.0",
     "puppeteer-core": "^24.34.0",
     "typescript": "^5.3.3",
-    "vite": "^5.0.8",
-    "vite-plugin-css-injected-by-js": "^3.5.2"
+    "vite": "^5.0.8"
   }
 }
