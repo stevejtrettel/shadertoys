@@ -112,39 +112,12 @@ export interface ShadertoyConfig {
   controls?: boolean;
   common?: string;
 
-  // Passes (at top level, not under "passes")
+  // Passes (at top level)
   Image?: PassConfigSimplified;
   BufferA?: PassConfigSimplified;
   BufferB?: PassConfigSimplified;
   BufferC?: PassConfigSimplified;
   BufferD?: PassConfigSimplified;
-
-  // Legacy support: old nested format
-  meta?: {
-    title?: string;
-    author?: string;
-    description?: string;
-  };
-  passes?: {
-    Image?: PassConfigLegacy;
-    BufferA?: PassConfigLegacy;
-    BufferB?: PassConfigLegacy;
-    BufferC?: PassConfigLegacy;
-    BufferD?: PassConfigLegacy;
-  };
-}
-
-/**
- * Legacy pass config format (for backward compatibility).
- */
-export interface PassConfigLegacy {
-  source?: string;
-  channels?: {
-    iChannel0?: ChannelJSONObject;
-    iChannel1?: ChannelJSONObject;
-    iChannel2?: ChannelJSONObject;
-    iChannel3?: ChannelJSONObject;
-  };
 }
 
 // =============================================================================

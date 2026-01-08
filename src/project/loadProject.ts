@@ -20,7 +20,6 @@ import {
   ShadertoyProject,
   ShadertoyTexture2D,
   PassConfigSimplified,
-  PassConfigLegacy,
 } from './types';
 
 // =============================================================================
@@ -198,13 +197,6 @@ async function loadSinglePassProject(root: string): Promise<ShadertoyProject> {
 // =============================================================================
 
 /**
- * Check if a string looks like a file path (has extension).
- */
-function looksLikeFilePath(s: string): boolean {
-  return /\.[a-zA-Z0-9]+$/.test(s);
-}
-
-/**
  * Parse a channel value (string shorthand or object) into normalized ChannelJSONObject.
  *
  * String shortcuts:
@@ -231,44 +223,20 @@ function parseChannelValue(value: ChannelValue): ChannelJSONObject | null {
 
 /**
  * Load a project with config.json.
- * Supports both new simplified format and legacy nested format.
  *
  * @param root - Project directory
  * @param config - Parsed JSON config
  * @returns Normalized ShadertoyProject
  */
 async function loadProjectWithConfig(root: string, config: ShadertoyConfig): Promise<ShadertoyProject> {
-  // Detect format: legacy has "passes" key, new format has passes at top level
-  const isLegacyFormat = !!config.passes;
-
-  // Extract pass configs based on format
-  let passConfigs: {
-    Image?: PassConfigSimplified;
-    BufferA?: PassConfigSimplified;
-    BufferB?: PassConfigSimplified;
-    BufferC?: PassConfigSimplified;
-    BufferD?: PassConfigSimplified;
+  // Extract pass configs from top level
+  const passConfigs = {
+    Image: config.Image,
+    BufferA: config.BufferA,
+    BufferB: config.BufferB,
+    BufferC: config.BufferC,
+    BufferD: config.BufferD,
   };
-
-  if (isLegacyFormat) {
-    // Legacy format: convert from nested channels to flat iChannel format
-    passConfigs = {
-      Image: convertLegacyPassConfig(config.passes!.Image),
-      BufferA: convertLegacyPassConfig(config.passes!.BufferA),
-      BufferB: convertLegacyPassConfig(config.passes!.BufferB),
-      BufferC: convertLegacyPassConfig(config.passes!.BufferC),
-      BufferD: convertLegacyPassConfig(config.passes!.BufferD),
-    };
-  } else {
-    // New format: passes are at top level
-    passConfigs = {
-      Image: config.Image,
-      BufferA: config.BufferA,
-      BufferB: config.BufferB,
-      BufferC: config.BufferC,
-      BufferD: config.BufferD,
-    };
-  }
 
   // Validate: must have Image pass (or be empty config for simple shader)
   const hasAnyPass = passConfigs.Image || passConfigs.BufferA || passConfigs.BufferB ||
@@ -428,10 +396,10 @@ async function loadProjectWithConfig(root: string, config: ShadertoyConfig): Pro
     throw new Error(`config.json at '${root}' must define an Image pass.`);
   }
 
-  // Build metadata - support both flat and nested formats
-  const title = config.title ?? config.meta?.title ?? path.basename(root);
-  const author = config.author ?? config.meta?.author ?? null;
-  const description = config.description ?? config.meta?.description ?? null;
+  // Build metadata
+  const title = config.title ?? path.basename(root);
+  const author = config.author ?? null;
+  const description = config.description ?? null;
 
   const project: ShadertoyProject = {
     root,
@@ -450,23 +418,4 @@ async function loadProjectWithConfig(root: string, config: ShadertoyConfig): Pro
   };
 
   return project;
-}
-
-/**
- * Convert legacy pass config (with nested channels) to simplified format.
- */
-function convertLegacyPassConfig(legacy: PassConfigLegacy | undefined): PassConfigSimplified | undefined {
-  if (!legacy) return undefined;
-
-  const result: PassConfigSimplified = {};
-  if (legacy.source) result.source = legacy.source;
-
-  if (legacy.channels) {
-    if (legacy.channels.iChannel0) result.iChannel0 = legacy.channels.iChannel0;
-    if (legacy.channels.iChannel1) result.iChannel1 = legacy.channels.iChannel1;
-    if (legacy.channels.iChannel2) result.iChannel2 = legacy.channels.iChannel2;
-    if (legacy.channels.iChannel3) result.iChannel3 = legacy.channels.iChannel3;
-  }
-
-  return result;
 }

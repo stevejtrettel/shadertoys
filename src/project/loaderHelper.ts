@@ -9,8 +9,6 @@ import {
   PassName,
   ChannelValue,
   ChannelJSONObject,
-  PassConfigSimplified,
-  PassConfigLegacy,
 } from './types';
 
 /**
@@ -36,25 +34,6 @@ function parseChannelValue(value: ChannelValue): ChannelJSONObject | null {
   return value;
 }
 
-/**
- * Convert legacy pass config to simplified format.
- */
-function convertLegacyPassConfig(legacy: PassConfigLegacy | undefined): PassConfigSimplified | undefined {
-  if (!legacy) return undefined;
-
-  const result: PassConfigSimplified = {};
-  if (legacy.source) result.source = legacy.source;
-
-  if (legacy.channels) {
-    if (legacy.channels.iChannel0) result.iChannel0 = legacy.channels.iChannel0;
-    if (legacy.channels.iChannel1) result.iChannel1 = legacy.channels.iChannel1;
-    if (legacy.channels.iChannel2) result.iChannel2 = legacy.channels.iChannel2;
-    if (legacy.channels.iChannel3) result.iChannel3 = legacy.channels.iChannel3;
-  }
-
-  return result;
-}
-
 export async function loadDemo(
   demoName: string,
   glslFiles: Record<string, () => Promise<string>>,
@@ -66,12 +45,10 @@ export async function loadDemo(
 
   if (hasConfig) {
     const config = await jsonFiles[configPath]();
-    // Detect format: legacy has "passes" key, new format has passes at top level
-    const isLegacyFormat = !!config.passes;
-    const hasNewFormatPasses = config.Image || config.BufferA || config.BufferB ||
-                               config.BufferC || config.BufferD;
+    const hasPassConfigs = config.Image || config.BufferA || config.BufferB ||
+                           config.BufferC || config.BufferD;
 
-    if (isLegacyFormat || hasNewFormatPasses) {
+    if (hasPassConfigs) {
       return loadWithConfig(demoName, config, glslFiles, imageFiles);
     } else {
       // Config with only settings (layout, controls, etc.) but no passes
@@ -95,18 +72,17 @@ async function loadSinglePass(
 
   const imageSource = await glslFiles[imagePath]();
 
-  // Support both flat and nested metadata
   const layout = configOverrides?.layout || 'tabbed';
   const controls = configOverrides?.controls ?? true;
-  const title = configOverrides?.title || configOverrides?.meta?.title ||
+  const title = configOverrides?.title ||
                 demoName.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 
   return {
     root: `/demos/${demoName}`,
     meta: {
       title,
-      author: configOverrides?.author || configOverrides?.meta?.author || null,
-      description: configOverrides?.description || configOverrides?.meta?.description || null,
+      author: configOverrides?.author || null,
+      description: configOverrides?.description || null,
     },
     layout,
     controls,
@@ -134,34 +110,14 @@ async function loadWithConfig(
   imageFiles: Record<string, () => Promise<string>>
 ): Promise<ShadertoyProject> {
 
-  // Detect format and normalize pass configs
-  const isLegacyFormat = !!config.passes;
-
-  let passConfigs: {
-    Image?: PassConfigSimplified;
-    BufferA?: PassConfigSimplified;
-    BufferB?: PassConfigSimplified;
-    BufferC?: PassConfigSimplified;
-    BufferD?: PassConfigSimplified;
+  // Extract pass configs from top level
+  const passConfigs = {
+    Image: config.Image,
+    BufferA: config.BufferA,
+    BufferB: config.BufferB,
+    BufferC: config.BufferC,
+    BufferD: config.BufferD,
   };
-
-  if (isLegacyFormat) {
-    passConfigs = {
-      Image: convertLegacyPassConfig(config.passes!.Image),
-      BufferA: convertLegacyPassConfig(config.passes!.BufferA),
-      BufferB: convertLegacyPassConfig(config.passes!.BufferB),
-      BufferC: convertLegacyPassConfig(config.passes!.BufferC),
-      BufferD: convertLegacyPassConfig(config.passes!.BufferD),
-    };
-  } else {
-    passConfigs = {
-      Image: config.Image,
-      BufferA: config.BufferA,
-      BufferB: config.BufferB,
-      BufferC: config.BufferC,
-      BufferD: config.BufferD,
-    };
-  }
 
   // Load common source
   let commonSource: string | null = null;
@@ -262,11 +218,10 @@ async function loadWithConfig(
     throw new Error(`Demo '${demoName}' must have an Image pass`);
   }
 
-  // Support both flat and nested metadata
-  const title = config.title || config.meta?.title ||
+  const title = config.title ||
                 demoName.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-  const author = config.author || config.meta?.author || null;
-  const description = config.description || config.meta?.description || null;
+  const author = config.author || null;
+  const description = config.description || null;
   const layout = config.layout || 'tabbed';
   const controls = config.controls ?? true;
 
