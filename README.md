@@ -18,93 +18,217 @@ A lightweight, Shadertoy-compatible GLSL shader playground built for teaching an
 
 ```bash
 npm install
-
-# Create a new shader project
 npm run new my-shader
-
-# Run it
 npm run dev:demo my-shader
 ```
 
 Open `http://localhost:3000` to see your shader.
 
-## Creating Shaders
+---
 
-### Simple Shader (no buffers)
+## Common Setups
+
+### 1. Simple Shader (just image.glsl)
+
+The simplest setup - no config needed.
 
 ```bash
 npm run new my-shader
 ```
 
-Creates `demos/my-shader/image.glsl` - a single-pass shader.
+**Files:**
+```
+demos/my-shader/
+└── image.glsl
+```
 
-### Multi-Buffer Shader
+**image.glsl:**
+```glsl
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+    vec2 uv = fragCoord / iResolution.xy;
+    vec3 col = 0.5 + 0.5 * cos(iTime + uv.xyx + vec3(0, 2, 4));
+    fragColor = vec4(col, 1.0);
+}
+```
+
+---
+
+### 2. One Buffer (feedback/trails)
+
+For effects that accumulate over time (trails, paint, fluid).
+
+```bash
+npm run new my-shader 1
+```
+
+**Files:**
+```
+demos/my-shader/
+├── bufferA.glsl
+├── image.glsl
+└── config.json
+```
+
+**config.json:**
+```json
+{
+  "passes": {
+    "BufferA": {
+      "channels": {
+        "iChannel0": { "buffer": "BufferA", "previous": true }
+      }
+    },
+    "Image": {
+      "channels": {
+        "iChannel0": { "buffer": "BufferA" }
+      }
+    }
+  }
+}
+```
+
+**bufferA.glsl:**
+```glsl
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+    vec2 uv = fragCoord / iResolution.xy;
+
+    // Read previous frame with fade
+    vec4 prev = texture(iChannel0, uv) * 0.98;
+
+    // Draw at mouse
+    vec2 mouse = iMouse.xy / iResolution.xy;
+    float d = length(uv - mouse);
+    float spot = smoothstep(0.05, 0.0, d);
+
+    fragColor = prev + vec4(spot);
+}
+```
+
+**image.glsl:**
+```glsl
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+    vec2 uv = fragCoord / iResolution.xy;
+    fragColor = texture(iChannel0, uv);
+}
+```
+
+---
+
+### 3. Multiple Buffers (interacting simulations)
+
+For reaction-diffusion, fluid dynamics, etc. All buffers can read all other buffers.
 
 ```bash
 npm run new my-shader 2
 ```
 
-Creates a shader with 2 buffers where **all buffers are available to all passes**:
-
-| Channel | Buffer |
-|---------|--------|
-| `iChannel0` | BufferA |
-| `iChannel1` | BufferB |
-| `iChannel2` | BufferC |
-| `iChannel3` | BufferD |
-
-**Examples:**
-```bash
-npm run new trail-effect 1      # Feedback effect (BufferA + Image)
-npm run new reaction-diffusion 2 # Two interacting buffers
-npm run new fluid-sim 3          # Three buffers
-```
-
-## Buffer Execution & Frame Timing
-
-Matches Shadertoy's semantics exactly:
-
-**Execution order:** BufferA → BufferB → BufferC → BufferD → Image
-
-**Which frame do you get when sampling a buffer?**
-
-| You are in... | Reading... | You get... |
-|---------------|------------|------------|
-| BufferA | BufferA (self) | **previous frame** |
-| BufferA | BufferB, C, D | **previous frame** (haven't run yet) |
-| BufferB | BufferA | **current frame** (already ran) |
-| BufferB | BufferB (self) | **previous frame** |
-| BufferB | BufferC, D | **previous frame** (haven't run yet) |
-| Image | Any buffer | **current frame** (all have run) |
-
-This is handled automatically by the generated `config.json`. The `previous: true` flag in the config explicitly requests the previous frame.
-
-## Project Structure
-
-A shader project is a folder in `demos/` containing:
-
+**Files:**
 ```
 demos/my-shader/
-├── image.glsl           # Required - final output
-├── bufferA.glsl         # Optional - BufferA pass
-├── bufferB.glsl         # Optional - BufferB pass
-├── common.glsl          # Optional - shared code (included in all passes)
-├── config.json          # Optional - channel bindings & settings
-└── *.jpg, *.png         # Optional - texture files
+├── bufferA.glsl
+├── bufferB.glsl
+├── image.glsl
+└── config.json
 ```
 
-## Config File
-
-For simple shaders, no config is needed. For multi-buffer or texture use:
-
+**config.json:**
 ```json
 {
-  "meta": { "title": "My Shader" },
-  "controls": true,
   "passes": {
     "BufferA": {
       "channels": {
-        "iChannel0": { "buffer": "BufferA", "previous": true }
+        "iChannel0": { "buffer": "BufferA", "previous": true },
+        "iChannel1": { "buffer": "BufferB", "previous": true }
+      }
+    },
+    "BufferB": {
+      "channels": {
+        "iChannel0": { "buffer": "BufferA" },
+        "iChannel1": { "buffer": "BufferB", "previous": true }
+      }
+    },
+    "Image": {
+      "channels": {
+        "iChannel0": { "buffer": "BufferA" },
+        "iChannel1": { "buffer": "BufferB" }
+      }
+    }
+  }
+}
+```
+
+**Channel mapping:** `iChannel0` = BufferA, `iChannel1` = BufferB, etc.
+
+---
+
+### 4. Texture + Image (image processing)
+
+Load an image and process it.
+
+**Files:**
+```
+demos/my-shader/
+├── image.glsl
+├── photo.jpg
+└── config.json
+```
+
+**config.json:**
+```json
+{
+  "passes": {
+    "Image": {
+      "channels": {
+        "iChannel0": { "texture": "photo.jpg" }
+      }
+    }
+  }
+}
+```
+
+**image.glsl:**
+```glsl
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+    vec2 uv = fragCoord / iResolution.xy;
+    vec4 img = texture(iChannel0, uv);
+
+    // Example: grayscale
+    float gray = dot(img.rgb, vec3(0.299, 0.587, 0.114));
+
+    fragColor = vec4(vec3(gray), 1.0);
+}
+```
+
+**Texture options (all optional):**
+```json
+{ "texture": "photo.jpg", "filter": "linear", "wrap": "repeat" }
+```
+- `filter`: `"linear"` (smooth, default) or `"nearest"` (pixelated)
+- `wrap`: `"repeat"` (tile, default) or `"clamp"` (stretch edges)
+
+---
+
+### 5. Texture + Buffers (image + feedback)
+
+Combine textures with buffer feedback for effects like painting on an image.
+
+**Files:**
+```
+demos/my-shader/
+├── bufferA.glsl
+├── image.glsl
+├── photo.jpg
+└── config.json
+```
+
+**config.json:**
+```json
+{
+  "passes": {
+    "BufferA": {
+      "channels": {
+        "iChannel0": { "buffer": "BufferA", "previous": true },
+        "iChannel1": { "texture": "photo.jpg" }
       }
     },
     "Image": {
@@ -117,11 +241,41 @@ For simple shaders, no config is needed. For multi-buffer or texture use:
 }
 ```
 
-**Channel types:**
-- `{ "buffer": "BufferA" }` - read from buffer (current frame)
-- `{ "buffer": "BufferA", "previous": true }` - read previous frame
-- `{ "texture": "photo.jpg" }` - load image file
-- `{ "keyboard": true }` - keyboard state texture
+**bufferA.glsl:**
+```glsl
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+    vec2 uv = fragCoord / iResolution.xy;
+
+    vec4 prev = texture(iChannel0, uv);      // Previous frame
+    vec4 img = texture(iChannel1, uv);        // Original image
+
+    // Paint with mouse
+    vec2 mouse = iMouse.xy / iResolution.xy;
+    float d = length(uv - mouse);
+    float brush = smoothstep(0.05, 0.0, d);
+
+    // Blend: painted areas persist, unpainted fade to original
+    fragColor = mix(mix(prev, img, 0.01), prev + brush, brush);
+}
+```
+
+---
+
+## Buffer Execution & Frame Timing
+
+**Execution order:** BufferA → BufferB → BufferC → BufferD → Image
+
+| You are in... | Reading... | You get... |
+|---------------|------------|------------|
+| BufferA | BufferA (self) | **previous frame** |
+| BufferA | BufferB, C, D | **previous frame** (haven't run yet) |
+| BufferB | BufferA | **current frame** (already ran) |
+| BufferB | BufferB (self) | **previous frame** |
+| Image | Any buffer | **current frame** (all have run) |
+
+The `previous: true` flag explicitly requests the previous frame.
+
+---
 
 ## Keyboard Shortcuts
 
@@ -131,6 +285,8 @@ For simple shaders, no config is needed. For multi-buffer or texture use:
 | **Space** | Play/Pause (when controls enabled) |
 | **R** | Reset to frame 0 (when controls enabled) |
 
+---
+
 ## NPM Scripts
 
 ```bash
@@ -138,6 +294,8 @@ npm run new <name> [buffers]   # Create new shader project
 npm run dev:demo <name>        # Development server with hot reload
 npm run build:demo <name>      # Production build to dist/
 ```
+
+---
 
 ## Documentation
 
