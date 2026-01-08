@@ -8,6 +8,7 @@
 
 const { execSync } = require('child_process');
 const fs = require('fs');
+const path = require('path');
 
 const demo = process.argv[2];
 
@@ -19,6 +20,19 @@ if (!demo) {
 }
 
 console.log(`Starting dev server for demo: ${demo}`);
+
+// Check if editor mode is enabled in config.json
+let editorEnabled = false;
+const configPath = path.join(__dirname, '..', 'demos', demo, 'config.json');
+if (fs.existsSync(configPath)) {
+  try {
+    const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    editorEnabled = config.editor === true;
+  } catch (e) {
+    // Ignore config read errors
+  }
+}
+console.log(`Editor mode: ${editorEnabled ? 'enabled' : 'disabled'}`);
 
 try {
   // Generate tiny loader with literal paths for this demo only
@@ -50,9 +64,13 @@ export async function loadDemoProject() {
 
   fs.writeFileSync('src/project/generatedLoader.ts', loaderContent);
 
-  execSync(`VITE_DEMO=${demo} npx vite`, {
+  execSync(`npx vite`, {
     stdio: 'inherit',
-    env: { ...process.env, VITE_DEMO: demo }
+    env: {
+      ...process.env,
+      VITE_DEMO: demo,
+      VITE_EDITOR_ENABLED: editorEnabled ? 'true' : 'false'
+    }
   });
 } catch (error) {
   process.exit(error.status || 1);
