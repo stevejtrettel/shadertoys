@@ -1,3 +1,8 @@
+// Color palette
+const vec3 CREAM = vec3(0.85, 0.8, 0.75);
+const vec3 SLATE = vec3(0.35, 0.4, 0.45);
+const vec3 BLACK = vec3(0.05, 0.05, 0.05);
+
 struct HalfSpaceVert {
     float x;
     float side;
@@ -10,8 +15,7 @@ struct HalfSpaceCirc {
 };
 
 vec2 reflectInto(vec2 z, HalfSpaceVert h, inout int count) {
-    float val = z.x - h.x;
-    if (val * h.side < 0.0) return z;
+    if ((z.x - h.x) * h.side < 0.0) return z;
     z.x = 2.0 * h.x - z.x;
     count++;
     return z;
@@ -23,12 +27,12 @@ vec2 reflectInto(vec2 z, HalfSpaceCirc h, inout int count) {
     
     if ((dist2 - h.radius * h.radius) * h.side > 0.0) return z;
     
+    // Circle inversion
     z.x -= h.center;
-    z /= h.radius;
-    z /= dot(z, z);
-    z *= h.radius;
+    z = z / h.radius;
+    z = z / dot(z, z);
+    z = z * h.radius;
     z.x += h.center;
-    
     count++;
     return z;
 }
@@ -50,9 +54,9 @@ vec2 diskToUHP(vec2 w) {
 
 vec2 normalize_coord(vec2 fragCoord) {
     vec2 uv = fragCoord / iResolution.xy;
-    uv = (uv - 0.5) * 2.5;
+    uv = uv - vec2(0.5, 0.5);
     uv.x *= iResolution.x / iResolution.y;
-    return uv;
+    return uv * 2.5;
 }
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord)
@@ -73,10 +77,14 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
         if (length(z - z0) < 0.0001) break;
     }
     
+    // Color by parity
     float parity = mod(float(foldCount), 2.0);
-    vec3 color = (parity < 0.5) ? vec3(0.85, 0.8, 0.75) : vec3(0.35, 0.4, 0.45);
+    vec3 color = (parity < 0.5) ? CREAM : SLATE;
     
-    if (length(w) > 1.0) color = vec3(0.05);
+    // Darken outside the disk
+    if (length(w) > 1.0) {
+        color = BLACK;
+    }
     
     fragColor = vec4(color, 1.0);
 }

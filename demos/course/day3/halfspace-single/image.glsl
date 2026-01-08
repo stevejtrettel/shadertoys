@@ -1,11 +1,11 @@
 struct HalfSpace {
-    float a, b, c;
-    float side;
+    vec2 normal;    // Unit normal to the line
+    float offset;   // Signed distance from origin to line
+    float side;     // +1 or -1: which side is "inside"
 };
 
 bool inside(vec2 p, HalfSpace h) {
-    float val = h.a * p.x + h.b * p.y - h.c;
-    return val * h.side < 0.0;
+    return (dot(h.normal, p) - h.offset) * h.side < 0.0;
 }
 
 vec2 normalize_coord(vec2 fragCoord) {
@@ -19,12 +19,21 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
 {
     vec2 p = normalize_coord(fragCoord);
     
-    HalfSpace h = HalfSpace(1.0, 0.0, 1.0, 1.0);
+    // Half-space: x < 1 (left side of vertical line at x = 1)
+    HalfSpace h = HalfSpace(vec2(1.0, 0.0), 1.0, 1.0);
     
-    vec3 color = inside(p, h) ? vec3(0.3, 0.5, 0.7) : vec3(0.1, 0.1, 0.15);
+    vec3 color;
+    if (inside(p, h)) {
+        color = vec3(0.3, 0.5, 0.7);
+    } else {
+        color = vec3(0.1, 0.1, 0.15);
+    }
     
-    float dist = abs(h.a * p.x + h.b * p.y - h.c) / length(vec2(h.a, h.b));
-    if (dist < 0.03) color = vec3(1.0);
+    // Draw the boundary line
+    float dist = abs(dot(h.normal, p) - h.offset);
+    if (dist < 0.03) {
+        color = vec3(1.0, 1.0, 1.0);
+    }
     
     fragColor = vec4(color, 1.0);
 }

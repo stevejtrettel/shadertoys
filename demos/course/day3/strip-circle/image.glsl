@@ -17,9 +17,11 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
     
     // Draw a circle in the fundamental domain
     float d = length(p - vec2(0.5, 0.0));
-    vec3 color = vec3(0.1, 0.1, 0.15);
+    vec3 color;
     if (d < 0.3) {
         color = vec3(1.0, 0.8, 0.3);
+    } else {
+        color = vec3(0.1, 0.1, 0.15);
     }
     
     fragColor = vec4(color, 1.0);
