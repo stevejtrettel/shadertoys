@@ -1,15 +1,10 @@
 {
   "controls": true,
-  "passes": {
-    "BufferA": {
-      "channels": {
-        "iChannel0": { "buffer": "BufferA", "previous": true }
-      }
-    },
-    "Image": {
-      "channels": {
-        "iChannel0": { "buffer": "BufferA" }
-      }
-    }
+
+  "BufferA": {
+    "iChannel0": "BufferA"
+  },
+  "Image": {
+    "iChannel0": "BufferA"
   }
 }

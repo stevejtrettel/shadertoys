@@ -1,8 +1,8 @@
 /**
  * Tabbed Layout
  *
- * Single window with tabs to switch between shader output and code views.
- * First tab shows the live shader, remaining tabs show GLSL source files.
+ * Single window with tabs to switch between shader output, code views, and textures.
+ * First tab shows the live shader, remaining tabs show GLSL source files and images.
  */
 
 import './tabbed.css';
@@ -14,6 +14,11 @@ import 'prismjs/components/prism-cpp';
 import { BaseLayout, LayoutOptions } from './types';
 import { ShadertoyProject } from '../project/types';
 
+type ShaderTab = { kind: 'shader'; name: string };
+type CodeTab = { kind: 'code'; name: string; source: string };
+type ImageTab = { kind: 'image'; name: string; url: string };
+type Tab = ShaderTab | CodeTab | ImageTab;
+
 export class TabbedLayout implements BaseLayout {
   private container: HTMLElement;
   private project: ShadertoyProject;
@@ -21,6 +26,7 @@ export class TabbedLayout implements BaseLayout {
   private canvasContainer: HTMLElement;
   private contentArea: HTMLElement;
   private codeViewer: HTMLElement;
+  private imageViewer: HTMLElement;
   private copyButton: HTMLElement;
 
   constructor(opts: LayoutOptions) {
@@ -35,7 +41,7 @@ export class TabbedLayout implements BaseLayout {
     const wrapper = document.createElement('div');
     wrapper.className = 'tabbed-wrapper';
 
-    // Create content area (holds either canvas or code)
+    // Create content area (holds either canvas, code, or image)
     this.contentArea = document.createElement('div');
     this.contentArea.className = 'tabbed-content';
 
@@ -47,6 +53,11 @@ export class TabbedLayout implements BaseLayout {
     this.codeViewer = document.createElement('div');
     this.codeViewer.className = 'tabbed-code-viewer';
     this.codeViewer.style.visibility = 'hidden';
+
+    // Create image viewer (shown when image tabs are active)
+    this.imageViewer = document.createElement('div');
+    this.imageViewer.className = 'tabbed-image-viewer';
+    this.imageViewer.style.visibility = 'hidden';
 
     // Create copy button
     this.copyButton = document.createElement('button');
@@ -62,6 +73,7 @@ export class TabbedLayout implements BaseLayout {
 
     this.contentArea.appendChild(this.canvasContainer);
     this.contentArea.appendChild(this.codeViewer);
+    this.contentArea.appendChild(this.imageViewer);
     this.contentArea.appendChild(this.copyButton);
 
     // Build tab bar
@@ -86,15 +98,15 @@ export class TabbedLayout implements BaseLayout {
     const tabBar = document.createElement('div');
     tabBar.className = 'tabbed-tab-bar';
 
-    // Build tabs: Shader first, then code files
-    const tabs: Array<{ name: string; isShader: boolean; source?: string }> = [];
+    // Build tabs: Shader first, then code files, then textures
+    const tabs: Tab[] = [];
 
     // 1. Shader output tab
-    tabs.push({ name: 'Shader', isShader: true });
+    tabs.push({ kind: 'shader', name: 'Shader' });
 
     // 2. Common (if exists)
     if (this.project.commonSource) {
-      tabs.push({ name: 'common.glsl', isShader: false, source: this.project.commonSource });
+      tabs.push({ kind: 'code', name: 'common.glsl', source: this.project.commonSource });
     }
 
     // 3. Buffers in order
@@ -105,16 +117,26 @@ export class TabbedLayout implements BaseLayout {
       const pass = this.project.passes[bufferName];
       if (pass) {
         tabs.push({
+          kind: 'code',
           name: `${bufferName.toLowerCase()}.glsl`,
-          isShader: false,
           source: pass.glslSource,
         });
       }
     }
 
-    // 4. Image last
+    // 4. Image pass
     const imagePass = this.project.passes.Image;
-    tabs.push({ name: 'image.glsl', isShader: false, source: imagePass.glslSource });
+    tabs.push({ kind: 'code', name: 'image.glsl', source: imagePass.glslSource });
+
+    // 5. Textures (images)
+    for (const texture of this.project.textures) {
+      const filename = texture.source.split('/').pop() || texture.source;
+      tabs.push({
+        kind: 'image',
+        name: filename,
+        url: texture.source,
+      });
+    }
 
     // Track current source for copying
     let currentSource = '';
@@ -129,6 +151,7 @@ export class TabbedLayout implements BaseLayout {
 
     // Copy button handler
     this.copyButton.addEventListener('click', async () => {
+      if (!currentSource) return;
       try {
         await navigator.clipboard.writeText(currentSource);
         this.copyButton.innerHTML = checkIcon;
@@ -151,18 +174,21 @@ export class TabbedLayout implements BaseLayout {
         b.classList.toggle('active', i === tabIndex);
       });
 
-      if (tab.isShader) {
+      // Hide all content first
+      this.canvasContainer.style.visibility = 'hidden';
+      this.codeViewer.style.visibility = 'hidden';
+      this.imageViewer.style.visibility = 'hidden';
+      this.copyButton.style.visibility = 'hidden';
+
+      if (tab.kind === 'shader') {
         // Show shader canvas
         this.canvasContainer.style.visibility = 'visible';
-        this.codeViewer.style.visibility = 'hidden';
-        this.copyButton.style.visibility = 'hidden';
-      } else {
+      } else if (tab.kind === 'code') {
         // Show code
-        this.canvasContainer.style.visibility = 'hidden';
         this.codeViewer.style.visibility = 'visible';
         this.copyButton.style.visibility = 'visible';
 
-        currentSource = tab.source || '';
+        currentSource = tab.source;
         const lines = currentSource.split('\n');
 
         // Create pre element
@@ -190,6 +216,17 @@ export class TabbedLayout implements BaseLayout {
 
         // Highlight with Prism
         Prism.highlightElement(code);
+      } else {
+        // Show image
+        currentSource = '';
+        this.imageViewer.style.visibility = 'visible';
+
+        const img = document.createElement('img');
+        img.src = tab.url;
+        img.alt = tab.name;
+
+        this.imageViewer.innerHTML = '';
+        this.imageViewer.appendChild(img);
       }
     };
 
@@ -197,8 +234,10 @@ export class TabbedLayout implements BaseLayout {
     tabs.forEach((tab, index) => {
       const tabButton = document.createElement('button');
       tabButton.className = 'tabbed-tab-button';
-      if (tab.isShader) {
+      if (tab.kind === 'shader') {
         tabButton.classList.add('shader-tab');
+      } else if (tab.kind === 'image') {
+        tabButton.classList.add('image-tab');
       }
       tabButton.textContent = tab.name;
       if (index === 0) tabButton.classList.add('active');

@@ -1,0 +1,9 @@
+{
+  "title": "Texture Input",
+  "layout": "split",
+  "controls": true,
+
+  "Image": {
+    "iChannel0": "texture.png"
+  }
+}

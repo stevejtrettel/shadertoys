@@ -17,19 +17,22 @@ export type PassName = 'Image' | 'BufferA' | 'BufferB' | 'BufferC' | 'BufferD';
 
 /**
  * Reference to another buffer pass.
+ * By default, reads the previous frame (safe for all cases).
+ * Use current: true to read from a buffer that has already run this frame.
  */
 export interface ChannelJSONBuffer {
   buffer: PassName;
-  previous?: boolean;  // Default: false (read current frame)
+  current?: boolean;  // Default: false (read previous frame)
 }
 
 /**
- * Reference to external 2D texture (image file).
+ * Reference to external texture (image file).
  */
 export interface ChannelJSONTexture {
   texture: string;  // Path to image file
   filter?: 'nearest' | 'linear';  // Default: 'linear'
   wrap?: 'clamp' | 'repeat';      // Default: 'repeat'
+  type?: '2d' | 'cubemap';        // Default: '2d'. Cubemap uses equirectangular projection.
 }
 
 /**
@@ -40,86 +43,83 @@ export interface ChannelJSONKeyboard {
 }
 
 /**
- * Union type for channel sources in JSON config.
+ * Union type for channel sources in JSON config (object form).
  */
-export type ChannelJSON =
+export type ChannelJSONObject =
   | ChannelJSONBuffer
   | ChannelJSONTexture
   | ChannelJSONKeyboard;
 
+/**
+ * Channel value in simplified config format.
+ * Can be a string shorthand or full object:
+ * - "BufferA", "BufferB", etc. → buffer reference
+ * - "keyboard" → keyboard input
+ * - "photo.jpg" (with extension) → texture file
+ * - { buffer: "BufferA" } → explicit buffer with options
+ * - { texture: "photo.jpg", filter: "nearest" } → texture with options
+ */
+export type ChannelValue = string | ChannelJSONObject;
+
 // =============================================================================
-// Config Format (shadertoy.config.json)
+// Config Format (config.json) - Simplified flat format
 // =============================================================================
 
 /**
- * Per-pass configuration in JSON.
+ * Pass configuration in simplified format.
+ * Channel bindings are directly on the pass object.
+ *
+ * Example:
+ * {
+ *   "iChannel0": "BufferA",
+ *   "iChannel1": "photo.jpg",
+ *   "source": "custom.glsl"  // optional
+ * }
  */
-export interface PassConfig {
-  /**
-   * Path to GLSL source file (relative to project root).
-   * Optional - defaults to standard names (image.glsl, bufferA.glsl, etc.)
-   */
+export interface PassConfigSimplified {
+  /** Optional custom source file path */
   source?: string;
-
-  /**
-   * Channel bindings for iChannel0..3.
-   * Any omitted channel defaults to unused (none).
-   */
-  channels?: {
-    iChannel0?: ChannelJSON;
-    iChannel1?: ChannelJSON;
-    iChannel2?: ChannelJSON;
-    iChannel3?: ChannelJSON;
-  };
+  /** Channel bindings - string shorthand or full object */
+  iChannel0?: ChannelValue;
+  iChannel1?: ChannelValue;
+  iChannel2?: ChannelValue;
+  iChannel3?: ChannelValue;
 }
 
 /**
- * Top-level shadertoy.config.json structure.
+ * Top-level config.json structure (simplified flat format).
+ *
+ * Example:
+ * {
+ *   "title": "My Shader",
+ *   "layout": "split",
+ *   "controls": true,
+ *
+ *   "BufferA": {
+ *     "iChannel0": "BufferA"
+ *   },
+ *   "Image": {
+ *     "iChannel0": "BufferA"
+ *   }
+ * }
  */
 export interface ShadertoyConfig {
-  /**
-   * Optional project metadata.
-   */
-  meta?: {
-    title?: string;
-    author?: string;
-    description?: string;
-  };
+  // Metadata (flat, not nested)
+  title?: string;
+  author?: string;
+  description?: string;
 
-  /**
-   * Optional layout mode for the shader viewer.
-   * - 'fullscreen': Canvas fills entire viewport, no styling
-   * - 'centered': Centered canvas with rounded corners and drop shadow
-   * - 'split': Shader on left, code viewer on right with syntax highlighting
-   * - 'tabbed': Single window with tabs for shader and code (default)
-   * If omitted, defaults to 'tabbed'.
-   */
+  // Settings
   layout?: 'fullscreen' | 'centered' | 'split' | 'tabbed';
-
-  /**
-   * Optional controls for playback.
-   * If true, shows play/pause and reset buttons with keyboard shortcuts.
-   * If omitted, defaults to true.
-   */
   controls?: boolean;
-
-  /**
-   * Optional path to common GLSL code (shared across all passes).
-   * If omitted, loader checks for 'common.glsl' automatically.
-   */
   common?: string;
 
-  /**
-   * Pass definitions.
-   * Image is required, BufferA-D are optional.
-   */
-  passes: {
-    Image: PassConfig;
-    BufferA?: PassConfig;
-    BufferB?: PassConfig;
-    BufferC?: PassConfig;
-    BufferD?: PassConfig;
-  };
+  // Passes (at top level)
+  Image?: PassConfigSimplified;
+  BufferA?: PassConfigSimplified;
+  BufferB?: PassConfigSimplified;
+  BufferC?: PassConfigSimplified;
+  BufferD?: PassConfigSimplified;
 }
 
 // =============================================================================
@@ -132,8 +132,8 @@ export interface ShadertoyConfig {
  */
 export type ChannelSource =
   | { kind: 'none' }
-  | { kind: 'buffer'; buffer: PassName; previous: boolean }
-  | { kind: 'texture2D'; name: string }  // Internal texture ID (e.g., "tex0")
+  | { kind: 'buffer'; buffer: PassName; current: boolean }
+  | { kind: 'texture'; name: string; cubemap: boolean }  // Internal texture ID (e.g., "tex0")
   | { kind: 'keyboard' };
 
 /**

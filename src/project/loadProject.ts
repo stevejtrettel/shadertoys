@@ -13,11 +13,13 @@ import {
   PassName,
   ChannelSource,
   Channels,
+  ChannelValue,
+  ChannelJSONObject,
   ShadertoyConfig,
   ShadertoyPass,
   ShadertoyProject,
   ShadertoyTexture2D,
-  PassConfig,
+  PassConfigSimplified,
 } from './types';
 
 // =============================================================================
@@ -90,14 +92,14 @@ function defaultSourceForPass(name: PassName): string {
  *
  * Automatically detects:
  * - Single-pass mode (no config, just image.glsl)
- * - Multi-pass mode (shadertoy.config.json present)
+ * - Multi-pass mode (config.json present)
  *
  * @param root - Absolute path to project directory
  * @returns Fully normalized ShadertoyProject
  * @throws Error with descriptive message if project is invalid
  */
 export async function loadProject(root: string): Promise<ShadertoyProject> {
-  const configPath = path.join(root, 'shadertoy.config.json');
+  const configPath = path.join(root, 'config.json');
   const hasConfig = await fileExists(configPath);
 
   if (hasConfig) {
@@ -108,7 +110,7 @@ export async function loadProject(root: string): Promise<ShadertoyProject> {
       config = JSON.parse(raw);
     } catch (err: any) {
       throw new Error(
-        `Invalid JSON in shadertoy.config.json at '${root}': ${err?.message ?? String(err)}`
+        `Invalid JSON in config.json at '${root}': ${err?.message ?? String(err)}`
       );
     }
     return await loadProjectWithConfig(root, config);
@@ -147,14 +149,14 @@ async function loadSinglePassProject(root: string): Promise<ShadertoyProject> {
     throw new Error(
       `Project at '${root}' contains multiple GLSL files (${glslFiles.join(
         ', '
-      )}) but no 'shadertoy.config.json'. Add a config file to use multiple passes.`
+      )}) but no 'config.json'. Add a config file to use multiple passes.`
     );
   }
 
   // Check for textures
   if (await hasTexturesDirWithFiles(root)) {
     throw new Error(
-      `Project at '${root}' uses textures (in 'textures/' folder) but has no 'shadertoy.config.json'. Add a config file to define texture bindings.`
+      `Project at '${root}' uses textures (in 'textures/' folder) but has no 'config.json'. Add a config file to define texture bindings.`
     );
   }
 
@@ -195,25 +197,54 @@ async function loadSinglePassProject(root: string): Promise<ShadertoyProject> {
 // =============================================================================
 
 /**
- * Load a project with shadertoy.config.json.
+ * Parse a channel value (string shorthand or object) into normalized ChannelJSONObject.
+ *
+ * String shortcuts:
+ * - "BufferA", "BufferB", etc. → buffer reference
+ * - "keyboard" → keyboard input
+ * - "photo.jpg" (with extension) → texture file
+ */
+function parseChannelValue(value: ChannelValue): ChannelJSONObject | null {
+  if (typeof value === 'string') {
+    // Check for buffer names
+    if (isPassName(value)) {
+      return { buffer: value };
+    }
+    // Check for keyboard
+    if (value === 'keyboard') {
+      return { keyboard: true };
+    }
+    // Assume texture (file path)
+    return { texture: value };
+  }
+  // Already an object
+  return value;
+}
+
+/**
+ * Load a project with config.json.
  *
  * @param root - Project directory
  * @param config - Parsed JSON config
  * @returns Normalized ShadertoyProject
  */
 async function loadProjectWithConfig(root: string, config: ShadertoyConfig): Promise<ShadertoyProject> {
-  // Validate passes
-  if (!config.passes || !config.passes.Image) {
-    throw new Error(`shadertoy.config.json at '${root}' must define passes.Image.`);
-  }
+  // Extract pass configs from top level
+  const passConfigs = {
+    Image: config.Image,
+    BufferA: config.BufferA,
+    BufferB: config.BufferB,
+    BufferC: config.BufferC,
+    BufferD: config.BufferD,
+  };
 
-  const allowedPassKeys = new Set<PassName>(['Image', 'BufferA', 'BufferB', 'BufferC', 'BufferD']);
-  for (const key of Object.keys(config.passes)) {
-    if (!allowedPassKeys.has(key as PassName)) {
-      throw new Error(
-        `shadertoy.config.json at '${root}' contains unknown pass '${key}'. Allowed passes are Image, BufferA, BufferB, BufferC, BufferD.`
-      );
-    }
+  // Validate: must have Image pass (or be empty config for simple shader)
+  const hasAnyPass = passConfigs.Image || passConfigs.BufferA || passConfigs.BufferB ||
+                     passConfigs.BufferC || passConfigs.BufferD;
+
+  if (!hasAnyPass) {
+    // Empty config = simple Image pass with no channels
+    passConfigs.Image = {};
   }
 
   // Resolve commonSource
@@ -262,11 +293,50 @@ async function loadProjectWithConfig(root: string, config: ShadertoyConfig): Pro
   }
 
   /**
-   * Load a single pass from config.
+   * Parse a channel object into ChannelSource.
+   */
+  function parseChannelObject(value: ChannelJSONObject, passName: PassName, channelKey: string): ChannelSource {
+    // Buffer channel
+    if ('buffer' in value) {
+      const buf = value.buffer;
+      if (!isPassName(buf)) {
+        throw new Error(
+          `Invalid buffer name '${buf}' for ${channelKey} in pass '${passName}' at '${root}'.`
+        );
+      }
+      return {
+        kind: 'buffer',
+        buffer: buf,
+        current: !!value.current,
+      };
+    }
+
+    // Texture channel
+    if ('texture' in value) {
+      const internalName = registerTexture(value);
+      return {
+        kind: 'texture',
+        name: internalName,
+        cubemap: value.type === 'cubemap',
+      };
+    }
+
+    // Keyboard channel
+    if ('keyboard' in value) {
+      return { kind: 'keyboard' };
+    }
+
+    throw new Error(
+      `Invalid channel object for ${channelKey} in pass '${passName}' at '${root}'.`
+    );
+  }
+
+  /**
+   * Load a single pass from simplified config.
    */
   async function loadPass(
     name: PassName,
-    passConfig: PassConfig | undefined
+    passConfig: PassConfigSimplified | undefined
   ): Promise<ShadertoyPass | undefined> {
     if (!passConfig) return undefined;
 
@@ -283,58 +353,23 @@ async function loadProjectWithConfig(root: string, config: ShadertoyConfig): Pro
 
     // Normalize channels (always 4 channels)
     const channelSources: ChannelSource[] = [];
-    const ch = passConfig.channels ?? {};
+    const channelKeys = ['iChannel0', 'iChannel1', 'iChannel2', 'iChannel3'] as const;
 
-    const keys = ['iChannel0', 'iChannel1', 'iChannel2', 'iChannel3'] as const;
-
-    for (const key of keys) {
-      const value = ch[key];
-      if (!value) {
+    for (const key of channelKeys) {
+      const rawValue = passConfig[key];
+      if (!rawValue) {
         channelSources.push({ kind: 'none' });
         continue;
       }
 
-      // Buffer channel
-      if ('buffer' in value) {
-        const buf = value.buffer;
-        if (!isPassName(buf)) {
-          throw new Error(
-            `Invalid buffer name '${buf}' for ${key} in pass '${name}' at '${root}'.`
-          );
-        }
-        channelSources.push({
-          kind: 'buffer',
-          buffer: buf,
-          previous: !!value.previous,
-        });
+      // Parse string shorthand or use object directly
+      const parsed = parseChannelValue(rawValue);
+      if (!parsed) {
+        channelSources.push({ kind: 'none' });
         continue;
       }
 
-      // Texture channel
-      if ('texture' in value) {
-        const internalName = registerTexture(value);
-        channelSources.push({
-          kind: 'texture2D',
-          name: internalName,
-        });
-        continue;
-      }
-
-      // Keyboard channel
-      if ('keyboard' in value) {
-        if (value.keyboard !== true) {
-          throw new Error(
-            `Invalid keyboard value for ${key} in pass '${name}' at '${root}'. Expected { "keyboard": true }.`
-          );
-        }
-        channelSources.push({ kind: 'keyboard' });
-        continue;
-      }
-
-      // Unknown channel type
-      throw new Error(
-        `Invalid channel object for ${key} in pass '${name}' at '${root}'.`
-      );
+      channelSources.push(parseChannelObject(parsed, name, key));
     }
 
     return {
@@ -345,20 +380,26 @@ async function loadProjectWithConfig(root: string, config: ShadertoyConfig): Pro
   }
 
   // Load all passes
-  const imagePass = await loadPass('Image', config.passes.Image);
-  if (!imagePass) {
-    throw new Error(`passes.Image must be defined in shadertoy.config.json at '${root}'.`);
+  const imagePass = await loadPass('Image', passConfigs.Image);
+  const bufferAPass = await loadPass('BufferA', passConfigs.BufferA);
+  const bufferBPass = await loadPass('BufferB', passConfigs.BufferB);
+  const bufferCPass = await loadPass('BufferC', passConfigs.BufferC);
+  const bufferDPass = await loadPass('BufferD', passConfigs.BufferD);
+
+  // If no Image pass was loaded but we have buffers, that's an error
+  if (!imagePass && (bufferAPass || bufferBPass || bufferCPass || bufferDPass)) {
+    throw new Error(`config.json at '${root}' has buffers but no Image pass.`);
   }
 
-  const bufferAPass = await loadPass('BufferA', config.passes.BufferA);
-  const bufferBPass = await loadPass('BufferB', config.passes.BufferB);
-  const bufferCPass = await loadPass('BufferC', config.passes.BufferC);
-  const bufferDPass = await loadPass('BufferD', config.passes.BufferD);
+  // If still no Image pass, create empty one
+  if (!imagePass) {
+    throw new Error(`config.json at '${root}' must define an Image pass.`);
+  }
 
   // Build metadata
-  const title = config.meta?.title ?? path.basename(root);
-  const author = config.meta?.author ?? null;
-  const description = config.meta?.description ?? null;
+  const title = config.title ?? path.basename(root);
+  const author = config.author ?? null;
+  const description = config.description ?? null;
 
   const project: ShadertoyProject = {
     root,

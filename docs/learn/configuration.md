@@ -8,7 +8,7 @@ Every shader project needs either:
 - **Simple**: Just an `image.glsl` file (auto-configured)
 - **Advanced**: A config file + shader files
 
-**Config file names**: You can use either `shadertoy.config.json` or `config.json` - both work identically.
+**Config file**: `config.json` in your project folder.
 
 ## File Structure
 
@@ -25,7 +25,7 @@ That's it! The system will auto-generate a config for you.
 
 ```
 demos/my-shader/
-├── shadertoy.config.json
+├── config.json
 ├── common.glsl          (optional - shared code)
 ├── bufferA.glsl
 ├── bufferB.glsl
@@ -35,7 +35,7 @@ demos/my-shader/
 
 ## Configuration File Format
 
-`shadertoy.config.json` is a JSON file that describes your shader's structure.
+`config.json` is a JSON file that describes your shader's structure.
 
 ### Minimal Example
 
@@ -503,7 +503,7 @@ At the top level of your config, not inside `passes`.
 Begin with just `image.glsl`, add complexity as needed:
 
 1. Start: Just `image.glsl`
-2. Add config: `shadertoy.config.json` with metadata
+2. Add config: `config.json` with metadata
 3. Add buffers: Multi-pass rendering
 4. Add textures: External images
 5. Add keyboard: Interactivity
@@ -514,7 +514,7 @@ For big projects:
 
 ```
 demos/my-complex-shader/
-├── shadertoy.config.json
+├── config.json
 ├── common.glsl              # Shared functions
 ├── bufferA.glsl            # Simulation
 ├── bufferB.glsl            # Post-process

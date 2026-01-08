@@ -475,7 +475,7 @@ export class ShadertoyEngine {
       if (!projectPass) continue;
 
       // Build fragment shader source (outside try so we can access in catch)
-      const fragmentSource = this.buildFragmentShader(projectPass.glslSource);
+      const fragmentSource = this.buildFragmentShader(projectPass.glslSource, projectPass.channels);
 
       try {
         // Compile program
@@ -567,8 +567,11 @@ export class ShadertoyEngine {
 
   /**
    * Build complete fragment shader source with Shadertoy boilerplate.
+   *
+   * @param userSource - The user's GLSL source code
+   * @param channels - Channel configuration for this pass (to detect cubemap textures)
    */
-  private buildFragmentShader(userSource: string): string {
+  private buildFragmentShader(userSource: string, channels: ChannelSource[]): string {
     const parts: string[] = [FRAGMENT_PREAMBLE];
 
     // Common code (if any)
@@ -592,7 +595,7 @@ uniform sampler2D iChannel3;
 `);
 
     // Preprocess user shader code to handle cubemap-style texture sampling
-    const processedSource = this.preprocessCubemapTextures(userSource);
+    const processedSource = this.preprocessCubemapTextures(userSource, channels);
 
     // User shader code
     parts.push('// User shader code');
@@ -612,28 +615,37 @@ void main() {
 
   /**
    * Preprocess shader to convert cubemap-style texture() calls to equirectangular.
-   * Detects: texture(iChannelN, vec3_expr) and converts to texture(iChannelN, _st_dirToEquirect(vec3_expr))
+   *
+   * Uses the channel configuration to determine which channels are cubemaps.
+   * Only channels explicitly marked as `type: 'cubemap'` in config.json will have
+   * their texture() calls wrapped with _st_dirToEquirect().
+   *
+   * @param source - User's GLSL source code
+   * @param channels - Channel configuration for this pass
    */
-  private preprocessCubemapTextures(source: string): string {
+  private preprocessCubemapTextures(source: string, channels: ChannelSource[]): string {
+    // Build set of channel names that are cubemaps
+    const cubemapChannels = new Set<string>();
+    channels.forEach((ch, i) => {
+      if (ch.kind === 'texture' && ch.cubemap) {
+        cubemapChannels.add(`iChannel${i}`);
+      }
+    });
+
+    // If no cubemap channels, return source unchanged
+    if (cubemapChannels.size === 0) {
+      return source;
+    }
+
     // Match: texture(iChannelN, ...)
     const textureCallRegex = /texture\s*\(\s*(iChannel[0-3])\s*,\s*([^)]+)\)/g;
 
     return source.replace(textureCallRegex, (match, channel, coord) => {
-      // Heuristic: if coord contains indicators of 2D UV coordinates, leave it alone
-      // Otherwise, assume it's a 3D direction vector and wrap it
-      const is2DTexture =
-        coord.includes('fragCoord') ||   // Using fragCoord directly
-        coord.includes('/') ||            // Division (likely uv calculation)
-        /\.xy\s*$/.test(coord.trim()) ||  // Ends with .xy swizzle
-        /\.st\s*$/.test(coord.trim()) ||  // Ends with .st swizzle
-        /^vec2\s*\(/.test(coord.trim());  // Starts with vec2(
-
-      if (is2DTexture) {
-        // Leave 2D texture calls unchanged
-        return match;
-      } else {
-        // Wrap 3D direction with equirectangular conversion
+      // Only wrap if this channel is explicitly marked as cubemap
+      if (cubemapChannels.has(channel)) {
         return `texture(${channel}, _st_dirToEquirect(${coord}))`;
+      } else {
+        return match;
       }
     });
   }
@@ -716,7 +728,7 @@ void main() {
 
     for (let i = 0; i < 4; i++) {
       const channelSource = runtimePass.projectChannels[i];
-      const texture = this.resolveChannelTexture(channelSource, runtimePass.name);
+      const texture = this.resolveChannelTexture(channelSource);
 
       // Bind texture to texture unit i
       gl.activeTexture(gl.TEXTURE0 + i);
@@ -733,7 +745,7 @@ void main() {
   /**
    * Resolve a ChannelSource to an actual WebGLTexture to bind.
    */
-  private resolveChannelTexture(source: ChannelSource, currentPassName: PassName): WebGLTexture {
+  private resolveChannelTexture(source: ChannelSource): WebGLTexture {
     switch (source.kind) {
       case 'none':
         // Unused channel → bind black texture
@@ -749,14 +761,13 @@ void main() {
           throw new Error(`Buffer '${source.buffer}' not found`);
         }
 
-        // Auto-detect self-reference: if a buffer references itself, always use previous texture
-        // This prevents feedback loops and enables temporal accumulation (like path tracers)
-        const isSelfReference = source.buffer === currentPassName;
-        return isSelfReference ? targetPass.previousTexture : targetPass.currentTexture;
+        // Default to previous frame (safer, matches common use case)
+        // Only use current frame if explicitly requested with current: true
+        return source.current ? targetPass.currentTexture : targetPass.previousTexture;
       }
 
-      case 'texture2D': {
-        // External texture → find RuntimeTexture2D by name
+      case 'texture': {
+        // External texture → find RuntimeTexture by name
         const tex = this._textures.find((t) => t.name === source.name);
         if (!tex) {
           throw new Error(`Texture '${source.name}' not found`);

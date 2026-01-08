@@ -5,53 +5,44 @@ A lightweight, Shadertoy-compatible GLSL shader playground built for teaching an
 ## Features
 
 - **Shadertoy Compatibility** - Copy/paste shaders directly from Shadertoy
-  - Automatic `mainImage()` wrapper injection
-  - Automatic cubemap to equirectangular texture conversion
-  - Automatic ping-pong buffer detection for self-referencing passes
 - **Full Shadertoy Uniforms** - `iTime`, `iResolution`, `iFrame`, `iMouse`, `iTimeDelta`, `iChannel0-3`
-- **Multi-Buffer Rendering** - BufferA-D passes with automatic ping-pong for feedback effects
+- **Multi-Buffer Rendering** - BufferA-D passes with correct ping-pong semantics
 - **Texture Support** - Load external images with configurable filtering and wrapping
-- **Keyboard Input** - Full keyboard state via Shadertoy-compatible keyboard texture
+- **Keyboard Input** - Full keyboard state via Shadertoy-compatible texture
 - **Playback Controls** - Play/pause, reset, and screenshot capture
-- **Multiple Layout Modes** - Fullscreen, centered, or split-view with live code display
+- **Multiple Layout Modes** - Fullscreen, centered, split-view, or tabbed code display
 - **Zero Runtime Dependencies** - Pure WebGL2
 - **Tiny Builds** - ~26KB JS (gzipped)
 
 ## Quick Start
 
 ```bash
-# Install dependencies
 npm install
-
-# Run a demo in development
-npm run dev:demo <demo-folder-name>
-
-# Build a demo for production
-npm run build:demo <demo-folder-name>
+npm run new my-shader
+npm run dev:demo my-shader
 ```
 
-Open your browser to `http://localhost:3000` and you'll see the running shader.
+Open `http://localhost:3000` to see your shader.
 
-## Documentation
+---
 
-### For Students Learning Shaders
-- [**Getting Started**](docs/learn/getting-started.md) - Your first shader in 5 minutes
-- [**Buffers and Channels**](docs/learn/buffers-and-channels.md) - Multi-pass rendering and textures
-- [**Configuration**](docs/learn/configuration.md) - Config file reference and keyboard shortcuts
+## Common Setups
 
-### For Developers
-- [**Architecture**](docs/dev/architecture.md) - System design and data flow
-- [**Project Structure**](docs/dev/project-structure.md) - Codebase organization
-- [**Components**](docs/dev/components.md) - How each component works
-- [**Troubleshooting**](docs/dev/troubleshooting.md) - Common issues and solutions
+### 1. Simple Shader (just image.glsl)
 
-## Creating Your First Shader
+The simplest setup - no config needed.
 
-### Simple Single-Pass Shader
+```bash
+npm run new my-shader
+```
 
-1. Create a folder: `demos/my-shader/`
-2. Create `demos/my-shader/image.glsl`:
+**Files:**
+```
+demos/my-shader/
+└── image.glsl
+```
 
+**image.glsl:**
 ```glsl
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 uv = fragCoord / iResolution.xy;
@@ -60,66 +51,283 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 }
 ```
 
-3. Run it:
+---
+
+### 2. One Buffer (feedback/trails)
+
+For effects that accumulate over time (trails, paint, fluid).
+
 ```bash
-npm run dev:demo my-shader
+npm run new my-shader 1
 ```
 
-### Multi-Pass Shader with Buffers
+**Files:**
+```
+demos/my-shader/
+├── bufferA.glsl
+├── image.glsl
+└── config.json
+```
 
-Create `demos/feedback-effect/shadertoy.config.json`:
-
+**config.json:**
 ```json
 {
-  "meta": {
-    "title": "Feedback Effect"
+  "BufferA": {
+    "iChannel0": "BufferA"
   },
-  "passes": {
-    "BufferA": {
-      "channels": {
-        "iChannel0": { "buffer": "BufferA", "previous": true }
-      }
-    },
-    "Image": {
-      "channels": {
-        "iChannel0": { "buffer": "BufferA" }
-      }
-    }
+  "Image": {
+    "iChannel0": "BufferA"
   }
 }
 ```
 
-Then create your shader files (`bufferA.glsl`, `image.glsl`) in that folder. See [Buffers and Channels](docs/learn/buffers-and-channels.md) for details.
+**bufferA.glsl:**
+```glsl
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+    vec2 uv = fragCoord / iResolution.xy;
+
+    // Read previous frame with fade
+    vec4 prev = texture(iChannel0, uv) * 0.98;
+
+    // Draw at mouse
+    vec2 mouse = iMouse.xy / iResolution.xy;
+    float d = length(uv - mouse);
+    float spot = smoothstep(0.05, 0.0, d);
+
+    fragColor = prev + vec4(spot);
+}
+```
+
+**image.glsl:**
+```glsl
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+    vec2 uv = fragCoord / iResolution.xy;
+    fragColor = texture(iChannel0, uv);
+}
+```
+
+---
+
+### 3. Multiple Buffers (interacting simulations)
+
+For reaction-diffusion, fluid dynamics, etc. All buffers can read all other buffers.
+
+```bash
+npm run new my-shader 2
+```
+
+**Files:**
+```
+demos/my-shader/
+├── bufferA.glsl
+├── bufferB.glsl
+├── image.glsl
+└── config.json
+```
+
+**config.json:**
+```json
+{
+  "BufferA": {
+    "iChannel0": "BufferA",
+    "iChannel1": "BufferB"
+  },
+  "BufferB": {
+    "iChannel0": "BufferA",
+    "iChannel1": "BufferB"
+  },
+  "Image": {
+    "iChannel0": "BufferA",
+    "iChannel1": "BufferB"
+  }
+}
+```
+
+**Channel mapping:** `iChannel0` = BufferA, `iChannel1` = BufferB, etc.
+
+---
+
+### 4. Texture + Image (image processing)
+
+Load an image and process it.
+
+**Files:**
+```
+demos/my-shader/
+├── image.glsl
+├── photo.jpg
+└── config.json
+```
+
+**config.json:**
+```json
+{
+  "Image": {
+    "iChannel0": "photo.jpg"
+  }
+}
+```
+
+**image.glsl:**
+```glsl
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+    vec2 uv = fragCoord / iResolution.xy;
+    vec4 img = texture(iChannel0, uv);
+
+    // Example: grayscale
+    float gray = dot(img.rgb, vec3(0.299, 0.587, 0.114));
+
+    fragColor = vec4(vec3(gray), 1.0);
+}
+```
+
+**Texture options (all optional):**
+```json
+{ "texture": "photo.jpg", "filter": "linear", "wrap": "repeat", "type": "2d" }
+```
+- `filter`: `"linear"` (smooth, default) or `"nearest"` (pixelated)
+- `wrap`: `"repeat"` (tile, default) or `"clamp"` (stretch edges)
+- `type`: `"2d"` (standard, default) or `"cubemap"` (equirectangular environment map)
+
+**Cubemap textures:** Use `"type": "cubemap"` for equirectangular environment maps (360° panoramas). The engine will automatically convert 3D direction lookups to 2D coordinates:
+```json
+{ "texture": "environment.jpg", "type": "cubemap" }
+```
+```glsl
+// In your shader, sample with a 3D direction:
+vec3 dir = normalize(rayDirection);
+vec4 sky = texture(iChannel0, dir);  // Automatically converted
+```
+
+---
+
+### 5. Texture + Buffers (image + feedback)
+
+Combine textures with buffer feedback for effects like painting on an image.
+
+**Files:**
+```
+demos/my-shader/
+├── bufferA.glsl
+├── image.glsl
+├── photo.jpg
+└── config.json
+```
+
+**config.json:**
+```json
+{
+  "BufferA": {
+    "iChannel0": "BufferA",
+    "iChannel1": "photo.jpg"
+  },
+  "Image": {
+    "iChannel0": "BufferA",
+    "iChannel1": "photo.jpg"
+  }
+}
+```
+
+**bufferA.glsl:**
+```glsl
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+    vec2 uv = fragCoord / iResolution.xy;
+
+    vec4 prev = texture(iChannel0, uv);      // Previous frame
+    vec4 img = texture(iChannel1, uv);        // Original image
+
+    // Paint with mouse
+    vec2 mouse = iMouse.xy / iResolution.xy;
+    float d = length(uv - mouse);
+    float brush = smoothstep(0.05, 0.0, d);
+
+    // Blend: painted areas persist, unpainted fade to original
+    fragColor = mix(mix(prev, img, 0.01), prev + brush, brush);
+}
+```
+
+---
+
+## Buffer Execution & Frame Timing
+
+**Execution order:** BufferA → BufferB → BufferC → BufferD → Image
+
+All buffer reads default to the **previous frame**. This is safe for all cases:
+- Self-reference (feedback effects)
+- Reading buffers that haven't run yet this frame
+- Reading buffers that have already run (you get their latest output)
+
+Use `{ "buffer": "BufferA", "current": true }` only if you specifically need the in-progress current frame (rare).
+
+---
+
+## Layouts
+
+Control how the shader is displayed with the `layout` option in `config.json`:
+
+```json
+{
+  "layout": "split",
+  "BufferA": { ... },
+  "Image": { ... }
+}
+```
+
+| Layout | Description | Best for |
+|--------|-------------|----------|
+| `fullscreen` | Canvas fills entire viewport | Immersive art, games, installations |
+| `centered` | Canvas centered with max-width | General viewing (default without config) |
+| `tabbed` | Tabs to switch between shader and code | Exploring/debugging |
+| `split` | Side-by-side: shader left, code right | Teaching, presentations, tutorials |
+
+**`fullscreen`** - No chrome, canvas fills the screen:
+```json
+{ "layout": "fullscreen" }
+```
+
+**`centered`** - Clean centered view with rounded corners:
+```json
+{ "layout": "centered" }
+```
+
+**`tabbed`** - Click tabs to switch between live shader and source code:
+```json
+{ "layout": "tabbed" }
+```
+
+**`split`** - See shader and code simultaneously (code panel has tabs for multi-file projects):
+```json
+{ "layout": "split" }
+```
+
+---
 
 ## Keyboard Shortcuts
 
-- **S** - Save screenshot (PNG)
-- **Space** - Play/Pause (when controls enabled)
-- **R** - Reset (when controls enabled)
+| Key | Action |
+|-----|--------|
+| **S** | Save screenshot (PNG) |
+| **Space** | Play/Pause (when controls enabled) |
+| **R** | Reset to frame 0 (when controls enabled) |
 
-## Project Structure
+---
 
+## NPM Scripts
+
+```bash
+npm run new <name> [buffers]   # Create new shader project
+npm run dev:demo <name>        # Development server with hot reload
+npm run build:demo <name>      # Production build to dist/
 ```
-src/
-├── project/         # Config loading and project types
-├── engine/          # WebGL execution engine
-├── app/             # Browser runtime and UI
-├── layouts/         # Layout modes (fullscreen, centered, split)
-└── main.ts          # Entry point
 
-demos/               # Your shader projects go here
-```
+---
 
-## Architecture
+## Documentation
 
-Built with a clean layered architecture:
-
-1. **Project Layer** - Loads and normalizes shader configs
-2. **Engine Layer** - WebGL execution with Shadertoy semantics
-3. **App Layer** - Browser runtime, animation loop, and UI
-4. **Layout Layer** - Modular display modes
-
-All layers are strongly typed with TypeScript.
+- [Getting Started](docs/learn/getting-started.md) - Your first shader
+- [Buffers and Channels](docs/learn/buffers-and-channels.md) - Multi-pass rendering
+- [Configuration](docs/learn/configuration.md) - Full config reference
+- [Architecture](docs/dev/architecture.md) - How the engine works
 
 ## License
 

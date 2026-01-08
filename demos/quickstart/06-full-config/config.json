@@ -1,40 +1,18 @@
 {
-  "meta": {
-    "title": "Full Config Example",
-    "author": "Your Name",
-    "description": "Demonstrates all config options: multi-buffer with bloom effect. Click and drag to paint!"
-  },
-
+  "title": "Full Config Example",
+  "author": "Your Name",
+  "description": "Demonstrates all config options: multi-buffer with bloom effect. Click and drag to paint!",
   "layout": "centered",
   "controls": true,
 
-  "passes": {
-    "BufferA": {
-      "channels": {
-        "iChannel0": {
-          "buffer": "BufferA",
-          "previous": true
-        }
-      }
-    },
-
-    "BufferB": {
-      "channels": {
-        "iChannel0": {
-          "buffer": "BufferA"
-        }
-      }
-    },
-
-    "Image": {
-      "channels": {
-        "iChannel0": {
-          "buffer": "BufferA"
-        },
-        "iChannel1": {
-          "buffer": "BufferB"
-        }
-      }
-    }
+  "BufferA": {
+    "iChannel0": "BufferA"
+  },
+  "BufferB": {
+    "iChannel0": "BufferA"
+  },
+  "Image": {
+    "iChannel0": "BufferA",
+    "iChannel1": "BufferB"
   }
 }

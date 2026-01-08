@@ -1,0 +1,11 @@
+{
+  "title": "Ping-Pong Buffer Test",
+  "description": "Tests BufferA reading from its previous frame",
+
+  "BufferA": {
+    "iChannel0": "BufferA"
+  },
+  "Image": {
+    "iChannel0": "BufferA"
+  }
+}

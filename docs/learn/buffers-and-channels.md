@@ -55,7 +55,7 @@ Let's create a feedback effect where each frame fades and draws a new circle.
 
 ### Step 1: Create Config
 
-`demos/feedback-demo/shadertoy.config.json`:
+`demos/feedback-demo/config.json`:
 
 ```json
 {
@@ -166,7 +166,7 @@ Separable blur: BufferA renders content, BufferB blurs horizontally, Image blurs
 
 **Important**: Passes execute in order: BufferA → BufferB → BufferC → BufferD → Image. Each pass can only read the current frame from passes that ran *before* it.
 
-`shadertoy.config.json`:
+`config.json`:
 ```json
 {
   "passes": {
@@ -238,7 +238,7 @@ You can load image files and use them as textures.
 Put your image in the demo folder:
 ```
 demos/my-shader/
-├── shadertoy.config.json
+├── config.json
 ├── image.glsl
 └── photo.jpg
 ```
@@ -377,7 +377,7 @@ const int KEY_DOWN = 40;
 
 Draw with the mouse and have it persist across frames.
 
-`shadertoy.config.json`:
+`config.json`:
 ```json
 {
   "meta": {

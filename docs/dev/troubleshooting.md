@@ -174,7 +174,7 @@ Error: Failed to load texture: photo.jpg
 **Example structure**:
 ```
 demos/my-shader/
-├── shadertoy.config.json
+├── config.json
 ├── image.glsl
 └── photo.jpg  ← Must be here
 ```
@@ -507,7 +507,7 @@ Error: image.glsl not found for demo 'my-shader'
 
 **Solution**: Every demo must have an Image pass. Either:
 - Create `image.glsl` (simple demos)
-- Create `shadertoy.config.json` with Image pass definition
+- Create `config.json` with Image pass definition
 
 ---
 
