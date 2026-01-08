@@ -328,12 +328,12 @@ export class TabbedLayout implements BaseLayout {
           // Clear and load editor
           this.editorContainer.innerHTML = '';
           try {
-            const { createEditor } = await import('../editor/codemirror');
+            const { createEditor } = await import('../editor/prism-editor');
             this.editorInstance = createEditor(this.editorContainer, source, (newSource) => {
               this.modifiedSources.set(tab.passName, newSource);
             });
           } catch (err) {
-            console.error('Failed to load CodeMirror:', err);
+            console.error('Failed to load editor:', err);
             // Fallback to textarea
             const textarea = document.createElement('textarea');
             textarea.className = 'tabbed-fallback-textarea';

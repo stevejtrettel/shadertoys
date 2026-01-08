@@ -18,7 +18,6 @@ type ImageTab = { kind: 'image'; name: string; url: string };
 type Tab = CodeTab | ImageTab;
 
 interface EditorInstance {
-  view: any;
   getSource: () => string;
   setSource: (source: string) => void;
   destroy: () => void;
@@ -203,18 +202,18 @@ export class EditorPanel {
 
       // Create editor container
       const editorContainer = document.createElement('div');
-      editorContainer.className = 'editor-codemirror-container';
+      editorContainer.className = 'editor-prism-container';
       this.contentArea.appendChild(editorContainer);
 
-      // Dynamically load CodeMirror and create editor
+      // Dynamically load editor and create instance
       try {
-        const { createEditor } = await import('./codemirror');
+        const { createEditor } = await import('./prism-editor');
         this.editorInstance = createEditor(editorContainer, source, (newSource) => {
           // Track modifications
           this.modifiedSources.set(tab.passName, newSource);
         });
       } catch (err) {
-        console.error('Failed to load CodeMirror:', err);
+        console.error('Failed to load editor:', err);
         // Fallback to textarea
         const textarea = document.createElement('textarea');
         textarea.className = 'editor-fallback-textarea';

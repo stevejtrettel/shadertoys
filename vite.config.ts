@@ -13,7 +13,7 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
       // When editor is disabled, swap editor modules for empty stubs
       ...(editorEnabled ? {} : {
-        '../editor/codemirror': path.resolve(__dirname, './src/editor/stub.ts'),
+        '../editor/prism-editor': path.resolve(__dirname, './src/editor/stub.ts'),
         '../editor/EditorPanel': path.resolve(__dirname, './src/editor/stub.ts'),
       }),
     },
