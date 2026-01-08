@@ -100,9 +100,13 @@ const templates = {
 `,
 
   buffer: (index, total) => {
+    // Shadertoy execution order: BufferA → BufferB → BufferC → BufferD → Image
+    // - Self or later buffer = previous frame
+    // - Earlier buffer = current frame
     const channelComments = [];
     for (let i = 0; i < total; i++) {
-      const note = i === index ? ' (self, previous frame)' : '';
+      const isPrevious = i >= index;
+      const note = i === index ? ' (self, previous frame)' : isPrevious ? ' (previous frame)' : ' (current frame)';
       channelComments.push(`//   ${channelNames[i]} = ${bufferNames[i]}${note}`);
     }
 
@@ -206,14 +210,19 @@ if (bufferCount > 0) {
   });
 
   // Build config where all buffers are available to all passes
+  // Shadertoy execution order: BufferA → BufferB → BufferC → BufferD → Image
+  // - Self-reference (i === j): always previous frame (ping-pong)
+  // - Reading buffer that runs BEFORE you (j < i): current frame
+  // - Reading buffer that runs AFTER you (j > i): previous frame
   const passes = {};
 
   activeBuffers.forEach((bufName, i) => {
     const channels = {};
     activeBuffers.forEach((otherBuf, j) => {
+      const needsPrevious = j >= i; // self or runs after = previous frame
       channels[channelNames[j]] = {
         buffer: otherBuf,
-        ...(i === j ? { previous: true } : {}) // Self-reference uses previous frame
+        ...(needsPrevious ? { previous: true } : {})
       };
     });
     passes[bufName] = { channels };
