@@ -21,9 +21,6 @@ type CodeTab = { kind: 'code'; name: string; source: string };
 type ImageTab = { kind: 'image'; name: string; url: string };
 type Tab = CodeTab | ImageTab;
 
-// Lazy-loaded EditorPanel type
-type EditorPanelType = import('../editor/EditorPanel').EditorPanel;
-
 export class SplitLayout implements BaseLayout {
   private container: HTMLElement;
   private project: ShadertoyProject;
@@ -31,8 +28,8 @@ export class SplitLayout implements BaseLayout {
   private canvasContainer: HTMLElement;
   private codePanel: HTMLElement;
 
-  // Editor mode support
-  private editorPanel: EditorPanelType | null = null;
+  // Editor mode support (only used when __EDITOR_ENABLED__)
+  private editorPanel: any = null;
   private recompileHandler: RecompileHandler | null = null;
 
   constructor(opts: LayoutOptions) {
@@ -52,7 +49,8 @@ export class SplitLayout implements BaseLayout {
     this.codePanel.className = 'code-panel';
 
     // Build code panel based on editor mode
-    if (this.project.editor) {
+    // __EDITOR_ENABLED__ is a compile-time flag - when false, this entire branch is tree-shaken
+    if (__EDITOR_ENABLED__ && this.project.editor) {
       this.buildEditorPanel();
     } else {
       this.buildCodePanel();

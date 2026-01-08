@@ -8,6 +8,7 @@
 
 const { execSync, writeFileSync } = require('child_process');
 const fs = require('fs');
+const path = require('path');
 
 const demo = process.argv[2];
 
@@ -19,6 +20,19 @@ if (!demo) {
 }
 
 console.log(`Building demo: ${demo}`);
+
+// Check if demo has editor enabled
+let editorEnabled = false;
+const configPath = path.join('demos', demo, 'config.json');
+if (fs.existsSync(configPath)) {
+  try {
+    const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    editorEnabled = config.editor === true;
+  } catch (e) {
+    // Ignore parse errors, default to false
+  }
+}
+console.log(`Editor mode: ${editorEnabled ? 'enabled' : 'disabled'}`);
 
 try {
   // Generate tiny loader with literal paths for this demo only
@@ -58,7 +72,11 @@ export async function loadDemoProject() {
   console.log(`Building with Vite...`);
   execSync(`vite build`, {
     stdio: 'inherit',
-    env: { ...process.env, VITE_DEMO: demo }
+    env: {
+      ...process.env,
+      VITE_DEMO: demo,
+      VITE_EDITOR_ENABLED: editorEnabled ? 'true' : 'false'
+    }
   });
 
   console.log(`✓ Build complete for demo: ${demo}`);

@@ -22,9 +22,6 @@ type CodeTab = { kind: 'code'; name: string; passName: 'common' | PassName; sour
 type ImageTab = { kind: 'image'; name: string; url: string };
 type Tab = ShaderTab | CodeTab | ImageTab;
 
-// Lazy-loaded editor types
-type EditorInstanceType = import('../editor/codemirror').EditorInstance;
-
 export class TabbedLayout implements BaseLayout {
   private container: HTMLElement;
   private project: ShadertoyProject;
@@ -35,9 +32,9 @@ export class TabbedLayout implements BaseLayout {
   private imageViewer: HTMLElement;
   private copyButton: HTMLElement;
 
-  // Editor mode support
+  // Editor mode support (only used when __EDITOR_ENABLED__)
   private editorContainer: HTMLElement | null = null;
-  private editorInstance: EditorInstanceType | null = null;
+  private editorInstance: any = null;
   private recompileButton: HTMLElement | null = null;
   private errorDisplay: HTMLElement | null = null;
   private recompileHandler: RecompileHandler | null = null;
@@ -93,7 +90,8 @@ export class TabbedLayout implements BaseLayout {
     this.contentArea.appendChild(this.copyButton);
 
     // Create editor container (for editor mode)
-    if (this.project.editor) {
+    // __EDITOR_ENABLED__ is a compile-time flag - when false, this entire block is tree-shaken
+    if (__EDITOR_ENABLED__ && this.project.editor) {
       this.editorContainer = document.createElement('div');
       this.editorContainer.className = 'tabbed-editor-container';
       this.editorContainer.style.visibility = 'hidden';
@@ -162,7 +160,7 @@ export class TabbedLayout implements BaseLayout {
   }
 
   private saveCurrentEditorContent(): void {
-    if (this.editorInstance && this.project.editor) {
+    if (__EDITOR_ENABLED__ && this.editorInstance && this.project.editor) {
       const tab = this.tabs[this.activeTabIndex];
       if (tab.kind === 'code') {
         const source = this.editorInstance.getSource();
@@ -319,7 +317,7 @@ export class TabbedLayout implements BaseLayout {
         // Show shader canvas
         this.canvasContainer.style.visibility = 'visible';
       } else if (tab.kind === 'code') {
-        if (this.project.editor && this.editorContainer) {
+        if (__EDITOR_ENABLED__ && this.project.editor && this.editorContainer) {
           // Editor mode: use CodeMirror
           this.editorContainer.style.visibility = 'visible';
           if (this.recompileButton) this.recompileButton.style.visibility = 'visible';

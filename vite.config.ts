@@ -2,6 +2,8 @@ import { defineConfig } from 'vite';
 import path from 'path';
 import cssInjectedByJsPlugin from 'vite-plugin-css-injected-by-js';
 
+const editorEnabled = process.env.VITE_EDITOR_ENABLED === 'true';
+
 export default defineConfig({
   plugins: [
     cssInjectedByJsPlugin(),
@@ -9,7 +11,16 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      // When editor is disabled, swap editor modules for empty stubs
+      ...(editorEnabled ? {} : {
+        '../editor/codemirror': path.resolve(__dirname, './src/editor/stub.ts'),
+        '../editor/EditorPanel': path.resolve(__dirname, './src/editor/stub.ts'),
+      }),
     },
+  },
+  define: {
+    // Compile-time flag to enable/disable editor code
+    __EDITOR_ENABLED__: JSON.stringify(editorEnabled),
   },
   server: {
     port: 3000,
@@ -18,14 +29,9 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
+        // Single JS bundle
+        inlineDynamicImports: true,
         entryFileNames: 'assets/main.js',
-        chunkFileNames: 'assets/[name].js',
-        // Separate CodeMirror into its own chunk (only loaded when editor=true)
-        manualChunks(id) {
-          if (id.includes('codemirror') || id.includes('@lezer') || id.includes('src/editor/')) {
-            return 'editor';
-          }
-        },
         // Keep original names for images
         assetFileNames: (assetInfo) => {
           const name = assetInfo.name || '';
