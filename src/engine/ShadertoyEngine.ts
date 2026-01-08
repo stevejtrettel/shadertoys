@@ -619,21 +619,25 @@ void main() {
     const textureCallRegex = /texture\s*\(\s*(iChannel[0-3])\s*,\s*([^)]+)\)/g;
 
     return source.replace(textureCallRegex, (match, channel, coord) => {
-      // Heuristic: if coord contains indicators of 2D UV coordinates, leave it alone
-      // Otherwise, assume it's a 3D direction vector and wrap it
-      const is2DTexture =
-        coord.includes('fragCoord') ||   // Using fragCoord directly
-        coord.includes('/') ||            // Division (likely uv calculation)
-        /\.xy\s*$/.test(coord.trim()) ||  // Ends with .xy swizzle
-        /\.st\s*$/.test(coord.trim()) ||  // Ends with .st swizzle
-        /^vec2\s*\(/.test(coord.trim());  // Starts with vec2(
+      const trimmedCoord = coord.trim();
 
-      if (is2DTexture) {
-        // Leave 2D texture calls unchanged
-        return match;
-      } else {
+      // Heuristic: only convert to cubemap if it clearly looks like a 3D direction
+      // This is safer than assuming everything else is 3D
+      const is3DDirection =
+        /^vec3\s*\(/.test(trimmedCoord) ||           // Starts with vec3(
+        /^normalize\s*\(/.test(trimmedCoord) ||      // Starts with normalize(
+        /^reflect\s*\(/.test(trimmedCoord) ||        // Starts with reflect(
+        /^refract\s*\(/.test(trimmedCoord) ||        // Starts with refract(
+        /\.xyz\s*$/.test(trimmedCoord) ||            // Ends with .xyz swizzle
+        /\.xzy\s*$/.test(trimmedCoord) ||            // Ends with other 3-component swizzles
+        /\.zyx\s*$/.test(trimmedCoord);
+
+      if (is3DDirection) {
         // Wrap 3D direction with equirectangular conversion
         return `texture(${channel}, _st_dirToEquirect(${coord}))`;
+      } else {
+        // Assume 2D texture coordinates - leave unchanged
+        return match;
       }
     });
   }
