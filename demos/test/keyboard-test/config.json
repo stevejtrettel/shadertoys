@@ -1,6 +1,4 @@
 {
-  "title": "Keyboard Test",
-  "description": "Test keyboard input via keyboard texture. Press WASD, 1-5, and C to interact.",
   "layout": "centered",
   "controls": true,
 

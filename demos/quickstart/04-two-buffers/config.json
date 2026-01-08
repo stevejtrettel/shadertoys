@@ -1,6 +1,5 @@
 {
-  "title": "Wave Simulation",
-  "description": "Interactive wave equation. Click to create ripples!",
+  "layout": "centered",
   "controls": true,
 
   "BufferA": {

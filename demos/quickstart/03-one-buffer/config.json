@@ -1,4 +1,5 @@
 {
+  "layout": "centered",
   "controls": true,
 
   "BufferA": {

@@ -1,6 +1,5 @@
 {
-  "title": "Common Code",
-  "description": "Shared helper functions in common.glsl",
+  "layout": "split",
   "controls": true,
 
   "BufferA": {},
