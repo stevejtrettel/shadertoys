@@ -26,6 +26,67 @@ Open `http://localhost:3000` to see your shader.
 
 ---
 
+## Use as NPM Package
+
+Create your own shader collection in any project:
+
+```bash
+# Create a new project
+mkdir my-shaders && cd my-shaders
+
+# Install dependencies
+npm init -y
+npm install shadertoy-runner vite vite-plugin-css-injected-by-js
+
+# Initialize shader collection
+npx shadertoy init
+
+# Install and run
+npm install
+npx shadertoy dev example-gradient
+```
+
+### CLI Commands
+
+```bash
+shadertoy init              # Create shader collection structure
+shadertoy list              # List all shaders
+shadertoy dev <name>        # Run shader in development mode
+shadertoy build <name>      # Build shader for production
+shadertoy new <name>        # Create a new shader
+```
+
+### Project Structure
+
+After `shadertoy init`:
+
+```
+my-shaders/
+├── shaders/
+│   ├── example-gradient/
+│   │   ├── image.glsl      # Main shader
+│   │   └── config.json     # Optional config
+│   └── example-buffer/
+│       ├── image.glsl
+│       ├── bufferA.glsl    # Feedback buffer
+│       └── config.json
+├── main.ts
+├── vite.config.js
+└── package.json
+```
+
+### Adding a New Shader
+
+```bash
+shadertoy new my-cool-shader
+# Creates shaders/my-cool-shader/image.glsl
+
+shadertoy dev my-cool-shader
+# Opens browser with live reload
+```
+
+---
+
 ## Common Setups
 
 ### 1. Simple Shader (just image.glsl)
