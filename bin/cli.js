@@ -4,6 +4,7 @@
  * Shadertoy Runner CLI
  * Commands:
  *   shadertoy init                - Create a new shader collection
+ *   shadertoy new <name>          - Create a new shader
  *   shadertoy dev <shader-name>   - Start development server
  *   shadertoy build <shader-name> - Build for production
  *   shadertoy list                - List available shaders
@@ -27,12 +28,14 @@ Shadertoy Runner - Local GLSL shader development
 
 Usage:
   shadertoy init                Create a new shader collection
+  shadertoy new <name>          Create a new shader
   shadertoy dev <shader-name>   Start development server
   shadertoy build <shader-name> Build for production
   shadertoy list                List available shaders
 
 Examples:
   shadertoy init                Create a new project
+  shadertoy new my-shader       Create shaders/my-shader/
   shadertoy dev my-shader       Run shader in dev mode
   shadertoy build my-shader     Build shader to dist/
   shadertoy list                Show all shaders
@@ -67,7 +70,7 @@ function listShaders(cwd) {
   const shaders = entries.filter(e => e.isDirectory()).map(e => e.name);
 
   if (shaders.length === 0) {
-    console.log('No shaders found. Create a folder in shaders/ with image.glsl');
+    console.log('No shaders found. Run "shadertoy new <name>" to create one.');
     return;
   }
 
@@ -103,11 +106,72 @@ Next steps:
   npm install
   shadertoy list                    Show all shaders
   shadertoy dev example-gradient    Run a shader
+  shadertoy new my-shader           Create a new shader
+`);
+}
 
-To add a new shader:
-  1. Create shaders/my-shader/
-  2. Add image.glsl (required)
-  3. Add config.json, bufferA.glsl, common.glsl as needed
+function createNewShader(name) {
+  const cwd = process.cwd();
+  const shadersDir = path.join(cwd, 'shaders');
+
+  // Check shaders directory exists
+  if (!fs.existsSync(shadersDir)) {
+    console.error('Error: shaders/ directory not found');
+    console.error('Run "shadertoy init" first');
+    process.exit(1);
+  }
+
+  // Validate name
+  if (!name || !/^[a-zA-Z0-9_-]+$/.test(name)) {
+    console.error('Error: Invalid shader name');
+    console.error('Use only letters, numbers, hyphens, and underscores');
+    process.exit(1);
+  }
+
+  const shaderDir = path.join(shadersDir, name);
+
+  // Check if already exists
+  if (fs.existsSync(shaderDir)) {
+    console.error(`Error: Shader "${name}" already exists`);
+    process.exit(1);
+  }
+
+  // Create directory
+  fs.mkdirSync(shaderDir, { recursive: true });
+
+  // Create image.glsl with starter template
+  const imageGlsl = `void mainImage(out vec4 fragColor, in vec2 fragCoord)
+{
+    // Normalized pixel coordinates (0 to 1)
+    vec2 uv = fragCoord / iResolution.xy;
+
+    // Time varying pixel color
+    vec3 col = 0.5 + 0.5 * cos(iTime + uv.xyx + vec3(0, 2, 4));
+
+    // Output to screen
+    fragColor = vec4(col, 1.0);
+}
+`;
+
+  fs.writeFileSync(path.join(shaderDir, 'image.glsl'), imageGlsl);
+
+  // Create config.json
+  const config = {
+    layout: 'default',
+    controls: true
+  };
+
+  fs.writeFileSync(path.join(shaderDir, 'config.json'), JSON.stringify(config, null, 2) + '\n');
+
+  console.log(`
+✓ Created shader "${name}"
+
+Files:
+  shaders/${name}/image.glsl     Main shader
+  shaders/${name}/config.json    Configuration
+
+Run it:
+  shadertoy dev ${name}
 `);
 }
 
@@ -153,6 +217,17 @@ switch (command) {
   case 'init':
     init();
     break;
+
+  case 'new': {
+    const name = args[1];
+    if (!name) {
+      console.error('Error: Specify a shader name');
+      console.error('  shadertoy new <name>');
+      process.exit(1);
+    }
+    createNewShader(name);
+    break;
+  }
 
   case 'dev': {
     const shaderName = args[1];
