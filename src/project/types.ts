@@ -11,6 +11,14 @@
 
 export type PassName = 'Image' | 'BufferA' | 'BufferB' | 'BufferC' | 'BufferD';
 
+/**
+ * Theme mode for the shader viewer.
+ * - 'light': Always use light theme
+ * - 'dark': Always use dark theme
+ * - 'system': Follow OS preference (prefers-color-scheme)
+ */
+export type ThemeMode = 'light' | 'dark' | 'system';
+
 // =============================================================================
 // Channel Definitions (JSON Config Format)
 // =============================================================================
@@ -111,6 +119,7 @@ export interface ShadertoyConfig {
 
   // Settings
   layout?: 'fullscreen' | 'default' | 'split' | 'tabbed';
+  theme?: ThemeMode;
   controls?: boolean;
   common?: string;
 
@@ -212,6 +221,12 @@ export interface ShadertoyProject {
    * Layout mode for the shader viewer.
    */
   layout: 'fullscreen' | 'default' | 'split' | 'tabbed';
+
+  /**
+   * Theme mode for the shader viewer.
+   * Defaults to 'light' if not specified.
+   */
+  theme: ThemeMode;
 
   /**
    * Whether to show playback controls (play/pause, reset).

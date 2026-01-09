@@ -103,6 +103,8 @@ async function loadSinglePass(
   const title = configOverrides?.title ||
                 demoName.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 
+  const theme = configOverrides?.theme || 'light';
+
   return {
     root: demoPath,
     meta: {
@@ -111,6 +113,7 @@ async function loadSinglePass(
       description: configOverrides?.description || null,
     },
     layout,
+    theme,
     controls,
     commonSource: null,
     passes: {
@@ -257,12 +260,14 @@ async function loadWithConfig(
   const author = config.author || null;
   const description = config.description || null;
   const layout = config.layout || 'tabbed';
+  const theme = config.theme || 'light';
   const controls = config.controls ?? true;
 
   return {
     root: demoPath,
     meta: { title, author, description },
     layout,
+    theme,
     controls,
     commonSource,
     passes,

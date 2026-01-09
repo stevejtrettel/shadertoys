@@ -206,3 +206,79 @@
   margin-left: -16px;
   padding-left: 13px;
 }
+
+/* ===== WebGL Context Lost Overlay ===== */
+.context-lost-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.9);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+}
+
+.context-lost-content {
+  text-align: center;
+  color: white;
+  padding: 40px;
+}
+
+.context-lost-icon {
+  margin-bottom: 16px;
+  opacity: 0.8;
+}
+
+.context-lost-spinner {
+  width: 48px;
+  height: 48px;
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  border-top-color: white;
+  border-radius: 50%;
+  margin: 0 auto 16px;
+  animation: context-lost-spin 1s linear infinite;
+}
+
+@keyframes context-lost-spin {
+  to { transform: rotate(360deg); }
+}
+
+.context-lost-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.context-lost-message {
+  font-size: 14px;
+  opacity: 0.7;
+  margin-bottom: 20px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.context-lost-reload {
+  background: white;
+  color: #000;
+  border: none;
+  padding: 10px 24px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.context-lost-reload:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
+}
+
+.context-lost-reload:active {
+  transform: scale(0.98);
+}

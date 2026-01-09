@@ -15,8 +15,8 @@
   position: relative;
   width: 800px;
   height: 600px;
-  background: #000;
+  background: var(--bg-canvas);
   border-radius: 8px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25), 0 5px 15px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-lg), var(--shadow-sm);
   overflow: hidden;
 }

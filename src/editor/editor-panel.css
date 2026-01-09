@@ -6,8 +6,8 @@
 .editor-toolbar {
   display: flex;
   align-items: center;
-  background: #f8f8f8;
-  border-bottom: 1px solid #e0e0e0;
+  background: var(--tab-bg);
+  border-bottom: 1px solid var(--border-primary);
   padding-right: 8px;
 }
 
@@ -21,7 +21,7 @@
 .editor-tab-button {
   background: transparent;
   border: none;
-  color: #666;
+  color: var(--tab-text);
   padding: 10px 16px;
   cursor: pointer;
   font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
@@ -32,21 +32,21 @@
 }
 
 .editor-tab-button:hover {
-  color: #333;
+  color: var(--tab-text-hover);
 }
 
 .editor-tab-button.active {
-  color: #000;
-  border-bottom-color: #4a9eff;
+  color: var(--tab-text-active);
+  border-bottom-color: var(--tab-border-active);
 }
 
 .editor-tab-button.image-tab {
-  color: #7c4dff;
+  color: var(--accent-secondary);
 }
 
 .editor-tab-button.image-tab.active {
-  color: #7c4dff;
-  border-bottom-color: #7c4dff;
+  color: var(--accent-secondary);
+  border-bottom-color: var(--accent-secondary);
 }
 
 /* Copy button (icon only) */
@@ -54,9 +54,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: transparent;
-  border: 1px solid #ccc;
-  color: #666;
+  background: var(--button-bg);
+  border: 1px solid var(--button-border);
+  color: var(--button-text);
   width: 32px;
   height: 32px;
   border-radius: 4px;
@@ -67,19 +67,19 @@
 }
 
 .editor-copy-button:hover {
-  background: #f0f0f0;
-  border-color: #999;
-  color: #333;
+  background: var(--button-bg-hover);
+  border-color: var(--button-border-hover);
+  color: var(--button-text-hover);
 }
 
 .editor-copy-button:active {
-  background: #e0e0e0;
+  background: var(--button-bg-hover);
 }
 
 .editor-copy-button.copied {
-  background: #e8f5e9;
-  border-color: #4caf50;
-  color: #4caf50;
+  background: var(--success-bg);
+  border-color: var(--success-border);
+  color: var(--success-text);
 }
 
 .editor-copy-button svg {
@@ -91,7 +91,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  background: #4a9eff;
+  background: var(--accent-primary);
   border: none;
   color: #fff;
   padding: 6px 12px;
@@ -105,11 +105,11 @@
 }
 
 .editor-recompile-button:hover {
-  background: #3a8eef;
+  background: var(--accent-primary-hover);
 }
 
 .editor-recompile-button:active {
-  background: #2a7edf;
+  background: var(--accent-primary-active);
 }
 
 .editor-recompile-button svg {
@@ -121,7 +121,7 @@
   flex: 1;
   overflow: hidden;
   position: relative;
-  background: #ffffff;
+  background: var(--code-bg);
 }
 
 .editor-prism-container {
@@ -133,8 +133,8 @@
 .editor-fallback-textarea {
   width: 100%;
   height: 100%;
-  background: #ffffff;
-  color: #000;
+  background: var(--code-bg);
+  color: var(--code-text);
   border: none;
   padding: 12px;
   font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
@@ -149,7 +149,7 @@
   align-items: center;
   justify-content: center;
   height: 100%;
-  background: #f5f5f5;
+  background: var(--image-viewer-bg);
   padding: 20px;
 }
 
@@ -158,18 +158,18 @@
   max-height: 100%;
   object-fit: contain;
   border-radius: 4px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-sm);
 }
 
 /* Error display */
 .editor-error-display {
-  background: #fff0f0;
-  color: #c00;
+  background: var(--error-bg);
+  color: var(--error-text);
   padding: 10px 14px;
   font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
   font-size: 12px;
   white-space: pre-wrap;
   overflow: auto;
   max-height: 120px;
-  border-top: 1px solid #fcc;
+  border-top: 1px solid var(--error-border);
 }

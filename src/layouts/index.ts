@@ -19,6 +19,17 @@ import { DefaultLayout } from './DefaultLayout';
 import { SplitLayout } from './SplitLayout';
 import { TabbedLayout } from './TabbedLayout';
 import { BaseLayout, LayoutOptions, LayoutMode } from './types';
+import { ThemeMode } from '../project/types';
+
+/**
+ * Apply theme to the document.
+ * Sets the data-theme attribute on the html element.
+ *
+ * @param theme - Theme mode to apply ('light', 'dark', or 'system')
+ */
+export function applyTheme(theme: ThemeMode): void {
+  document.documentElement.setAttribute('data-theme', theme);
+}
 
 /**
  * Factory function to create the appropriate layout based on mode.
@@ -31,6 +42,9 @@ export function createLayout(
   mode: LayoutMode,
   options: LayoutOptions
 ): BaseLayout {
+  // Apply theme from project configuration
+  applyTheme(options.project.theme);
+
   switch (mode) {
     case 'fullscreen':
       return new FullscreenLayout(options);
