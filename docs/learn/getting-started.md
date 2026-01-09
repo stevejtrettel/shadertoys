@@ -12,15 +12,15 @@ Think of it like this: you write a function that says "if you give me an (x, y) 
 
 Let's create a simple animated gradient!
 
-### Step 1: Create Your Shader Folder
+### Step 1: Create Your Shader
 
 ```bash
-mkdir demos/my-first-shader
+shader new my-first-shader
 ```
 
 ### Step 2: Write Your Shader Code
 
-Create a file `demos/my-first-shader/image.glsl`:
+Edit `shaders/my-first-shader/image.glsl`:
 
 ```glsl
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
@@ -38,7 +38,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 ### Step 3: Run It!
 
 ```bash
-npm run dev:demo my-first-shader
+shader dev my-first-shader
 ```
 
 Open `http://localhost:3000` in your browser. You should see a gradient!
