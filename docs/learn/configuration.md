@@ -58,7 +58,7 @@ This is the absolute minimum - just an Image pass with no special configuration.
     "author": "Your Name",
     "description": "Does cool things with colors"
   },
-  "layout": "centered",
+  "layout": "default",
   "controls": true,
   "passes": {
     "BufferA": {
@@ -108,12 +108,12 @@ All fields are optional. If omitted:
 Controls how the shader is displayed.
 
 ```json
-"layout": "centered"
+"layout": "default"
 ```
 
 **Options**:
 - `"fullscreen"` - Canvas fills entire screen
-- `"centered"` (default) - Canvas is centered with max-width
+- `"default"` (default) - Canvas is centered with max-width
 - `"split"` - Split view with shader code on the right
 - `"tabbed"` - Tabs to switch between viewing each pass's code
 
@@ -321,7 +321,7 @@ See [Buffers and Channels - Keyboard Input](buffers-and-channels.md#keyboard-inp
     "title": "Interactive Photo Effect",
     "author": "Me"
   },
-  "layout": "centered",
+  "layout": "default",
   "controls": true,
   "passes": {
     "Image": {

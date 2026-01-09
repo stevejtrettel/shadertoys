@@ -42,7 +42,7 @@ export class TabbedLayout implements BaseLayout {
     this.root = document.createElement('div');
     this.root.className = 'layout-tabbed';
 
-    // Create wrapper to constrain size (matches centered layout)
+    // Create wrapper to constrain size (matches default layout)
     const wrapper = document.createElement('div');
     wrapper.className = 'tabbed-wrapper';
 

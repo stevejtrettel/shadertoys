@@ -110,7 +110,7 @@ export interface ShadertoyConfig {
   description?: string;
 
   // Settings
-  layout?: 'fullscreen' | 'centered' | 'split' | 'tabbed';
+  layout?: 'fullscreen' | 'default' | 'split' | 'tabbed';
   controls?: boolean;
   common?: string;
 
@@ -211,7 +211,7 @@ export interface ShadertoyProject {
   /**
    * Layout mode for the shader viewer.
    */
-  layout: 'fullscreen' | 'centered' | 'split' | 'tabbed';
+  layout: 'fullscreen' | 'default' | 'split' | 'tabbed';
 
   /**
    * Whether to show playback controls (play/pause, reset).

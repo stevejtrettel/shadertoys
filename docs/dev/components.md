@@ -401,7 +401,7 @@ export function createLayout(
 ): BaseLayout {
   switch (mode) {
     case 'fullscreen': return new FullscreenLayout(options);
-    case 'centered': return new CenteredLayout(options);
+    case 'default': return new DefaultLayout(options);
     case 'split': return new SplitLayout(options);
   }
 }
@@ -433,13 +433,13 @@ Each layout:
 3. Provides canvas container
 4. Handles its own cleanup
 
-**Example: CenteredLayout**
+**Example: DefaultLayout**
 
 ```typescript
-import './centered.css';
+import './default.css';
 import { BaseLayout, LayoutOptions } from './types';
 
-export class CenteredLayout implements BaseLayout {
+export class DefaultLayout implements BaseLayout {
   private root: HTMLElement;
   private canvasContainer: HTMLElement;
 
@@ -448,7 +448,7 @@ export class CenteredLayout implements BaseLayout {
 
     // Create DOM
     this.root = document.createElement('div');
-    this.root.className = 'layout-centered';
+    this.root.className = 'layout-default';
 
     this.canvasContainer = document.createElement('div');
     this.canvasContainer.className = 'canvas-container';
@@ -472,7 +472,7 @@ export class CenteredLayout implements BaseLayout {
 Each layout imports its CSS:
 
 ```typescript
-import './centered.css';
+import './default.css';
 ```
 
 Vite processes this and bundles the CSS. In production, all CSS is extracted to a single file.
@@ -516,7 +516,7 @@ export class MyLayout implements BaseLayout {
 // src/layouts/index.ts
 import { MyLayout } from './MyLayout';
 
-export type LayoutMode = 'fullscreen' | 'centered' | 'split' | 'my';
+export type LayoutMode = 'fullscreen' | 'default' | 'split' | 'my';
 
 export function createLayout(
   mode: LayoutMode,

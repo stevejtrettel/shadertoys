@@ -10,7 +10,7 @@ A lightweight, Shadertoy-compatible GLSL shader playground built for teaching an
 - **Texture Support** - Load external images with configurable filtering and wrapping
 - **Keyboard Input** - Full keyboard state via Shadertoy-compatible texture
 - **Playback Controls** - Play/pause, reset, and screenshot capture
-- **Multiple Layout Modes** - Fullscreen, centered, split-view, or tabbed code display
+- **Multiple Layout Modes** - Fullscreen, default, split-view, or tabbed code display
 - **Zero Runtime Dependencies** - Pure WebGL2
 - **Tiny Builds** - ~26KB JS (gzipped)
 
@@ -276,7 +276,7 @@ Control how the shader is displayed with the `layout` option in `config.json`:
 | Layout | Description | Best for |
 |--------|-------------|----------|
 | `fullscreen` | Canvas fills entire viewport | Immersive art, games, installations |
-| `centered` | Canvas centered with max-width | General viewing (default without config) |
+| `default` | Canvas centered with max-width | General viewing (default without config) |
 | `tabbed` | Tabs to switch between shader and code | Exploring/debugging |
 | `split` | Side-by-side: shader left, code right | Teaching, presentations, tutorials |
 
@@ -285,9 +285,9 @@ Control how the shader is displayed with the `layout` option in `config.json`:
 { "layout": "fullscreen" }
 ```
 
-**`centered`** - Clean centered view with rounded corners:
+**`default`** - Clean centered view with rounded corners:
 ```json
-{ "layout": "centered" }
+{ "layout": "default" }
 ```
 
 **`tabbed`** - Click tabs to switch between live shader and source code:

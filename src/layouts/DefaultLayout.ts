@@ -1,15 +1,15 @@
 /**
- * Centered Layout
+ * Default Layout
  *
  * Centered canvas with rounded corners and drop shadow.
  * Default layout mode for a polished presentation.
  */
 
-import './centered.css';
+import './default.css';
 
 import { BaseLayout, LayoutOptions } from './types';
 
-export class CenteredLayout implements BaseLayout {
+export class DefaultLayout implements BaseLayout {
   private container: HTMLElement;
   private root: HTMLElement;
   private canvasContainer: HTMLElement;
@@ -19,7 +19,7 @@ export class CenteredLayout implements BaseLayout {
 
     // Create root layout container
     this.root = document.createElement('div');
-    this.root.className = 'layout-centered';
+    this.root.className = 'layout-default';
 
     // Create canvas container
     this.canvasContainer = document.createElement('div');

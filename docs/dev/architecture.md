@@ -103,7 +103,7 @@ Each layer has a specific responsibility and communicates through well-defined i
 
 **Key Files**:
 - `FullscreenLayout.ts` - Canvas fills screen
-- `CenteredLayout.ts` - Canvas centered with max-width
+- `DefaultLayout.ts` - Canvas centered with max-width
 - `SplitLayout.ts` - Canvas + code viewer side-by-side
 - `index.ts` - Factory function
 - `types.ts` - BaseLayout interface
