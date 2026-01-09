@@ -1,7 +1,7 @@
 {
-  "name": "shadertoy-system",
+  "name": "shader-sandbox",
   "version": "0.1.0",
-  "description": "Local Shadertoy-style GLSL shader development environment with live editing",
+  "description": "Local Shadertoy-compatible GLSL shader development environment with live editing",
   "type": "module",
   "main": "./dist-lib/index.js",
   "types": "./dist-lib/index.d.ts",
@@ -12,7 +12,7 @@
     }
   },
   "bin": {
-    "shadertoy": "./bin/cli.js"
+    "shader": "./bin/cli.js"
   },
   "files": [
     "bin",

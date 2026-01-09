@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 
 /**
- * Shadertoy Runner CLI
+ * Shader Sandbox CLI
  * Commands:
- *   shadertoy create <name>       - Create a new shader project (recommended)
- *   shadertoy init                - Initialize shaders in current directory
- *   shadertoy new <name>          - Create a new shader
- *   shadertoy dev <shader-name>   - Start development server
- *   shadertoy build <shader-name> - Build for production
- *   shadertoy list                - List available shaders
+ *   shader create <name>       - Create a new shader project (recommended)
+ *   shader init                - Initialize shaders in current directory
+ *   shader new <name>          - Create a new shader
+ *   shader dev <shader-name>   - Start development server
+ *   shader build <shader-name> - Build for production
+ *   shader list                - List available shaders
  */
 
 import { spawn } from 'child_process';
@@ -25,22 +25,22 @@ const command = args[0];
 
 function printUsage() {
   console.log(`
-Shadertoy Runner - Local GLSL shader development
+Shader Sandbox - Local GLSL shader development
 
 Usage:
-  shadertoy create <name>       Create a new shader project (recommended)
-  shadertoy init                Initialize shaders in current directory
-  shadertoy new <name>          Create a new shader
-  shadertoy dev <shader-name>   Start development server
-  shadertoy build <shader-name> Build for production
-  shadertoy list                List available shaders
+  shader create <name>       Create a new shader project (recommended)
+  shader init                Initialize shaders in current directory
+  shader new <name>          Create a new shader
+  shader dev <shader-name>   Start development server
+  shader build <shader-name> Build for production
+  shader list                List available shaders
 
 Examples:
-  shadertoy create my-shaders   Create a new project with everything set up
-  shadertoy new my-shader       Create shaders/my-shader/
-  shadertoy dev my-shader       Run shader in dev mode
-  shadertoy build my-shader     Build shader to dist/
-  shadertoy list                Show all shaders
+  shader create my-shaders   Create a new project with everything set up
+  shader new my-shader       Create shaders/my-shader/
+  shader dev my-shader       Run shader in dev mode
+  shader build my-shader     Build shader to dist/
+  shader list                Show all shaders
 `);
 }
 
@@ -67,7 +67,7 @@ function listShaders(cwd) {
   const shadersDir = path.join(cwd, 'shaders');
   if (!fs.existsSync(shadersDir)) {
     console.error('Error: shaders/ directory not found');
-    console.error('Run "shadertoy init" first');
+    console.error('Run "shader init" first');
     process.exit(1);
   }
 
@@ -75,7 +75,7 @@ function listShaders(cwd) {
   const shaders = entries.filter(e => e.isDirectory()).map(e => e.name);
 
   if (shaders.length === 0) {
-    console.log('No shaders found. Run "shadertoy new <name>" to create one.');
+    console.log('No shaders found. Run "shader new <name>" to create one.');
     return;
   }
 
@@ -111,12 +111,12 @@ async function create(projectName) {
     version: '1.0.0',
     type: 'module',
     scripts: {
-      dev: 'shadertoy dev',
-      build: 'shadertoy build',
-      list: 'shadertoy list'
+      dev: 'shader dev',
+      build: 'shader build',
+      list: 'shader list'
     },
     dependencies: {
-      'shadertoy-system': '^0.1.0'
+      'shader-sandbox': '^0.1.0'
     }
   };
 
@@ -157,9 +157,9 @@ async function create(projectName) {
 
 Next steps:
   cd ${projectName}
-  shadertoy dev example-gradient    Run a shader
-  shadertoy list                    Show all shaders
-  shadertoy new my-shader           Create a new shader
+  shader dev example-gradient    Run a shader
+  shader list                    Show all shaders
+  shader new my-shader           Create a new shader
 `);
   });
 }
@@ -189,9 +189,9 @@ Structure:
     example-buffer/      BufferA feedback example
 
 Next steps:
-  shadertoy list                    Show all shaders
-  shadertoy dev example-gradient    Run a shader
-  shadertoy new my-shader           Create a new shader
+  shader list                    Show all shaders
+  shader dev example-gradient    Run a shader
+  shader new my-shader           Create a new shader
 `);
 }
 
@@ -202,7 +202,7 @@ function createNewShader(name) {
   // Check shaders directory exists
   if (!fs.existsSync(shadersDir)) {
     console.error('Error: shaders/ directory not found');
-    console.error('Run "shadertoy init" first');
+    console.error('Run "shader init" first');
     process.exit(1);
   }
 
@@ -256,7 +256,7 @@ Files:
   shaders/${name}/config.json    Configuration
 
 Run it:
-  shadertoy dev ${name}
+  shader dev ${name}
 `);
 }
 
@@ -266,7 +266,7 @@ function runVite(viteArgs, shaderName) {
   // Check for vite.config.js
   if (!fs.existsSync(path.join(cwd, 'vite.config.js'))) {
     console.error('Error: vite.config.js not found');
-    console.error('Run "shadertoy init" first');
+    console.error('Run "shader init" first');
     process.exit(1);
   }
 
@@ -303,7 +303,7 @@ switch (command) {
     const name = args[1];
     if (!name) {
       console.error('Error: Specify a project name');
-      console.error('  shadertoy create <name>');
+      console.error('  shader create <name>');
       process.exit(1);
     }
     create(name);
@@ -318,7 +318,7 @@ switch (command) {
     const name = args[1];
     if (!name) {
       console.error('Error: Specify a shader name');
-      console.error('  shadertoy new <name>');
+      console.error('  shader new <name>');
       process.exit(1);
     }
     createNewShader(name);
@@ -329,8 +329,8 @@ switch (command) {
     const shaderName = args[1];
     if (!shaderName) {
       console.error('Error: Specify a shader name');
-      console.error('  shadertoy dev <shader-name>');
-      console.error('  shadertoy list');
+      console.error('  shader dev <shader-name>');
+      console.error('  shader list');
       process.exit(1);
     }
 
@@ -338,7 +338,7 @@ switch (command) {
     const shaderPath = path.join(cwd, 'shaders', shaderName);
     if (!fs.existsSync(shaderPath)) {
       console.error(`Error: Shader "${shaderName}" not found`);
-      console.error('Run "shadertoy list" to see available shaders');
+      console.error('Run "shader list" to see available shaders');
       process.exit(1);
     }
 
@@ -351,7 +351,7 @@ switch (command) {
     const shaderName = args[1];
     if (!shaderName) {
       console.error('Error: Specify a shader name');
-      console.error('  shadertoy build <shader-name>');
+      console.error('  shader build <shader-name>');
       process.exit(1);
     }
 

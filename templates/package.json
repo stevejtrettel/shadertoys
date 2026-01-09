@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "list": "shadertoy list"
+    "list": "shader list"
   },
   "dependencies": {
-    "shadertoy-system": "^0.1.0"
+    "shader-sandbox": "^0.1.0"
   }
 }

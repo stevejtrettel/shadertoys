@@ -1,4 +1,4 @@
-# Shadertoy Runner
+# Shader Sandbox
 
 A lightweight, Shadertoy-compatible GLSL shader playground built for teaching and learning shader programming.
 
@@ -32,11 +32,11 @@ Create your own shader collection:
 
 ```bash
 # Create a new project (does everything in one step)
-npx shadertoy-system create my-shaders
+npx shader-sandbox create my-shaders
 
 # Run a shader
 cd my-shaders
-shadertoy dev example-gradient
+shader dev example-gradient
 ```
 
 That's it! The `create` command sets up the directory, installs dependencies, and creates example shaders.
@@ -44,17 +44,17 @@ That's it! The `create` command sets up the directory, installs dependencies, an
 ### CLI Commands
 
 ```bash
-shadertoy create <name>     # Create a new shader project (recommended)
-shadertoy init              # Initialize shaders in current directory
-shadertoy list              # List all shaders
-shadertoy dev <name>        # Run shader in development mode
-shadertoy build <name>      # Build shader for production
-shadertoy new <name>        # Create a new shader
+shader create <name>     # Create a new shader project (recommended)
+shader init              # Initialize shaders in current directory
+shader list              # List all shaders
+shader dev <name>        # Run shader in development mode
+shader build <name>      # Build shader for production
+shader new <name>        # Create a new shader
 ```
 
 ### Project Structure
 
-After `shadertoy create`:
+After `shader create`:
 
 ```
 my-shaders/
@@ -74,10 +74,10 @@ my-shaders/
 ### Adding a New Shader
 
 ```bash
-shadertoy new my-cool-shader
+shader new my-cool-shader
 # Creates shaders/my-cool-shader/image.glsl
 
-shadertoy dev my-cool-shader
+shader dev my-cool-shader
 # Opens browser with live reload
 ```
 
