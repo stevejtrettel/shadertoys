@@ -56,12 +56,14 @@ function parseChannelValue(value: ChannelValue): ChannelJSONObject | null {
 }
 
 export async function loadDemo(
-  demoName: string,
+  demoPath: string,
   glslFiles: Record<string, () => Promise<string>>,
   jsonFiles: Record<string, () => Promise<ShadertoyConfig>>,
   imageFiles: Record<string, () => Promise<string>>
 ): Promise<ShadertoyProject> {
-  const configPath = `/demos/${demoName}/config.json`;
+  // Normalize path - handle both "./shaders/name" and "shaders/name" formats
+  const normalizedPath = demoPath.startsWith('./') ? demoPath : `./${demoPath}`;
+  const configPath = `${normalizedPath}/config.json`;
   const hasConfig = configPath in jsonFiles;
 
   if (hasConfig) {
@@ -70,37 +72,39 @@ export async function loadDemo(
                            config.BufferC || config.BufferD;
 
     if (hasPassConfigs) {
-      return loadWithConfig(demoName, config, glslFiles, imageFiles);
+      return loadWithConfig(normalizedPath, config, glslFiles, imageFiles);
     } else {
       // Config with only settings (layout, controls, etc.) but no passes
-      return loadSinglePass(demoName, glslFiles, config);
+      return loadSinglePass(normalizedPath, glslFiles, config);
     }
   } else {
-    return loadSinglePass(demoName, glslFiles);
+    return loadSinglePass(normalizedPath, glslFiles);
   }
 }
 
 async function loadSinglePass(
-  demoName: string,
+  demoPath: string,
   glslFiles: Record<string, () => Promise<string>>,
   configOverrides?: Partial<ShadertoyConfig>
 ): Promise<ShadertoyProject> {
-  const imagePath = `/demos/${demoName}/image.glsl`;
+  const imagePath = `${demoPath}/image.glsl`;
   const actualImagePath = findFileCaseInsensitive(glslFiles, imagePath);
 
   if (!actualImagePath) {
-    throw new Error(`Demo '${demoName}' not found. Expected ${imagePath}`);
+    throw new Error(`Demo '${demoPath}' not found. Expected ${imagePath}`);
   }
 
   const imageSource = await glslFiles[actualImagePath]();
 
   const layout = configOverrides?.layout || 'tabbed';
   const controls = configOverrides?.controls ?? true;
+  // Extract name from path for title (e.g., "./shaders/example-gradient" -> "example-gradient")
+  const demoName = demoPath.split('/').pop() || demoPath;
   const title = configOverrides?.title ||
                 demoName.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 
   return {
-    root: `/demos/${demoName}`,
+    root: demoPath,
     meta: {
       title,
       author: configOverrides?.author || null,
@@ -126,7 +130,7 @@ async function loadSinglePass(
 }
 
 async function loadWithConfig(
-  demoName: string,
+  demoPath: string,
   config: ShadertoyConfig,
   glslFiles: Record<string, () => Promise<string>>,
   imageFiles: Record<string, () => Promise<string>>
@@ -144,13 +148,13 @@ async function loadWithConfig(
   // Load common source
   let commonSource: string | null = null;
   if (config.common) {
-    const commonPath = `/demos/${demoName}/${config.common}`;
+    const commonPath = `${demoPath}/${config.common}`;
     const actualCommonPath = findFileCaseInsensitive(glslFiles, commonPath);
     if (actualCommonPath) {
       commonSource = await glslFiles[actualCommonPath]();
     }
   } else {
-    const defaultCommonPath = `/demos/${demoName}/common.glsl`;
+    const defaultCommonPath = `${demoPath}/common.glsl`;
     const actualCommonPath = findFileCaseInsensitive(glslFiles, defaultCommonPath);
     if (actualCommonPath) {
       commonSource = await glslFiles[actualCommonPath]();
@@ -181,7 +185,7 @@ async function loadWithConfig(
   const texturePathToName = new Map<string, string>();
 
   for (const texturePath of texturePathsSet) {
-    const fullPath = `/demos/${demoName}/${texturePath.replace(/^\.\//, '')}`;
+    const fullPath = `${demoPath}/${texturePath.replace(/^\.\//, '')}`;
     const actualPath = findFileCaseInsensitive(imageFiles, fullPath);
 
     if (!actualPath) {
@@ -219,7 +223,7 @@ async function loadWithConfig(
     };
 
     const sourceFile = passConfig.source || defaultNames[passName];
-    const sourcePath = `/demos/${demoName}/${sourceFile}`;
+    const sourcePath = `${demoPath}/${sourceFile}`;
     const actualSourcePath = findFileCaseInsensitive(glslFiles, sourcePath);
 
     if (!actualSourcePath) {
@@ -243,9 +247,11 @@ async function loadWithConfig(
   }
 
   if (!passes.Image) {
-    throw new Error(`Demo '${demoName}' must have an Image pass`);
+    throw new Error(`Demo '${demoPath}' must have an Image pass`);
   }
 
+  // Extract name from path for title (e.g., "./shaders/example-gradient" -> "example-gradient")
+  const demoName = demoPath.split('/').pop() || demoPath;
   const title = config.title ||
                 demoName.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
   const author = config.author || null;
@@ -254,7 +260,7 @@ async function loadWithConfig(
   const controls = config.controls ?? true;
 
   return {
-    root: `/demos/${demoName}`,
+    root: demoPath,
     meta: { title, author, description },
     layout,
     controls,
