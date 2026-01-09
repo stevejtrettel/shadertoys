@@ -2,7 +2,7 @@
   "title": "Full Config Example",
   "author": "Your Name",
   "description": "Demonstrates all config options: multi-buffer with bloom effect. Click and drag to paint!",
-  "layout": "centered",
+  "layout": "default",
   "controls": true,
 
   "BufferA": {

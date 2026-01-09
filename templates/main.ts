@@ -1,13 +1,31 @@
 /**
- * Shader Playground Entry Point
+ * Shader Collection Entry Point
+ *
+ * Loads a shader from the shaders/ folder based on the SHADER_NAME env variable
+ * or URL parameter (?shader=name)
  */
 
 import { App, createLayout, loadDemo } from 'shadertoy-runner';
 import type { ShadertoyConfig, PassName } from 'shadertoy-runner';
 import type { RecompileResult } from 'shadertoy-runner';
 
+// Get shader name from env (set by dev script) or URL param
+function getShaderName(): string {
+  // Check URL parameter first
+  const urlParams = new URLSearchParams(window.location.search);
+  const urlShader = urlParams.get('shader');
+  if (urlShader) return urlShader;
+
+  // Fall back to env variable (set by vite define)
+  // @ts-ignore
+  return typeof __SHADER_NAME__ !== 'undefined' ? __SHADER_NAME__ : 'example-gradient';
+}
+
 async function main() {
   try {
+    const shaderName = getShaderName();
+    console.log(`Loading shader: ${shaderName}`);
+
     // Load shaders using Vite's import.meta.glob
     const glslFiles = import.meta.glob<string>('./shaders/**/*.glsl', {
       query: '?raw',
@@ -23,8 +41,8 @@ async function main() {
       import: 'default',
     });
 
-    // Load the demo project
-    const project = await loadDemo('shaders', glslFiles, jsonFiles, imageFiles);
+    // Load the specific shader project
+    const project = await loadDemo(`shaders/${shaderName}`, glslFiles, jsonFiles, imageFiles);
 
     console.log(`Loaded project: ${project.meta.title}`);
 
@@ -78,7 +96,7 @@ async function main() {
     // Start if no errors
     if (!app.hasErrors()) {
       app.start();
-      console.log('Shader playground started!');
+      console.log('Shader started!');
     } else {
       console.warn('Not started due to shader compilation errors');
     }

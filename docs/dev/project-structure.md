@@ -209,10 +209,10 @@ src/layouts/
 ├── index.ts           # Factory and exports
 ├── types.ts           # Layout interface
 ├── FullscreenLayout.ts
-├── CenteredLayout.ts
+├── DefaultLayout.ts
 ├── SplitLayout.ts
 ├── fullscreen.css
-├── centered.css
+├── default.css
 └── split.css
 ```
 
@@ -221,7 +221,7 @@ src/layouts/
   - `getCanvasContainer()` - Returns HTMLElement for canvas
   - `dispose()` - Clean up
 - `LayoutOptions` - Layout constructor options
-- `LayoutMode` - `'fullscreen' | 'centered' | 'split'`
+- `LayoutMode` - `'fullscreen' | 'default' | 'split'`
 
 **`index.ts`**
 - `createLayout(mode, options)` - Factory function
@@ -230,9 +230,9 @@ src/layouts/
 - Canvas fills entire screen
 - Imports `fullscreen.css`
 
-**`CenteredLayout.ts`**
+**`DefaultLayout.ts`**
 - Canvas centered with max-width and shadow
-- Imports `centered.css`
+- Imports `default.css`
 
 **`SplitLayout.ts`**
 - Split view with code panel on right
