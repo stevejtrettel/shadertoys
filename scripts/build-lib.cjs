@@ -53,18 +53,25 @@ try {
   // Copy CSS files
   console.log('Copying CSS files...');
   const cssFiles = [
+    'src/app/app.css',
     'src/styles/base.css',
+    'src/styles/embed.css',
+    'src/layouts/default.css',
+    'src/layouts/fullscreen.css',
     'src/layouts/split.css',
     'src/layouts/tabbed.css',
     'src/controls/controls.css',
+    'src/editor/editor-panel.css',
     'src/editor/prism-editor.css'
   ];
 
+  const appDir = path.join(DIST_LIB, 'app');
   const stylesDir = path.join(DIST_LIB, 'styles');
   const layoutsDir = path.join(DIST_LIB, 'layouts');
   const controlsDir = path.join(DIST_LIB, 'controls');
   const editorDir = path.join(DIST_LIB, 'editor');
 
+  fs.mkdirSync(appDir, { recursive: true });
   fs.mkdirSync(stylesDir, { recursive: true });
   fs.mkdirSync(layoutsDir, { recursive: true });
   fs.mkdirSync(controlsDir, { recursive: true });
