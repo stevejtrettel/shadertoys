@@ -173,7 +173,7 @@ Error: Failed to load texture: photo.jpg
 
 **Example structure**:
 ```
-demos/my-shader/
+shaders/my-shader/
 ├── config.json
 ├── image.glsl
 └── photo.jpg  ← Must be here
@@ -450,7 +450,7 @@ Error: EXT_color_buffer_float not supported
 **Symptom**: Changes to files don't update in browser.
 
 **Solution**:
-1. Check dev server is running (`npm run dev`)
+1. Check dev server is running (`shader dev <name>`)
 2. Hard refresh: Ctrl+Shift+R (Windows/Linux) or Cmd+Shift+R (Mac)
 3. Check console for errors
 
@@ -489,11 +489,11 @@ Error: Demo 'my-shader' not found
 **Cause**: Folder doesn't exist or demo name is wrong.
 
 **Solution**:
-1. Check folder exists: `demos/my-shader/`
+1. Check folder exists: `shaders/my-shader/`
 2. Check spelling matches exactly
-3. Check npm command has correct name:
+3. Check command has correct name:
 ```bash
-npm run dev:demo my-shader  # Must match folder name
+shader dev my-shader  # Must match folder name
 ```
 
 ### "No image.glsl found"

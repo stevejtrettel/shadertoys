@@ -15,7 +15,7 @@ Every shader project needs either:
 ### Simple Single-Pass Shader
 
 ```
-demos/my-shader/
+shaders/my-shader/
 └── image.glsl
 ```
 
@@ -24,7 +24,7 @@ That's it! The system will auto-generate a config for you.
 ### Multi-Pass Shader
 
 ```
-demos/my-shader/
+shaders/my-shader/
 ├── config.json
 ├── common.glsl          (optional - shared code)
 ├── bufferA.glsl
@@ -427,7 +427,7 @@ These work even if you hide the control buttons!
 Use the npm script with your folder name:
 
 ```bash
-npm run dev:demo my-shader
+shader dev my-shader
 ```
 
 That's it!
@@ -513,7 +513,7 @@ Begin with just `image.glsl`, add complexity as needed:
 For big projects:
 
 ```
-demos/my-complex-shader/
+shaders/my-complex-shader/
 ├── config.json
 ├── common.glsl              # Shared functions
 ├── bufferA.glsl            # Simulation

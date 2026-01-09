@@ -7,7 +7,7 @@ Complete guide to the codebase organization and what each file does.
 ```
 shadertoys/
 ├── src/               # Source code
-├── demos/             # Example shaders
+├── shaders/           # Your shaders
 ├── docs/              # Documentation
 ├── scripts/           # Build scripts
 ├── package.json       # Dependencies and scripts
@@ -253,21 +253,21 @@ src/styles/
 - html/body 100% height
 - Disable overflow on body
 
-## Demos (`demos/`)
+## Shaders (`shaders/`)
 
-Example shader projects. Each demo is a folder containing shader files.
+Your shader projects. Each shader is a folder containing shader files.
 
-**Demo structure** (two variants):
+**Shader structure** (two variants):
 
 **Simple** (auto-configured):
 ```
-demos/my-shader/
+shaders/my-shader/
 └── image.glsl
 ```
 
 **Complex** (with config):
 ```
-demos/my-shader/
+shaders/my-shader/
 ├── config.json
 ├── common.glsl          (optional)
 ├── bufferA.glsl         (if BufferA defined)
@@ -314,12 +314,11 @@ docs/
 - `vite` - Build tool and dev server
 - `vite-plugin-css-injected-by-js` - Inline CSS into JS bundle
 
-**Scripts**:
-- `npm run dev` - Start dev server (port 3000)
-- `npm run dev:demo <name>` - Run specific demo
-- `npm run build` - TypeScript + Vite build
-- `npm run build:demo <name>` - Build specific demo
-- `npm run preview` - Preview production build
+**CLI Commands** (after installing package):
+- `shader dev <name>` - Run specific shader
+- `shader build <name>` - Build specific shader
+- `shader new <name>` - Create new shader
+- `shader list` - List all shaders
 
 ### `tsconfig.json`
 
@@ -382,11 +381,11 @@ Every module has clear interfaces and types in `types.ts`.
 
 ## Adding New Files
 
-### New Demo
+### New Shader
 
-1. Create folder: `demos/my-shader/`
-2. Add files: `image.glsl` (+ optional config/buffers)
-3. Run: `npm run dev:demo my-shader`
+1. Run: `shader new my-shader`
+2. Edit: `shaders/my-shader/image.glsl`
+3. Run: `shader dev my-shader`
 
 ### New Layout
 
@@ -407,9 +406,9 @@ Every module has clear interfaces and types in `types.ts`.
 
 ### Typical Session
 
-1. `npm run dev:demo <name>` - Start with a demo
+1. `shader dev <name>` - Start with a shader
 2. Edit shader files - browser auto-reloads
-3. Edit TypeScript - browser auto-reloads
+3. Edit code in browser - instant recompilation
 4. Press S to save screenshots
 
 ### Debugging
