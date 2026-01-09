@@ -103,7 +103,6 @@ Structure:
     example-buffer/      BufferA feedback example
 
 Next steps:
-  npm install
   shadertoy list                    Show all shaders
   shadertoy dev example-gradient    Run a shader
   shadertoy new my-shader           Create a new shader

@@ -33,16 +33,15 @@ Create your own shader collection in any project:
 ```bash
 # Create a new project
 mkdir my-shaders && cd my-shaders
-
-# Install dependencies
 npm init -y
-npm install shadertoy-system vite vite-plugin-css-injected-by-js
+
+# Install shadertoy-system (includes vite and all dependencies)
+npm install shadertoy-system
 
 # Initialize shader collection
 npx shadertoy init
 
-# Install and run
-npm install
+# Run a shader
 npx shadertoy dev example-gradient
 ```
 

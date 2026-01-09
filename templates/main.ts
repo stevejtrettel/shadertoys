@@ -5,9 +5,9 @@
  * or URL parameter (?shader=name)
  */
 
-import { App, createLayout, loadDemo } from 'shadertoy-runner';
-import type { ShadertoyConfig, PassName } from 'shadertoy-runner';
-import type { RecompileResult } from 'shadertoy-runner';
+import { App, createLayout, loadDemo } from 'shadertoy-system';
+import type { ShadertoyConfig, PassName } from 'shadertoy-system';
+import type { RecompileResult } from 'shadertoy-system';
 
 // Get shader name from env (set by dev script) or URL param
 function getShaderName(): string {

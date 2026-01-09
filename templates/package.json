@@ -7,9 +7,5 @@
   },
   "dependencies": {
     "shadertoy-system": "^0.1.0"
-  },
-  "devDependencies": {
-    "vite": "^5.0.0",
-    "vite-plugin-css-injected-by-js": "^3.5.0"
   }
 }
