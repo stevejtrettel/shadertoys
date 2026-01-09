@@ -36,7 +36,7 @@ mkdir my-shaders && cd my-shaders
 
 # Install dependencies
 npm init -y
-npm install shadertoy-runner vite vite-plugin-css-injected-by-js
+npm install shadertoy-system vite vite-plugin-css-injected-by-js
 
 # Initialize shader collection
 npx shadertoy init

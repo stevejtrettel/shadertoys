@@ -1,5 +1,5 @@
 {
-  "name": "shadertoy-runner",
+  "name": "shadertoy-system",
   "version": "0.1.0",
   "description": "Local Shadertoy-style GLSL shader development environment with live editing",
   "type": "module",

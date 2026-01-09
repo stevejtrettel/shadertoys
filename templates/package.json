@@ -6,7 +6,7 @@
     "list": "shadertoy list"
   },
   "dependencies": {
-    "shadertoy-runner": "^0.1.0"
+    "shadertoy-system": "^0.1.0"
   },
   "devDependencies": {
     "vite": "^5.0.0",
