@@ -1,5 +1,5 @@
 {
-  "name": "shader-sandbox",
+  "name": "@stevejtrettel/shader-sandbox",
   "version": "0.1.0",
   "description": "Local Shadertoy-compatible GLSL shader development environment with live editing",
   "type": "module",
