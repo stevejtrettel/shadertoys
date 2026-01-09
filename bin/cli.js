@@ -116,7 +116,7 @@ async function create(projectName) {
       list: 'shader list'
     },
     dependencies: {
-      'shader-sandbox': '^0.1.0',
+      '@stevejtrettel/shader-sandbox': '^0.1.0',
       'vite': '^5.0.0'
     }
   };
