@@ -28,27 +28,24 @@ Open `http://localhost:3000` to see your shader.
 
 ## Use as NPM Package
 
-Create your own shader collection in any project:
+Create your own shader collection:
 
 ```bash
-# Create a new project
-mkdir my-shaders && cd my-shaders
-npm init -y
-
-# Install shadertoy-system (includes vite and all dependencies)
-npm install shadertoy-system
-
-# Initialize shader collection
-npx shadertoy init
+# Create a new project (does everything in one step)
+npx shadertoy-system create my-shaders
 
 # Run a shader
-npx shadertoy dev example-gradient
+cd my-shaders
+shadertoy dev example-gradient
 ```
+
+That's it! The `create` command sets up the directory, installs dependencies, and creates example shaders.
 
 ### CLI Commands
 
 ```bash
-shadertoy init              # Create shader collection structure
+shadertoy create <name>     # Create a new shader project (recommended)
+shadertoy init              # Initialize shaders in current directory
 shadertoy list              # List all shaders
 shadertoy dev <name>        # Run shader in development mode
 shadertoy build <name>      # Build shader for production
@@ -57,7 +54,7 @@ shadertoy new <name>        # Create a new shader
 
 ### Project Structure
 
-After `shadertoy init`:
+After `shadertoy create`:
 
 ```
 my-shaders/
