@@ -1,105 +1,76 @@
 # Shader Sandbox
 
-A lightweight, Shadertoy-compatible GLSL shader playground built for teaching and learning shader programming.
+A lightweight, Shadertoy-compatible GLSL shader development environment. Copy shaders directly from Shadertoy and run them locally with live editing.
 
 ## Features
 
 - **Shadertoy Compatibility** - Copy/paste shaders directly from Shadertoy
 - **Full Shadertoy Uniforms** - `iTime`, `iResolution`, `iFrame`, `iMouse`, `iTimeDelta`, `iChannel0-3`
 - **Multi-Buffer Rendering** - BufferA-D passes with correct ping-pong semantics
-- **Texture Support** - Load external images with configurable filtering and wrapping
+- **Texture Support** - Load images with configurable filtering and wrapping
 - **Keyboard Input** - Full keyboard state via Shadertoy-compatible texture
+- **Live Code Editing** - Edit shaders in the browser with instant recompilation
+- **Multiple Layouts** - Fullscreen, split-view, or tabbed code display
 - **Playback Controls** - Play/pause, reset, and screenshot capture
-- **Multiple Layout Modes** - Fullscreen, default, split-view, or tabbed code display
-- **Zero Runtime Dependencies** - Pure WebGL2
-- **Tiny Builds** - ~26KB JS (gzipped)
 
 ## Quick Start
 
 ```bash
-npm install
-npm run new my-shader
-npm run dev:demo my-shader
-```
+# Create a new shader project
+npx @stevejtrettel/shader-sandbox create my-shaders
 
-Open `http://localhost:3000` to see your shader.
-
----
-
-## Use as NPM Package
-
-Create your own shader collection:
-
-```bash
-# Create a new project (does everything in one step)
-npx shader-sandbox create my-shaders
-
-# Run a shader
+# Enter the project
 cd my-shaders
+
+# Run an example shader
 shader dev example-gradient
 ```
 
-That's it! The `create` command sets up the directory, installs dependencies, and creates example shaders.
+Open http://localhost:3000 to see your shader running.
 
-### CLI Commands
+## CLI Commands
 
 ```bash
-shader create <name>     # Create a new shader project (recommended)
-shader init              # Initialize shaders in current directory
-shader list              # List all shaders
-shader dev <name>        # Run shader in development mode
+shader create <name>     # Create a new shader project
+shader dev <name>        # Run shader with live reload
 shader build <name>      # Build shader for production
 shader new <name>        # Create a new shader
+shader list              # List all shaders
+shader init              # Initialize shaders in current directory
 ```
 
-### Project Structure
+## Project Structure
 
-After `shader create`:
+After running `shader create my-shaders`:
 
 ```
 my-shaders/
 ├── shaders/
 │   ├── example-gradient/
-│   │   ├── image.glsl      # Main shader
-│   │   └── config.json     # Optional config
+│   │   ├── image.glsl       # Main shader code
+│   │   └── config.json      # Optional configuration
 │   └── example-buffer/
-│       ├── image.glsl
-│       ├── bufferA.glsl    # Feedback buffer
+│       ├── image.glsl       # Final output
+│       ├── bufferA.glsl     # Feedback buffer
 │       └── config.json
-├── main.ts
-├── vite.config.js
+├── main.ts                  # Entry point
+├── vite.config.js           # Vite configuration
 └── package.json
 ```
 
-### Adding a New Shader
+## Creating Shaders
+
+### Simple Shader
+
+Create a new shader with just an image pass:
 
 ```bash
-shader new my-cool-shader
-# Creates shaders/my-cool-shader/image.glsl
-
-shader dev my-cool-shader
-# Opens browser with live reload
+shader new my-shader
+shader dev my-shader
 ```
 
----
+Edit `shaders/my-shader/image.glsl`:
 
-## Common Setups
-
-### 1. Simple Shader (just image.glsl)
-
-The simplest setup - no config needed.
-
-```bash
-npm run new my-shader
-```
-
-**Files:**
-```
-demos/my-shader/
-└── image.glsl
-```
-
-**image.glsl:**
 ```glsl
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 uv = fragCoord / iResolution.xy;
@@ -108,45 +79,26 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 }
 ```
 
----
+### Copy from Shadertoy
 
-### 2. One Buffer (feedback/trails)
+1. Find a shader on [Shadertoy](https://www.shadertoy.com)
+2. Copy the code from the "Image" tab
+3. Paste into `shaders/my-shader/image.glsl`
+4. Run `shader dev my-shader`
 
-For effects that accumulate over time (trails, paint, fluid).
+Most single-pass shaders work immediately. For multi-buffer shaders, you'll need to create the buffer files and config.
 
-```bash
-npm run new my-shader 1
-```
+### Multi-Buffer Shaders
 
-**Files:**
-```
-demos/my-shader/
-├── bufferA.glsl
-├── image.glsl
-└── config.json
-```
+For feedback effects (trails, fluid, etc.), create a buffer:
 
-**config.json:**
-```json
-{
-  "BufferA": {
-    "iChannel0": "BufferA"
-  },
-  "Image": {
-    "iChannel0": "BufferA"
-  }
-}
-```
-
-**bufferA.glsl:**
+**shaders/my-effect/bufferA.glsl:**
 ```glsl
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 uv = fragCoord / iResolution.xy;
+    vec4 prev = texture(iChannel0, uv) * 0.98;  // Previous frame with fade
 
-    // Read previous frame with fade
-    vec4 prev = texture(iChannel0, uv) * 0.98;
-
-    // Draw at mouse
+    // Draw at mouse position
     vec2 mouse = iMouse.xy / iResolution.xy;
     float d = length(uv - mouse);
     float spot = smoothstep(0.05, 0.0, d);
@@ -155,7 +107,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 }
 ```
 
-**image.glsl:**
+**shaders/my-effect/image.glsl:**
 ```glsl
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 uv = fragCoord / iResolution.xy;
@@ -163,60 +115,23 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 }
 ```
 
----
-
-### 3. Multiple Buffers (interacting simulations)
-
-For reaction-diffusion, fluid dynamics, etc. All buffers can read all other buffers.
-
-```bash
-npm run new my-shader 2
-```
-
-**Files:**
-```
-demos/my-shader/
-├── bufferA.glsl
-├── bufferB.glsl
-├── image.glsl
-└── config.json
-```
-
-**config.json:**
+**shaders/my-effect/config.json:**
 ```json
 {
   "BufferA": {
-    "iChannel0": "BufferA",
-    "iChannel1": "BufferB"
-  },
-  "BufferB": {
-    "iChannel0": "BufferA",
-    "iChannel1": "BufferB"
+    "iChannel0": "BufferA"
   },
   "Image": {
-    "iChannel0": "BufferA",
-    "iChannel1": "BufferB"
+    "iChannel0": "BufferA"
   }
 }
 ```
 
-**Channel mapping:** `iChannel0` = BufferA, `iChannel1` = BufferB, etc.
+### Using Textures
 
----
+Place an image in your shader folder and reference it in config:
 
-### 4. Texture + Image (image processing)
-
-Load an image and process it.
-
-**Files:**
-```
-demos/my-shader/
-├── image.glsl
-├── photo.jpg
-└── config.json
-```
-
-**config.json:**
+**shaders/my-shader/config.json:**
 ```json
 {
   "Image": {
@@ -225,166 +140,78 @@ demos/my-shader/
 }
 ```
 
-**image.glsl:**
+**shaders/my-shader/image.glsl:**
 ```glsl
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 uv = fragCoord / iResolution.xy;
     vec4 img = texture(iChannel0, uv);
-
-    // Example: grayscale
-    float gray = dot(img.rgb, vec3(0.299, 0.587, 0.114));
-
-    fragColor = vec4(vec3(gray), 1.0);
+    fragColor = img;
 }
 ```
 
-**Texture options (all optional):**
-```json
-{ "texture": "photo.jpg", "filter": "linear", "wrap": "repeat", "type": "2d" }
-```
-- `filter`: `"linear"` (smooth, default) or `"nearest"` (pixelated)
-- `wrap`: `"repeat"` (tile, default) or `"clamp"` (stretch edges)
-- `type`: `"2d"` (standard, default) or `"cubemap"` (equirectangular environment map)
-
-**Cubemap textures:** Use `"type": "cubemap"` for equirectangular environment maps (360° panoramas). The engine will automatically convert 3D direction lookups to 2D coordinates:
-```json
-{ "texture": "environment.jpg", "type": "cubemap" }
-```
-```glsl
-// In your shader, sample with a 3D direction:
-vec3 dir = normalize(rayDirection);
-vec4 sky = texture(iChannel0, dir);  // Automatically converted
-```
-
----
-
-### 5. Texture + Buffers (image + feedback)
-
-Combine textures with buffer feedback for effects like painting on an image.
-
-**Files:**
-```
-demos/my-shader/
-├── bufferA.glsl
-├── image.glsl
-├── photo.jpg
-└── config.json
-```
-
-**config.json:**
+Texture options:
 ```json
 {
-  "BufferA": {
-    "iChannel0": "BufferA",
-    "iChannel1": "photo.jpg"
-  },
   "Image": {
-    "iChannel0": "BufferA",
-    "iChannel1": "photo.jpg"
+    "iChannel0": {
+      "texture": "photo.jpg",
+      "filter": "linear",
+      "wrap": "repeat"
+    }
   }
 }
 ```
 
-**bufferA.glsl:**
-```glsl
-void mainImage(out vec4 fragColor, in vec2 fragCoord) {
-    vec2 uv = fragCoord / iResolution.xy;
-
-    vec4 prev = texture(iChannel0, uv);      // Previous frame
-    vec4 img = texture(iChannel1, uv);        // Original image
-
-    // Paint with mouse
-    vec2 mouse = iMouse.xy / iResolution.xy;
-    float d = length(uv - mouse);
-    float brush = smoothstep(0.05, 0.0, d);
-
-    // Blend: painted areas persist, unpainted fade to original
-    fragColor = mix(mix(prev, img, 0.01), prev + brush, brush);
-}
-```
-
----
-
-## Buffer Execution & Frame Timing
-
-**Execution order:** BufferA → BufferB → BufferC → BufferD → Image
-
-All buffer reads default to the **previous frame**. This is safe for all cases:
-- Self-reference (feedback effects)
-- Reading buffers that haven't run yet this frame
-- Reading buffers that have already run (you get their latest output)
-
-Use `{ "buffer": "BufferA", "current": true }` only if you specifically need the in-progress current frame (rare).
-
----
+- `filter`: `"linear"` (smooth) or `"nearest"` (pixelated)
+- `wrap`: `"repeat"` (tile) or `"clamp"` (stretch edges)
 
 ## Layouts
 
-Control how the shader is displayed with the `layout` option in `config.json`:
+Control how the shader is displayed in `config.json`:
 
 ```json
 {
-  "layout": "split",
-  "BufferA": { ... },
-  "Image": { ... }
+  "layout": "split"
 }
 ```
 
-| Layout | Description | Best for |
-|--------|-------------|----------|
-| `fullscreen` | Canvas fills entire viewport | Immersive art, games, installations |
-| `default` | Canvas centered with max-width | General viewing (default without config) |
-| `tabbed` | Tabs to switch between shader and code | Exploring/debugging |
-| `split` | Side-by-side: shader left, code right | Teaching, presentations, tutorials |
-
-**`fullscreen`** - No chrome, canvas fills the screen:
-```json
-{ "layout": "fullscreen" }
-```
-
-**`default`** - Clean centered view with rounded corners:
-```json
-{ "layout": "default" }
-```
-
-**`tabbed`** - Click tabs to switch between live shader and source code:
-```json
-{ "layout": "tabbed" }
-```
-
-**`split`** - See shader and code simultaneously (code panel has tabs for multi-file projects):
-```json
-{ "layout": "split" }
-```
-
----
+| Layout | Description |
+|--------|-------------|
+| `fullscreen` | Canvas fills the viewport |
+| `default` | Centered canvas with controls |
+| `tabbed` | Tabs to switch between shader and code |
+| `split` | Side-by-side shader and code editor |
 
 ## Keyboard Shortcuts
 
 | Key | Action |
 |-----|--------|
 | **S** | Save screenshot (PNG) |
-| **Space** | Play/Pause (when controls enabled) |
-| **R** | Reset to frame 0 (when controls enabled) |
+| **Space** | Play/Pause |
+| **R** | Reset to frame 0 |
 
----
+## Shadertoy Uniforms
 
-## NPM Scripts
+All standard Shadertoy uniforms are supported:
+
+| Uniform | Type | Description |
+|---------|------|-------------|
+| `iResolution` | `vec3` | Viewport resolution (width, height, 1) |
+| `iTime` | `float` | Elapsed time in seconds |
+| `iTimeDelta` | `float` | Time since last frame |
+| `iFrame` | `int` | Frame counter |
+| `iMouse` | `vec4` | Mouse position and click state |
+| `iChannel0-3` | `sampler2D` | Input textures/buffers |
+| `iChannelResolution[4]` | `vec3[]` | Resolution of each channel |
+| `iDate` | `vec4` | Year, month, day, time in seconds |
+
+## Building for Production
 
 ```bash
-npm run new <name> [buffers]   # Create new shader project
-npm run dev:demo <name>        # Development server with hot reload
-npm run build:demo <name>      # Production build to dist/
+shader build my-shader
 ```
 
----
-
-## Documentation
-
-- [Getting Started](docs/learn/getting-started.md) - Your first shader
-- [Buffers and Channels](docs/learn/buffers-and-channels.md) - Multi-pass rendering
-- [Configuration](docs/learn/configuration.md) - Full config reference
-- [Architecture](docs/dev/architecture.md) - How the engine works
+Output is in `dist/` - a single HTML file with embedded JavaScript that can be hosted anywhere.
 
 ## License
 
