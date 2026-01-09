@@ -2,6 +2,21 @@
   "name": "@stevejtrettel/shader-sandbox",
   "version": "0.1.0",
   "description": "Local Shadertoy-compatible GLSL shader development environment with live editing",
+  "author": "Steve Trettel",
+  "license": "MIT",
+  "homepage": "https://github.com/stevejtrettel/shader-sandbox",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/stevejtrettel/shader-sandbox.git"
+  },
+  "keywords": [
+    "shader",
+    "glsl",
+    "shadertoy",
+    "webgl",
+    "graphics",
+    "creative-coding"
+  ],
   "type": "module",
   "main": "./dist-lib/index.js",
   "types": "./dist-lib/index.d.ts",

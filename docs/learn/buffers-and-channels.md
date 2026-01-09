@@ -55,7 +55,7 @@ Let's create a feedback effect where each frame fades and draws a new circle.
 
 ### Step 1: Create Config
 
-`demos/feedback-demo/config.json`:
+`shaders/feedback-demo/config.json`:
 
 ```json
 {
@@ -82,7 +82,7 @@ Let's create a feedback effect where each frame fades and draws a new circle.
 
 ### Step 2: Create BufferA
 
-`demos/feedback-demo/bufferA.glsl`:
+`shaders/feedback-demo/bufferA.glsl`:
 
 ```glsl
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
@@ -105,7 +105,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
 ### Step 3: Create Image
 
-`demos/feedback-demo/image.glsl`:
+`shaders/feedback-demo/image.glsl`:
 
 ```glsl
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
@@ -237,7 +237,7 @@ You can load image files and use them as textures.
 
 Put your image in the demo folder:
 ```
-demos/my-shader/
+shaders/my-shader/
 ├── config.json
 ├── image.glsl
 └── photo.jpg
