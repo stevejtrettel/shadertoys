@@ -1,6 +1,6 @@
 {
   "name": "@stevejtrettel/shader-sandbox",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Local Shadertoy-compatible GLSL shader development environment with live editing",
   "type": "module",
   "main": "./dist-lib/index.js",
