@@ -3,13 +3,9 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "list": "shadertoy list"
+    "list": "shader list"
   },
   "dependencies": {
-    "shadertoy-system": "^0.1.0"
-  },
-  "devDependencies": {
-    "vite": "^5.0.0",
-    "vite-plugin-css-injected-by-js": "^3.5.0"
+    "shader-sandbox": "^0.1.0"
   }
 }

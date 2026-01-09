@@ -1,4 +1,4 @@
-# Shadertoy Runner
+# Shader Sandbox
 
 A lightweight, Shadertoy-compatible GLSL shader playground built for teaching and learning shader programming.
 
@@ -28,37 +28,33 @@ Open `http://localhost:3000` to see your shader.
 
 ## Use as NPM Package
 
-Create your own shader collection in any project:
+Create your own shader collection:
 
 ```bash
-# Create a new project
-mkdir my-shaders && cd my-shaders
+# Create a new project (does everything in one step)
+npx shader-sandbox create my-shaders
 
-# Install dependencies
-npm init -y
-npm install shadertoy-system vite vite-plugin-css-injected-by-js
-
-# Initialize shader collection
-npx shadertoy init
-
-# Install and run
-npm install
-npx shadertoy dev example-gradient
+# Run a shader
+cd my-shaders
+shader dev example-gradient
 ```
+
+That's it! The `create` command sets up the directory, installs dependencies, and creates example shaders.
 
 ### CLI Commands
 
 ```bash
-shadertoy init              # Create shader collection structure
-shadertoy list              # List all shaders
-shadertoy dev <name>        # Run shader in development mode
-shadertoy build <name>      # Build shader for production
-shadertoy new <name>        # Create a new shader
+shader create <name>     # Create a new shader project (recommended)
+shader init              # Initialize shaders in current directory
+shader list              # List all shaders
+shader dev <name>        # Run shader in development mode
+shader build <name>      # Build shader for production
+shader new <name>        # Create a new shader
 ```
 
 ### Project Structure
 
-After `shadertoy init`:
+After `shader create`:
 
 ```
 my-shaders/
@@ -78,10 +74,10 @@ my-shaders/
 ### Adding a New Shader
 
 ```bash
-shadertoy new my-cool-shader
+shader new my-cool-shader
 # Creates shaders/my-cool-shader/image.glsl
 
-shadertoy dev my-cool-shader
+shader dev my-cool-shader
 # Opens browser with live reload
 ```
 
