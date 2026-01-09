@@ -1,0 +1,16 @@
+{
+  "name": "my-shader-collection",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "SHADER_NAME=${npm_config_shader:-example-gradient} vite",
+    "build": "SHADER_NAME=${npm_config_shader:-example-gradient} vite build",
+    "list": "ls -1 shaders"
+  },
+  "dependencies": {
+    "shadertoy-runner": "^0.1.0"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
+  }
+}

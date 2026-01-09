@@ -1,0 +1,10 @@
+{
+  "layout": "default",
+  "controls": true,
+  "Image": {
+    "iChannel0": "BufferA"
+  },
+  "BufferA": {
+    "iChannel0": "BufferA"
+  }
+}

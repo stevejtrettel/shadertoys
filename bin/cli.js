@@ -3,9 +3,10 @@
 /**
  * Shadertoy Runner CLI
  * Commands:
- *   shadertoy init [template]  - Create a new shader project
- *   shadertoy dev              - Start development server
- *   shadertoy build            - Build for production
+ *   shadertoy init [template]     - Create a new shader project
+ *   shadertoy dev [shader-name]   - Start development server
+ *   shadertoy build [shader-name] - Build for production
+ *   shadertoy list                - List available shaders (collection only)
  */
 
 import { spawn } from 'child_process';
@@ -25,19 +26,23 @@ function printUsage() {
 Shadertoy Runner - Local GLSL shader development
 
 Usage:
-  shadertoy init [template]   Create a new shader project
-  shadertoy dev               Start development server
-  shadertoy build             Build for production
+  shadertoy init [template]     Create a new shader project
+  shadertoy dev [shader-name]   Start development server
+  shadertoy build [shader-name] Build for production
+  shadertoy list                List available shaders (collection projects)
 
 Templates:
-  basic    Single image shader (default)
-  buffer   Image shader with BufferA
+  basic       Single image shader (default)
+  buffer      Image shader with BufferA
+  collection  Multiple shaders in one project
 
 Examples:
-  shadertoy init              Create project with basic template
-  shadertoy init buffer       Create project with buffer template
-  shadertoy dev               Start dev server on port 3000
-  shadertoy build             Build to ./dist folder
+  shadertoy init                 Create project with basic template
+  shadertoy init collection      Create a shader collection
+  shadertoy dev                  Start dev server
+  shadertoy dev my-shader        Start dev server for specific shader
+  shadertoy build                Build to ./dist folder
+  shadertoy list                 Show all shaders in collection
 `);
 }
 
@@ -57,6 +62,34 @@ function copyDir(src, dest) {
   }
 }
 
+function isCollectionProject(cwd) {
+  const shadersDir = path.join(cwd, 'shaders');
+  if (!fs.existsSync(shadersDir)) return false;
+
+  // Check if shaders/ contains subdirectories (collection) vs files (single)
+  const entries = fs.readdirSync(shadersDir, { withFileTypes: true });
+  return entries.some(e => e.isDirectory());
+}
+
+function listShaders(cwd) {
+  const shadersDir = path.join(cwd, 'shaders');
+  if (!fs.existsSync(shadersDir)) {
+    console.error('Error: shaders/ directory not found');
+    process.exit(1);
+  }
+
+  const entries = fs.readdirSync(shadersDir, { withFileTypes: true });
+  const shaders = entries.filter(e => e.isDirectory()).map(e => e.name);
+
+  if (shaders.length === 0) {
+    console.log('No shaders found. Create a folder in shaders/ with image.glsl');
+    return;
+  }
+
+  console.log('Available shaders:');
+  shaders.forEach(s => console.log(`  ${s}`));
+}
+
 async function init(template = 'basic') {
   const cwd = process.cwd();
   const templatesDir = path.join(packageRoot, 'templates');
@@ -64,7 +97,7 @@ async function init(template = 'basic') {
 
   if (!fs.existsSync(templatePath)) {
     console.error(`Error: Template "${template}" not found`);
-    console.error(`Available templates: basic, buffer`);
+    console.error(`Available templates: basic, buffer, collection`);
     process.exit(1);
   }
 
@@ -80,7 +113,28 @@ async function init(template = 'basic') {
   // Copy template files
   copyDir(templatePath, cwd);
 
-  console.log(`
+  if (template === 'collection') {
+    console.log(`
+✓ Shader collection created!
+
+Structure:
+  shaders/
+    example-gradient/    - Simple animated gradient
+    example-buffer/      - BufferA feedback example
+
+Usage:
+  npm install
+  shadertoy dev example-gradient    Run a specific shader
+  shadertoy list                    Show all shaders
+  shadertoy build example-gradient  Build a specific shader
+
+To add a new shader:
+  1. Create shaders/my-shader/
+  2. Add image.glsl (required)
+  3. Add config.json, bufferA.glsl, common.glsl as needed
+`);
+  } else {
+    console.log(`
 ✓ Project created!
 
 Files created:
@@ -94,9 +148,10 @@ Next steps:
   2. shadertoy dev       Start development server
   3. Edit shaders/image.glsl and see live updates!
 `);
+  }
 }
 
-function runVite(args) {
+function runVite(viteArgs, shaderName) {
   const cwd = process.cwd();
 
   // Check for vite.config.js
@@ -116,10 +171,17 @@ function runVite(args) {
     process.exit(1);
   }
 
-  const child = spawn(viteBin, args, {
+  // Set environment for shader name
+  const env = { ...process.env };
+  if (shaderName) {
+    env.SHADER_NAME = shaderName;
+  }
+
+  const child = spawn(viteBin, viteArgs, {
     cwd,
     stdio: 'inherit',
-    shell: process.platform === 'win32'
+    shell: process.platform === 'win32',
+    env
   });
 
   child.on('error', (err) => {
@@ -138,14 +200,57 @@ switch (command) {
     init(args[1]);
     break;
 
-  case 'dev':
-    console.log('Starting development server...');
-    runVite([]);
-    break;
+  case 'dev': {
+    const shaderName = args[1];
+    const cwd = process.cwd();
 
-  case 'build':
-    console.log('Building for production...');
-    runVite(['build']);
+    if (shaderName) {
+      // Verify shader exists
+      const shaderPath = path.join(cwd, 'shaders', shaderName);
+      if (!fs.existsSync(shaderPath)) {
+        console.error(`Error: Shader "${shaderName}" not found`);
+        console.error(`Run "shadertoy list" to see available shaders`);
+        process.exit(1);
+      }
+      console.log(`Starting development server for "${shaderName}"...`);
+    } else if (isCollectionProject(cwd)) {
+      console.error('Error: This is a collection project. Specify a shader name:');
+      console.error('  shadertoy dev <shader-name>');
+      console.error('  shadertoy list');
+      process.exit(1);
+    } else {
+      console.log('Starting development server...');
+    }
+
+    runVite([], shaderName);
+    break;
+  }
+
+  case 'build': {
+    const shaderName = args[1];
+    const cwd = process.cwd();
+
+    if (shaderName) {
+      const shaderPath = path.join(cwd, 'shaders', shaderName);
+      if (!fs.existsSync(shaderPath)) {
+        console.error(`Error: Shader "${shaderName}" not found`);
+        process.exit(1);
+      }
+      console.log(`Building "${shaderName}" for production...`);
+    } else if (isCollectionProject(cwd)) {
+      console.error('Error: This is a collection project. Specify a shader name:');
+      console.error('  shadertoy build <shader-name>');
+      process.exit(1);
+    } else {
+      console.log('Building for production...');
+    }
+
+    runVite(['build'], shaderName);
+    break;
+  }
+
+  case 'list':
+    listShaders(process.cwd());
     break;
 
   case 'help':
