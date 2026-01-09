@@ -3,14 +3,13 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "SHADER_NAME=${npm_config_shader:-example-gradient} vite",
-    "build": "SHADER_NAME=${npm_config_shader:-example-gradient} vite build",
-    "list": "ls -1 shaders"
+    "list": "shadertoy list"
   },
   "dependencies": {
     "shadertoy-runner": "^0.1.0"
   },
   "devDependencies": {
-    "vite": "^5.0.0"
+    "vite": "^5.0.0",
+    "vite-plugin-css-injected-by-js": "^3.5.0"
   }
 }
