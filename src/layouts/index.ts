@@ -28,12 +28,13 @@ import { BaseLayout, LayoutOptions, LayoutMode } from './types';
  * @returns Layout instance implementing BaseLayout interface
  */
 export function createLayout(
-  mode: LayoutMode,
+  mode: LayoutMode | 'default',
   options: LayoutOptions
 ): BaseLayout {
   switch (mode) {
     case 'fullscreen':
       return new FullscreenLayout(options);
+    case 'default':
     case 'centered':
       return new CenteredLayout(options);
     case 'split':
