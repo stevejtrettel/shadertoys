@@ -172,6 +172,7 @@ async function loadSinglePassProject(root: string): Promise<ShadertoyProject> {
       description: null,
     },
     layout: 'default',
+    theme: 'light',
     controls: false,
     commonSource: null,
     passes: {
@@ -187,6 +188,7 @@ async function loadSinglePassProject(root: string): Promise<ShadertoyProject> {
       },
     },
     textures: [],
+    uniforms: {},
   };
 
   return project;
@@ -416,6 +418,7 @@ async function loadProjectWithConfig(root: string, config: ShadertoyConfig): Pro
       BufferD: bufferDPass,
     },
     textures: Array.from(textureMap.values()),
+    uniforms: config.uniforms ?? {},
   };
 
   return project;

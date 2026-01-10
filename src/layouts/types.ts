@@ -24,6 +24,16 @@ export type RecompileHandler = (
 ) => RecompileResult;
 
 /**
+ * Callback for uniform value changes.
+ * @param name - Uniform name
+ * @param value - New uniform value
+ */
+export type UniformChangeHandler = (
+  name: string,
+  value: number | boolean | number[]
+) => void;
+
+/**
  * Base interface that all layouts must implement.
  */
 export interface BaseLayout {
@@ -37,6 +47,12 @@ export interface BaseLayout {
    * Called by App after initialization to wire up recompilation.
    */
   setRecompileHandler?(handler: RecompileHandler): void;
+
+  /**
+   * Set the uniform change handler for uniform controls.
+   * Called by App after initialization to wire up uniform changes.
+   */
+  setUniformHandler?(handler: UniformChangeHandler): void;
 
   /**
    * Clean up all DOM elements and resources.

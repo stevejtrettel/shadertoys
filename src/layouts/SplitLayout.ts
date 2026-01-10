@@ -7,7 +7,7 @@
 
 import './split.css';
 
-import { BaseLayout, LayoutOptions, RecompileHandler } from './types';
+import { BaseLayout, LayoutOptions, RecompileHandler, UniformChangeHandler } from './types';
 import { ShadertoyProject } from '../project/types';
 
 export class SplitLayout implements BaseLayout {
@@ -19,6 +19,7 @@ export class SplitLayout implements BaseLayout {
 
   private editorPanel: any = null;
   private recompileHandler: RecompileHandler | null = null;
+  private uniformChangeHandler: UniformChangeHandler | null = null;
 
   constructor(opts: LayoutOptions) {
     this.container = opts.container;
@@ -56,6 +57,13 @@ export class SplitLayout implements BaseLayout {
     }
   }
 
+  setUniformHandler(handler: UniformChangeHandler): void {
+    this.uniformChangeHandler = handler;
+    if (this.editorPanel) {
+      this.editorPanel.setUniformHandler(handler);
+    }
+  }
+
   dispose(): void {
     if (this.editorPanel) {
       this.editorPanel.dispose();
@@ -73,6 +81,9 @@ export class SplitLayout implements BaseLayout {
       this.editorPanel = new EditorPanel(this.codePanel, this.project);
       if (this.recompileHandler) {
         this.editorPanel.setRecompileHandler(this.recompileHandler);
+      }
+      if (this.uniformChangeHandler) {
+        this.editorPanel.setUniformHandler(this.uniformChangeHandler);
       }
     } catch (err) {
       console.error('Failed to load editor panel:', err);

@@ -37,8 +37,11 @@ export class App {
 
   // Playback controls
   private controlsContainer: HTMLElement | null = null;
+  private controlsGrid: HTMLElement | null = null;
+  private menuButton: HTMLElement | null = null;
   private playPauseButton: HTMLElement | null = null;
   private isPaused: boolean = false;
+  private isMenuOpen: boolean = false;
 
   // Error overlay
   private errorOverlay: HTMLElement | null = null;
@@ -329,12 +332,23 @@ export class App {
   // ===========================================================================
 
   /**
-   * Create playback control buttons (play/pause and reset).
+   * Create playback control buttons with collapsible menu.
    */
   private createControls(): void {
     // Create container
     this.controlsContainer = document.createElement('div');
     this.controlsContainer.className = 'playback-controls';
+
+    // Create menu toggle button
+    this.menuButton = document.createElement('button');
+    this.menuButton.className = 'controls-menu-button';
+    this.menuButton.title = 'Controls';
+    this.menuButton.textContent = '+';
+    this.menuButton.addEventListener('click', () => this.toggleControlsMenu());
+
+    // Create controls grid (hidden by default)
+    this.controlsGrid = document.createElement('div');
+    this.controlsGrid.className = 'controls-grid';
 
     // Play/Pause button (starts showing pause icon since we're playing)
     this.playPauseButton = document.createElement('button');
@@ -371,11 +385,36 @@ export class App {
     `;
     screenshotButton.addEventListener('click', () => this.screenshot());
 
-    // Add to container
-    this.controlsContainer.appendChild(this.playPauseButton);
-    this.controlsContainer.appendChild(resetButton);
-    this.controlsContainer.appendChild(screenshotButton);
+    // Add buttons to grid (positioned in 2x2 layout)
+    // Top-left: Play/Pause, Top-right: Reset
+    // Bottom-left: Screenshot, Bottom-right: (empty for menu button overlay)
+    this.controlsGrid.appendChild(this.playPauseButton);
+    this.controlsGrid.appendChild(resetButton);
+    this.controlsGrid.appendChild(screenshotButton);
+
+    // Add grid and menu button to container
+    this.controlsContainer.appendChild(this.controlsGrid);
+    this.controlsContainer.appendChild(this.menuButton);
     this.container.appendChild(this.controlsContainer);
+  }
+
+  /**
+   * Toggle the controls menu open/closed.
+   */
+  private toggleControlsMenu(): void {
+    this.isMenuOpen = !this.isMenuOpen;
+
+    if (this.menuButton) {
+      this.menuButton.textContent = this.isMenuOpen ? '−' : '+';
+    }
+
+    if (this.controlsGrid) {
+      this.controlsGrid.classList.toggle('open', this.isMenuOpen);
+    }
+
+    if (this.controlsContainer) {
+      this.controlsContainer.classList.toggle('open', this.isMenuOpen);
+    }
   }
 
   /**

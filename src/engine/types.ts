@@ -48,6 +48,9 @@ export interface PassUniformLocations {
 
   // iChannel0..3
   iChannel: (WebGLUniformLocation | null)[];
+
+  // Custom uniforms (from project config)
+  custom: Map<string, WebGLUniformLocation | null>;
 }
 
 // =============================================================================

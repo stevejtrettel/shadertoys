@@ -9,13 +9,17 @@
  */
 
 import { ShadertoyProject, PassName } from '../project/types';
-import { RecompileHandler } from '../layouts/types';
+import { RecompileHandler, UniformChangeHandler } from '../layouts/types';
 
 import './editor-panel.css';
 
 type CodeTab = { kind: 'code'; name: string; passName: 'common' | PassName; source: string };
 type ImageTab = { kind: 'image'; name: string; url: string };
-type Tab = CodeTab | ImageTab;
+type UniformsTab = { kind: 'uniforms'; name: string };
+type Tab = CodeTab | ImageTab | UniformsTab;
+
+// Re-export for convenience
+export type { UniformChangeHandler } from '../layouts/types';
 
 interface EditorInstance {
   getSource: () => string;
@@ -27,6 +31,7 @@ export class EditorPanel {
   private container: HTMLElement;
   private project: ShadertoyProject;
   private recompileHandler: RecompileHandler | null = null;
+  private uniformChangeHandler: UniformChangeHandler | null = null;
 
   private tabBar: HTMLElement;
   private contentArea: HTMLElement;
@@ -39,6 +44,9 @@ export class EditorPanel {
 
   // Editor instance (null if not in editor mode or viewing image)
   private editorInstance: EditorInstance | null = null;
+
+  // Uniform controls instance (null if not viewing uniforms tab)
+  private uniformControls: any = null;
 
   // Track modified sources (passName -> modified source)
   private modifiedSources: Map<string, string> = new Map();
@@ -110,10 +118,18 @@ export class EditorPanel {
     this.recompileHandler = handler;
   }
 
+  setUniformHandler(handler: UniformChangeHandler): void {
+    this.uniformChangeHandler = handler;
+  }
+
   dispose(): void {
     if (this.editorInstance) {
       this.editorInstance.destroy();
       this.editorInstance = null;
+    }
+    if (this.uniformControls) {
+      this.uniformControls.destroy();
+      this.uniformControls = null;
     }
     this.container.innerHTML = '';
   }
@@ -164,6 +180,14 @@ export class EditorPanel {
         url: texture.source,
       });
     }
+
+    // 5. Uniforms tab (if project has custom uniforms)
+    if (Object.keys(this.project.uniforms).length > 0) {
+      this.tabs.push({
+        kind: 'uniforms',
+        name: 'Uniforms',
+      });
+    }
   }
 
   private buildTabBar(): void {
@@ -174,6 +198,9 @@ export class EditorPanel {
       tabButton.className = 'editor-tab-button';
       if (tab.kind === 'image') {
         tabButton.classList.add('image-tab');
+      }
+      if (tab.kind === 'uniforms') {
+        tabButton.classList.add('uniforms-tab');
       }
       tabButton.textContent = tab.name;
       if (index === this.activeTabIndex) {
@@ -204,6 +231,12 @@ export class EditorPanel {
     if (this.editorInstance) {
       this.editorInstance.destroy();
       this.editorInstance = null;
+    }
+
+    // Destroy previous uniform controls instance
+    if (this.uniformControls) {
+      this.uniformControls.destroy();
+      this.uniformControls = null;
     }
 
     if (tab.kind === 'code') {
@@ -237,6 +270,32 @@ export class EditorPanel {
         });
         editorContainer.appendChild(textarea);
       }
+    } else if (tab.kind === 'uniforms') {
+      // Hide buttons for uniforms tab
+      this.copyButton.style.display = 'none';
+      this.recompileButton.style.display = 'none';
+
+      // Create uniforms container
+      const uniformsContainer = document.createElement('div');
+      uniformsContainer.className = 'editor-uniforms-container';
+      this.contentArea.appendChild(uniformsContainer);
+
+      // Dynamically load and create UniformControls
+      try {
+        const { UniformControls } = await import('../uniforms/UniformControls');
+        this.uniformControls = new UniformControls({
+          container: uniformsContainer,
+          uniforms: this.project.uniforms,
+          onChange: (name, value) => {
+            if (this.uniformChangeHandler) {
+              this.uniformChangeHandler(name, value);
+            }
+          },
+        });
+      } catch (err) {
+        console.error('Failed to load uniform controls:', err);
+        uniformsContainer.textContent = 'Failed to load uniform controls';
+      }
     } else {
       // Hide buttons for image tabs
       this.copyButton.style.display = 'none';
@@ -247,7 +306,7 @@ export class EditorPanel {
       imgContainer.className = 'editor-image-viewer';
 
       const img = document.createElement('img');
-      img.src = tab.url;
+      img.src = (tab as ImageTab).url;
       img.alt = tab.name;
 
       imgContainer.appendChild(img);

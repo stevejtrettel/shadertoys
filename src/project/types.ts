@@ -20,6 +20,106 @@ export type PassName = 'Image' | 'BufferA' | 'BufferB' | 'BufferC' | 'BufferD';
 export type ThemeMode = 'light' | 'dark' | 'system';
 
 // =============================================================================
+// Custom Uniform Definitions
+// =============================================================================
+
+/**
+ * Supported uniform types for user-defined controls.
+ * For now, we start with float only. More types will be added later.
+ */
+export type UniformType = 'float' | 'int' | 'bool' | 'vec2' | 'vec3' | 'vec4';
+
+/**
+ * Base uniform definition shared by all types.
+ */
+interface UniformDefinitionBase {
+  /** Display label (defaults to uniform name if not provided) */
+  label?: string;
+}
+
+/**
+ * Float uniform with slider control.
+ */
+export interface FloatUniformDefinition extends UniformDefinitionBase {
+  type: 'float';
+  value: number;
+  min?: number;   // Default: 0
+  max?: number;   // Default: 1
+  step?: number;  // Default: 0.01
+}
+
+/**
+ * Integer uniform with discrete slider.
+ */
+export interface IntUniformDefinition extends UniformDefinitionBase {
+  type: 'int';
+  value: number;
+  min?: number;   // Default: 0
+  max?: number;   // Default: 10
+  step?: number;  // Default: 1
+}
+
+/**
+ * Boolean uniform with toggle control.
+ */
+export interface BoolUniformDefinition extends UniformDefinitionBase {
+  type: 'bool';
+  value: boolean;
+}
+
+/**
+ * Vec2 uniform (2D position picker).
+ */
+export interface Vec2UniformDefinition extends UniformDefinitionBase {
+  type: 'vec2';
+  value: [number, number];
+  min?: [number, number];   // Default: [0, 0]
+  max?: [number, number];   // Default: [1, 1]
+}
+
+/**
+ * Vec3 uniform (color picker or 3D value).
+ */
+export interface Vec3UniformDefinition extends UniformDefinitionBase {
+  type: 'vec3';
+  value: [number, number, number];
+  /** If true, use color picker UI. Otherwise use 3 sliders. */
+  color?: boolean;
+}
+
+/**
+ * Vec4 uniform (color with alpha or 4D value).
+ */
+export interface Vec4UniformDefinition extends UniformDefinitionBase {
+  type: 'vec4';
+  value: [number, number, number, number];
+  /** If true, use color picker with alpha. Otherwise use 4 sliders. */
+  color?: boolean;
+}
+
+/**
+ * Union of all uniform definition types.
+ */
+export type UniformDefinition =
+  | FloatUniformDefinition
+  | IntUniformDefinition
+  | BoolUniformDefinition
+  | Vec2UniformDefinition
+  | Vec3UniformDefinition
+  | Vec4UniformDefinition;
+
+/**
+ * Map of uniform names to their definitions.
+ */
+export type UniformDefinitions = Record<string, UniformDefinition>;
+
+/**
+ * Runtime uniform values (current state).
+ * Keys are uniform names, values are the current value.
+ */
+export type UniformValues = Record<string, number | boolean | number[]>;
+
+// =============================================================================
 // Channel Definitions (JSON Config Format)
 // =============================================================================
 
@@ -122,6 +222,9 @@ export interface ShadertoyConfig {
   theme?: ThemeMode;
   controls?: boolean;
   common?: string;
+
+  // Custom uniforms (user-defined controls)
+  uniforms?: UniformDefinitions;
 
   // Passes (at top level)
   Image?: PassConfigSimplified;
@@ -255,4 +358,10 @@ export interface ShadertoyProject {
    * All ChannelSource with kind: 'texture2D' refer to names in this list.
    */
   textures: ShadertoyTexture2D[];
+
+  /**
+   * Custom uniform definitions from config.
+   * Users must declare these uniforms in their shader code.
+   */
+  uniforms: UniformDefinitions;
 }

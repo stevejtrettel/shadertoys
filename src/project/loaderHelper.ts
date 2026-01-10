@@ -129,6 +129,7 @@ async function loadSinglePass(
       },
     },
     textures: [],
+    uniforms: {},
   };
 }
 
@@ -272,6 +273,7 @@ async function loadWithConfig(
     commonSource,
     passes,
     textures,
+    uniforms: config.uniforms ?? {},
   };
 }
 
