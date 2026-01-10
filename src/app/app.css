@@ -9,20 +9,49 @@
 
 /* ===== Shared Glass Overlay Variables ===== */
 :root {
-  --glass-bg: rgba(30, 30, 35, 0.65);
-  --glass-bg-hover: rgba(30, 30, 35, 0.8);
-  --glass-border: 1px solid rgba(255, 255, 255, 0.1);
+  /* Background: gradient simulates light from top-left */
+  /* ORIGINAL: rgba(30, 30, 35, 0.65) */
+  --glass-bg: linear-gradient(
+    145deg,
+    rgba(50, 50, 58, 0.7) 0%,
+    rgba(30, 30, 35, 0.6) 100%
+  );
+  /* ORIGINAL: rgba(30, 30, 35, 0.8) */
+  --glass-bg-hover: linear-gradient(
+    145deg,
+    rgba(60, 60, 68, 0.8) 0%,
+    rgba(40, 40, 45, 0.75) 100%
+  );
+
+  /* Border: slightly brighter for definition */
+  /* ORIGINAL: 1px solid rgba(255, 255, 255, 0.1) */
+  --glass-border: 1px solid rgba(255, 255, 255, 0.12);
+
+  /* Shadow: multi-layer for realistic floating depth */
+  /* ORIGINAL: 0 4px 16px rgba(0,0,0,0.25), 0 2px 4px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.1) */
   --glass-shadow:
-    0 4px 16px rgba(0, 0, 0, 0.25),
-    0 2px 4px rgba(0, 0, 0, 0.15),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    0 1px 2px rgba(0, 0, 0, 0.07),
+    0 4px 8px rgba(0, 0, 0, 0.07),
+    0 8px 16px rgba(0, 0, 0, 0.1),
+    0 16px 32px rgba(0, 0, 0, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  /* ORIGINAL: 0 2px 8px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.08) */
   --glass-shadow-sm:
-    0 2px 8px rgba(0, 0, 0, 0.25),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  --glass-blur: blur(20px);
+    0 1px 2px rgba(0, 0, 0, 0.06),
+    0 2px 6px rgba(0, 0, 0, 0.08),
+    0 4px 12px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+
+  /* Blur: saturate makes colors behind glass more vibrant */
+  /* ORIGINAL: blur(20px) */
+  --glass-blur: blur(20px) saturate(180%);
+
   --glass-radius: 6px;    /* all overlays use same radius, smaller than canvas (8px) */
   --glass-radius-sm: 6px; /* same as above for consistency */
-  --glass-text: rgba(255, 255, 255, 0.9);
+
+  /* Text: slightly brighter for readability */
+  /* ORIGINAL: rgba(255, 255, 255, 0.9) */
+  --glass-text: rgba(255, 255, 255, 0.92);
   --glass-text-muted: rgba(255, 255, 255, 0.6);
 }
 
