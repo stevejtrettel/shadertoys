@@ -13,6 +13,7 @@ import './app.css';
 
 import { ShadertoyEngine } from '../engine/ShadertoyEngine';
 import { ShadertoyProject } from '../project/types';
+import { UniformsPanel } from '../uniforms/UniformsPanel';
 import { AppOptions, MouseState } from './types';
 
 export class App {
@@ -56,6 +57,9 @@ export class App {
   // WebGL context loss handling
   private contextLostOverlay: HTMLElement | null = null;
   private isContextLost: boolean = false;
+
+  // Floating uniforms panel
+  private uniformsPanel: UniformsPanel | null = null;
 
   constructor(opts: AppOptions) {
     this.container = opts.container;
@@ -111,6 +115,17 @@ export class App {
     // Check for compilation errors and show overlay if needed
     if (this.engine.hasErrors()) {
       this.showErrorOverlay(this.engine.getCompilationErrors());
+    }
+
+    // Create floating uniforms panel if uniforms are defined
+    if (opts.project.uniforms && Object.keys(opts.project.uniforms).length > 0) {
+      this.uniformsPanel = new UniformsPanel({
+        container: this.container,
+        uniforms: opts.project.uniforms,
+        onChange: (name, value) => {
+          this.engine.setUniformValue(name, value);
+        },
+      });
     }
 
     // Set up resize observer
@@ -197,6 +212,7 @@ export class App {
     this.stop();
     this.resizeObserver.disconnect();
     this.intersectionObserver.disconnect();
+    this.uniformsPanel?.destroy();
     this.engine.dispose();
     this.container.removeChild(this.canvas);
     this.container.removeChild(this.fpsDisplay);

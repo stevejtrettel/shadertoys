@@ -1,0 +1,163 @@
+/**
+ * Uniforms Panel - Floating overlay styles
+ */
+
+.uniforms-panel {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 200px;
+  max-height: calc(100% - 32px);
+  background: var(--bg-primary);
+  border-radius: 12px;
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.15),
+    0 0 0 1px rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header */
+.uniforms-panel-header {
+  padding: 12px 14px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-primary);
+  flex-shrink: 0;
+}
+
+/* Content area */
+.uniforms-panel-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Override uniform controls styles for compact panel */
+.uniforms-panel .uniform-controls {
+  padding: 12px;
+  gap: 12px;
+  background: transparent;
+}
+
+.uniforms-panel .uniform-controls-header {
+  display: none; /* Hide the reset button header in compact mode */
+}
+
+.uniforms-panel .uniform-controls-list {
+  gap: 14px;
+}
+
+.uniforms-panel .uniform-control {
+  gap: 6px;
+}
+
+.uniforms-panel .uniform-control-label {
+  font-size: 11px;
+}
+
+.uniforms-panel .uniform-control-value {
+  font-size: 10px;
+  padding: 1px 4px;
+  min-width: 40px;
+}
+
+/* Compact slider */
+.uniforms-panel .uniform-control-slider {
+  height: 4px;
+}
+
+.uniforms-panel .uniform-control-slider::-webkit-slider-runnable-track {
+  height: 4px;
+}
+
+.uniforms-panel .uniform-control-slider::-webkit-slider-thumb {
+  width: 12px;
+  height: 12px;
+  margin-top: -4px;
+}
+
+.uniforms-panel .uniform-control-slider::-moz-range-track {
+  height: 4px;
+}
+
+.uniforms-panel .uniform-control-slider::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+}
+
+/* Compact toggle */
+.uniforms-panel .uniform-control-toggle {
+  width: 34px;
+  height: 18px;
+}
+
+.uniforms-panel .uniform-control-toggle-slider {
+  border-radius: 18px;
+}
+
+.uniforms-panel .uniform-control-toggle-slider::before {
+  width: 12px;
+  height: 12px;
+  left: 3px;
+  bottom: 3px;
+}
+
+.uniforms-panel .uniform-control-toggle input:checked + .uniform-control-toggle-slider::before {
+  transform: translateX(16px);
+}
+
+/* Compact XY pad */
+.uniforms-panel .uniform-control-xy-pad {
+  height: 100px;
+}
+
+.uniforms-panel .uniform-control-xy-handle {
+  width: 12px;
+  height: 12px;
+}
+
+/* Compact color swatch */
+.uniforms-panel .uniform-control-color-swatch {
+  height: 28px;
+}
+
+/* Compact vec3 sliders */
+.uniforms-panel .uniform-control-vec-slider-row {
+  gap: 6px;
+}
+
+.uniforms-panel .uniform-control-vec-component {
+  font-size: 9px;
+  width: 12px;
+}
+
+.uniforms-panel .uniform-control-vec-value {
+  font-size: 9px;
+  min-width: 32px;
+}
+
+/* Scrollbar styling */
+.uniforms-panel-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.uniforms-panel-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.uniforms-panel-content::-webkit-scrollbar-thumb {
+  background: var(--border-primary);
+  border-radius: 3px;
+}
+
+.uniforms-panel-content::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
