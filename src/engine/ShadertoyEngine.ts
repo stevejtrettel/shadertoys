@@ -14,7 +14,6 @@ import {
   ShadertoyProject,
   ChannelSource,
   PassName,
-  UniformDefinition,
   UniformValues,
 } from '../project/types';
 

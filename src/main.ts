@@ -79,6 +79,16 @@ async function main() {
       });
     }
 
+    // Wire up uniform change handler for layouts that support it (split, tabbed)
+    if (layout.setUniformHandler) {
+      layout.setUniformHandler((name: string, value: number | boolean | number[]) => {
+        const engine = app.getEngine();
+        if (engine) {
+          engine.setUniformValue(name, value);
+        }
+      });
+    }
+
     // Only start animation loop if there are no compilation errors
     // If there are errors, the error overlay is already shown by App constructor
     if (!app.hasErrors()) {

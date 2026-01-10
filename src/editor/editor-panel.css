@@ -49,6 +49,15 @@
   border-bottom-color: var(--accent-secondary);
 }
 
+.editor-tab-button.uniforms-tab {
+  color: var(--accent-tertiary, var(--accent-primary));
+}
+
+.editor-tab-button.uniforms-tab.active {
+  color: var(--accent-tertiary, var(--accent-primary));
+  border-bottom-color: var(--accent-tertiary, var(--accent-primary));
+}
+
 /* Copy button (icon only) */
 .editor-copy-button {
   display: flex;
@@ -151,6 +160,13 @@
   height: 100%;
   background: var(--image-viewer-bg);
   padding: 20px;
+}
+
+/* Uniforms container */
+.editor-uniforms-container {
+  height: 100%;
+  overflow-y: auto;
+  background: var(--bg-secondary);
 }
 
 .editor-image-viewer img {
