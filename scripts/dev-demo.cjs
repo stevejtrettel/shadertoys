@@ -22,25 +22,25 @@ console.log(`Starting dev server for demo: ${demo}`);
 
 try {
   // Generate tiny loader with literal paths for this demo only
-  // Use ./ prefix to match npm package pattern (templates/main.ts uses ./shaders/...)
+  // Use /demos/ (root-relative) since generatedLoader.ts is in src/project/
   console.log(`Generating loader for demo: ${demo}...`);
   const loaderContent = `// Auto-generated - DO NOT EDIT
 import { loadDemo } from './loaderHelper';
 import { ShadertoyConfig } from './types';
 
-export const DEMO_NAME = 'demos/${demo}';
+export const DEMO_NAME = '/demos/${demo}';
 
 export async function loadDemoProject() {
-  const glslFiles = import.meta.glob<string>('./demos/${demo}/**/*.glsl', {
+  const glslFiles = import.meta.glob<string>('/demos/${demo}/**/*.glsl', {
     query: '?raw',
     import: 'default',
   });
 
-  const jsonFiles = import.meta.glob<ShadertoyConfig>('./demos/${demo}/**/*.json', {
+  const jsonFiles = import.meta.glob<ShadertoyConfig>('/demos/${demo}/**/*.json', {
     import: 'default',
   });
 
-  const imageFiles = import.meta.glob<string>('./demos/${demo}/**/*.{jpg,jpeg,png,gif,webp,bmp}', {
+  const imageFiles = import.meta.glob<string>('/demos/${demo}/**/*.{jpg,jpeg,png,gif,webp,bmp}', {
     query: '?url',
     import: 'default',
   });
