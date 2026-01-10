@@ -61,17 +61,8 @@ export async function loadDemo(
   jsonFiles: Record<string, () => Promise<ShadertoyConfig>>,
   imageFiles: Record<string, () => Promise<string>>
 ): Promise<ShadertoyProject> {
-  // Normalize path based on what format the glob keys use
-  // - npm package (templates/main.ts): uses "./shaders/..." -> keys are "./shaders/..."
-  // - repo demos (generatedLoader.ts): uses "/demos/..." -> keys are "/demos/..."
-  let normalizedPath: string;
-  if (demoPath.startsWith('/')) {
-    normalizedPath = demoPath;
-  } else if (demoPath.startsWith('./')) {
-    normalizedPath = demoPath;
-  } else {
-    normalizedPath = `./${demoPath}`;
-  }
+  // Normalize path - handle both "./path" and "path" formats
+  const normalizedPath = demoPath.startsWith('./') ? demoPath : `./${demoPath}`;
   const configPath = `${normalizedPath}/config.json`;
   const hasConfig = configPath in jsonFiles;
 

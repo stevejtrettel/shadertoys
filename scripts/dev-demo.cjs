@@ -22,32 +22,45 @@ console.log(`Starting dev server for demo: ${demo}`);
 
 try {
   // Generate tiny loader with literal paths for this demo only
-  // Use /demos/ (root-relative) since generatedLoader.ts is in src/project/
+  // Use /demos/ (root-relative) for globs, then transform keys to ./ format for loadDemo
   console.log(`Generating loader for demo: ${demo}...`);
   const loaderContent = `// Auto-generated - DO NOT EDIT
 import { loadDemo } from './loaderHelper';
 import { ShadertoyConfig } from './types';
 
-export const DEMO_NAME = '/demos/${demo}';
+export const DEMO_NAME = 'demos/${demo}';
+
+// Transform glob keys from "/path" to "./path" format
+function transformKeys<T>(files: Record<string, T>): Record<string, T> {
+  const result: Record<string, T> = {};
+  for (const [key, value] of Object.entries(files)) {
+    // Convert /demos/... to ./demos/...
+    const newKey = key.startsWith('/') ? '.' + key : key;
+    result[newKey] = value;
+  }
+  return result;
+}
 
 export async function loadDemoProject() {
-  const glslFiles = import.meta.glob<string>('/demos/${demo}/**/*.glsl', {
+  // Use root-relative paths for globs (works from any file location)
+  const glslFilesRaw = import.meta.glob<string>('/demos/${demo}/**/*.glsl', {
     query: '?raw',
     import: 'default',
   });
 
-  const jsonFiles = import.meta.glob<ShadertoyConfig>('/demos/${demo}/**/*.json', {
+  const jsonFilesRaw = import.meta.glob<ShadertoyConfig>('/demos/${demo}/**/*.json', {
     import: 'default',
   });
 
-  const imageFiles = import.meta.glob<string>('/demos/${demo}/**/*.{jpg,jpeg,png,gif,webp,bmp}', {
+  const imageFilesRaw = import.meta.glob<string>('/demos/${demo}/**/*.{jpg,jpeg,png,gif,webp,bmp}', {
     query: '?url',
     import: 'default',
   });
 
-  // Debug: log the actual keys
-  console.log('GLSL keys:', Object.keys(glslFiles));
-  console.log('JSON keys:', Object.keys(jsonFiles));
+  // Transform keys to ./ format that loadDemo expects
+  const glslFiles = transformKeys(glslFilesRaw);
+  const jsonFiles = transformKeys(jsonFilesRaw);
+  const imageFiles = transformKeys(imageFilesRaw);
 
   return loadDemo(DEMO_NAME, glslFiles, jsonFiles, imageFiles);
 }
