@@ -112,8 +112,10 @@ export class UniformControls {
         return def.color ? this.createColorPicker(name, def) : this.createVec3Sliders(name, def);
       case 'vec4':
         // vec4 color picker would need alpha - for now fall through to null
+        console.warn(`Uniform '${name}': vec4 type not yet supported`);
         return null;
       default:
+        console.warn(`Uniform '${name}': unknown type '${(def as any).type}'`);
         return null;
     }
   }
