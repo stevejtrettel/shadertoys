@@ -295,11 +295,16 @@ export class App {
 
   /**
    * Update FPS counter.
-   * Updates the display roughly once per second.
+   * FPS display updates once per second, frame count updates every frame.
    */
   private updateFps(currentTimeSec: number, elapsedTime: number): void {
     this.frameCount++;
     this.totalFrameCount++;
+
+    // Update frame count display every frame if stats panel is open
+    if (this.isStatsOpen && this.frameDisplay) {
+      this.updateFrameDisplay();
+    }
 
     // Update FPS display once per second
     if (currentTimeSec - this.lastFpsUpdate >= 1.0) {
@@ -308,18 +313,37 @@ export class App {
       this.frameCount = 0;
       this.lastFpsUpdate = currentTimeSec;
 
-      // Update stats displays if open
+      // Update time/resolution stats once per second (they don't need per-frame updates)
       if (this.isStatsOpen) {
-        this.updateStatsDisplay(elapsedTime);
+        this.updateTimeDisplay(elapsedTime);
+        this.updateResolutionDisplay();
       }
     }
   }
 
   /**
-   * Update the expanded stats display.
+   * Update frame count display.
    */
-  private updateStatsDisplay(elapsedTime: number): void {
-    // Format time as M:SS or H:MM:SS
+  private updateFrameDisplay(): void {
+    if (!this.frameDisplay) return;
+
+    let frameStr: string;
+    if (this.totalFrameCount >= 1000000) {
+      frameStr = (this.totalFrameCount / 1000000).toFixed(1) + 'M';
+    } else if (this.totalFrameCount >= 1000) {
+      frameStr = (this.totalFrameCount / 1000).toFixed(1) + 'K';
+    } else {
+      frameStr = this.totalFrameCount.toString();
+    }
+    this.frameDisplay.querySelector('.stat-value')!.textContent = frameStr;
+  }
+
+  /**
+   * Update time display.
+   */
+  private updateTimeDisplay(elapsedTime: number): void {
+    if (!this.timeDisplay) return;
+
     const totalSeconds = Math.floor(elapsedTime);
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
@@ -332,28 +356,18 @@ export class App {
       timeStr = `${minutes}:${seconds.toString().padStart(2, '0')}`;
     }
 
-    if (this.timeDisplay) {
-      this.timeDisplay.querySelector('.stat-value')!.textContent = timeStr;
-    }
+    this.timeDisplay.querySelector('.stat-value')!.textContent = timeStr;
+  }
 
-    if (this.frameDisplay) {
-      // Format large numbers with K/M suffix
-      let frameStr: string;
-      if (this.totalFrameCount >= 1000000) {
-        frameStr = (this.totalFrameCount / 1000000).toFixed(1) + 'M';
-      } else if (this.totalFrameCount >= 1000) {
-        frameStr = (this.totalFrameCount / 1000).toFixed(1) + 'K';
-      } else {
-        frameStr = this.totalFrameCount.toString();
-      }
-      this.frameDisplay.querySelector('.stat-value')!.textContent = frameStr;
-    }
+  /**
+   * Update resolution display.
+   */
+  private updateResolutionDisplay(): void {
+    if (!this.resolutionDisplay) return;
 
-    if (this.resolutionDisplay) {
-      const w = this.canvas.width;
-      const h = this.canvas.height;
-      this.resolutionDisplay.querySelector('.stat-value')!.textContent = `${w}×${h}`;
-    }
+    const w = this.canvas.width;
+    const h = this.canvas.height;
+    this.resolutionDisplay.querySelector('.stat-value')!.textContent = `${w}×${h}`;
   }
 
   /**
@@ -373,7 +387,9 @@ export class App {
     // Update stats immediately when opening
     if (this.isStatsOpen) {
       const elapsedTime = (performance.now() / 1000) - this.startTime;
-      this.updateStatsDisplay(elapsedTime);
+      this.updateTimeDisplay(elapsedTime);
+      this.updateFrameDisplay();
+      this.updateResolutionDisplay();
     }
   }
 
@@ -730,7 +746,9 @@ export class App {
 
     // Update stats display if open
     if (this.isStatsOpen) {
-      this.updateStatsDisplay(0);
+      this.updateTimeDisplay(0);
+      this.updateFrameDisplay();
+      this.updateResolutionDisplay();
     }
   }
 
