@@ -4,7 +4,7 @@
  * All floating elements use consistent "liquid glass" styling:
  * - Semi-transparent background with blur
  * - Subtle border and shadow
- * - 10px corner radius (slightly softer than canvas container's 8px)
+ * - 6px corner radius (smaller than canvas container's 8px per concentric radius rule)
  */
 
 /* ===== Shared Glass Overlay Variables ===== */
@@ -20,8 +20,8 @@
     0 2px 8px rgba(0, 0, 0, 0.25),
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
   --glass-blur: blur(20px);
-  --glass-radius: 10px;
-  --glass-radius-sm: 8px;
+  --glass-radius: 6px;    /* all overlays use same radius, smaller than canvas (8px) */
+  --glass-radius-sm: 6px; /* same as above for consistency */
   --glass-text: rgba(255, 255, 255, 0.9);
   --glass-text-muted: rgba(255, 255, 255, 0.6);
 }
