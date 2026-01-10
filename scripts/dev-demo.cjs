@@ -45,6 +45,10 @@ export async function loadDemoProject() {
     import: 'default',
   });
 
+  // Debug: log the actual keys
+  console.log('GLSL keys:', Object.keys(glslFiles));
+  console.log('JSON keys:', Object.keys(jsonFiles));
+
   return loadDemo(DEMO_NAME, glslFiles, jsonFiles, imageFiles);
 }
 `;
