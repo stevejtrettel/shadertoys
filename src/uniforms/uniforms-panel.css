@@ -47,15 +47,19 @@
   height: 20px;
 }
 
-/* Panel */
+/* Panel - Liquid glass style */
 .uniforms-panel {
   width: 200px;
   max-height: calc(100vh - 100px);
-  background: var(--bg-primary);
-  border-radius: 12px;
+  background: rgba(30, 30, 35, 0.65);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow:
-    0 4px 12px rgba(0, 0, 0, 0.15),
-    0 0 0 1px rgba(255, 255, 255, 0.05);
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    0 2px 8px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -71,7 +75,7 @@
   overflow: hidden;
 }
 
-/* Header */
+/* Header - subtle glass effect */
 .uniforms-panel-header {
   padding: 10px 14px;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -79,9 +83,9 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: var(--text-muted);
-  background: var(--bg-secondary);
-  border-bottom: 1px solid var(--border-primary);
+  color: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   flex-shrink: 0;
   display: flex;
   justify-content: space-between;
@@ -92,7 +96,7 @@
 .uniforms-panel-close {
   background: transparent;
   border: none;
-  color: var(--text-muted);
+  color: rgba(255, 255, 255, 0.5);
   font-size: 18px;
   line-height: 1;
   cursor: pointer;
@@ -107,8 +111,8 @@
 }
 
 .uniforms-panel-close:hover {
-  background: var(--border-primary);
-  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.9);
 }
 
 /* Content area */
@@ -118,7 +122,7 @@
   overflow-x: hidden;
 }
 
-/* Override uniform controls styles for compact panel */
+/* Override uniform controls styles for compact glass panel */
 .uniforms-panel .uniform-controls {
   padding: 12px;
   gap: 12px;
@@ -139,36 +143,46 @@
 
 .uniforms-panel .uniform-control-label {
   font-size: 11px;
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .uniforms-panel .uniform-control-value {
   font-size: 10px;
   padding: 1px 4px;
   min-width: 40px;
+  color: rgba(255, 255, 255, 0.6);
+  background: rgba(0, 0, 0, 0.2);
 }
 
-/* Compact slider */
+/* Compact slider - glass style */
 .uniforms-panel .uniform-control-slider {
   height: 4px;
+  background: rgba(255, 255, 255, 0.15);
 }
 
 .uniforms-panel .uniform-control-slider::-webkit-slider-runnable-track {
   height: 4px;
+  background: rgba(255, 255, 255, 0.15);
 }
 
 .uniforms-panel .uniform-control-slider::-webkit-slider-thumb {
   width: 12px;
   height: 12px;
   margin-top: -4px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
 }
 
 .uniforms-panel .uniform-control-slider::-moz-range-track {
   height: 4px;
+  background: rgba(255, 255, 255, 0.15);
 }
 
 .uniforms-panel .uniform-control-slider::-moz-range-thumb {
   width: 12px;
   height: 12px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
 }
 
 /* Compact toggle */
@@ -207,7 +221,7 @@
   height: 28px;
 }
 
-/* Compact vec3 sliders */
+/* Compact vec3 sliders - glass style */
 .uniforms-panel .uniform-control-vec-slider-row {
   gap: 6px;
 }
@@ -215,11 +229,25 @@
 .uniforms-panel .uniform-control-vec-component {
   font-size: 9px;
   width: 12px;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .uniforms-panel .uniform-control-vec-value {
   font-size: 9px;
   min-width: 32px;
+  color: rgba(255, 255, 255, 0.6);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+/* XY pad glass style */
+.uniforms-panel .uniform-control-xy-pad {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.uniforms-panel .uniform-control-xy-handle {
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
 }
 
 /* Scrollbar styling */
