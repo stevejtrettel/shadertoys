@@ -342,8 +342,8 @@
   width: 100%;
   height: 100%;
   overflow-y: auto;
-  background: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(4px);
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(8px);
   display: flex;
   justify-content: center;
   padding: 20px;
@@ -354,9 +354,45 @@
 .tabbed-uniforms-container .uniform-controls {
   max-width: 400px;
   width: 100%;
-  background: rgba(30, 30, 30, 0.9);
+  background: rgba(30, 30, 35, 0.95);
   border-radius: 12px;
   padding: 20px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
   height: fit-content;
+}
+
+/* Ensure text is visible in the overlay */
+.tabbed-uniforms-container .uniform-control-label {
+  color: #e0e0e0;
+}
+
+.tabbed-uniforms-container .uniform-control-value {
+  color: #a0a0a0;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.tabbed-uniforms-container .uniform-controls-header {
+  color: #909090;
+  border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+
+.tabbed-uniforms-container .uniform-control-slider {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.tabbed-uniforms-container .uniform-control-slider::-webkit-slider-thumb {
+  background: #ffffff;
+}
+
+.tabbed-uniforms-container .uniform-control-slider::-moz-range-thumb {
+  background: #ffffff;
+}
+
+.tabbed-uniforms-container .uniform-control-vec-component {
+  color: #909090;
+}
+
+.tabbed-uniforms-container .uniform-control-vec-value {
+  color: #a0a0a0;
+  background: rgba(0, 0, 0, 0.3);
 }
