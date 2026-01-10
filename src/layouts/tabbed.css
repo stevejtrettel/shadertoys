@@ -92,6 +92,22 @@
   border-bottom-color: var(--accent-secondary);
 }
 
+.tabbed-tab-button.uniforms-tab {
+  color: var(--accent-tertiary, var(--accent-primary));
+  padding: 8px 12px;
+}
+
+.tabbed-tab-button.uniforms-tab.active {
+  color: var(--accent-tertiary, var(--accent-primary));
+  border-bottom-color: var(--accent-tertiary, var(--accent-primary));
+}
+
+.tabbed-tab-button .uniforms-icon {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
 /* ===== Content Area ===== */
 .tabbed-content {
   flex: 1;
@@ -316,4 +332,31 @@
   font-size: 13px;
   resize: none;
   outline: none;
+}
+
+/* ===== Uniforms Container (semi-transparent overlay) ===== */
+.tabbed-uniforms-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
+  display: flex;
+  justify-content: center;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+/* Center the uniform controls and constrain width */
+.tabbed-uniforms-container .uniform-controls {
+  max-width: 400px;
+  width: 100%;
+  background: rgba(30, 30, 30, 0.9);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  height: fit-content;
 }

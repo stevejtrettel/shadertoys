@@ -51,11 +51,18 @@
 
 .editor-tab-button.uniforms-tab {
   color: var(--accent-tertiary, var(--accent-primary));
+  padding: 8px 12px;
 }
 
 .editor-tab-button.uniforms-tab.active {
   color: var(--accent-tertiary, var(--accent-primary));
   border-bottom-color: var(--accent-tertiary, var(--accent-primary));
+}
+
+.editor-tab-button .uniforms-icon {
+  width: 18px;
+  height: 18px;
+  display: block;
 }
 
 /* Copy button (icon only) */

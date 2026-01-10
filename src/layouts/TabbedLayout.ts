@@ -7,13 +7,15 @@
 
 import './tabbed.css';
 
-import { BaseLayout, LayoutOptions, RecompileHandler } from './types';
-import { ShadertoyProject, PassName } from '../project/types';
+import { BaseLayout, LayoutOptions, RecompileHandler, UniformChangeHandler } from './types';
+import { ShadertoyProject, PassName, UniformValue, UniformValues } from '../project/types';
+import type { UniformControls as UniformControlsType } from '../uniforms/UniformControls';
 
 type ShaderTab = { kind: 'shader'; name: string };
+type UniformsTab = { kind: 'uniforms'; name: string };
 type CodeTab = { kind: 'code'; name: string; passName: 'common' | PassName; source: string };
 type ImageTab = { kind: 'image'; name: string; url: string };
-type Tab = ShaderTab | CodeTab | ImageTab;
+type Tab = ShaderTab | UniformsTab | CodeTab | ImageTab;
 
 export class TabbedLayout implements BaseLayout {
   private container: HTMLElement;
@@ -30,9 +32,15 @@ export class TabbedLayout implements BaseLayout {
   private recompileButton: HTMLElement;
   private errorDisplay: HTMLElement;
   private recompileHandler: RecompileHandler | null = null;
+  private uniformChangeHandler: UniformChangeHandler | null = null;
   private modifiedSources: Map<string, string> = new Map();
   private tabs: Tab[] = [];
   private activeTabIndex: number = 0;
+
+  // Uniforms support
+  private uniformsContainer: HTMLElement;
+  private uniformControls: UniformControlsType | null = null;
+  private uniformValues: UniformValues = {};
 
   constructor(opts: LayoutOptions) {
     this.container = opts.container;
@@ -67,6 +75,17 @@ export class TabbedLayout implements BaseLayout {
     this.editorContainer.className = 'tabbed-editor-container';
     this.editorContainer.style.visibility = 'hidden';
     this.contentArea.appendChild(this.editorContainer);
+
+    // Create uniforms container (semi-transparent overlay)
+    this.uniformsContainer = document.createElement('div');
+    this.uniformsContainer.className = 'tabbed-uniforms-container';
+    this.uniformsContainer.style.visibility = 'hidden';
+    this.contentArea.appendChild(this.uniformsContainer);
+
+    // Initialize uniform values from project
+    for (const [name, def] of Object.entries(this.project.uniforms)) {
+      this.uniformValues[name] = def.value;
+    }
 
     // Create button container for copy and recompile (will be added to toolbar)
     this.buttonContainer = document.createElement('div');
@@ -126,10 +145,18 @@ export class TabbedLayout implements BaseLayout {
     this.recompileHandler = handler;
   }
 
+  setUniformHandler(handler: UniformChangeHandler): void {
+    this.uniformChangeHandler = handler;
+  }
+
   dispose(): void {
     if (this.editorInstance) {
       this.editorInstance.destroy();
       this.editorInstance = null;
+    }
+    if (this.uniformControls) {
+      this.uniformControls.destroy();
+      this.uniformControls = null;
     }
     this.container.innerHTML = '';
   }
@@ -228,13 +255,18 @@ export class TabbedLayout implements BaseLayout {
     const tabBar = document.createElement('div');
     tabBar.className = 'tabbed-tab-bar';
 
-    // Build tabs: Shader first, then code files, then textures
+    // Build tabs: Shader first, uniforms (if any), then code files, then textures
     this.tabs = [];
 
     // 1. Shader output tab
     this.tabs.push({ kind: 'shader', name: 'Shader' });
 
-    // 2. Common (if exists)
+    // 2. Uniforms tab (if project has custom uniforms)
+    if (Object.keys(this.project.uniforms).length > 0) {
+      this.tabs.push({ kind: 'uniforms', name: 'Uniforms' });
+    }
+
+    // 3. Common (if exists)
     if (this.project.commonSource) {
       this.tabs.push({
         kind: 'code',
@@ -244,7 +276,7 @@ export class TabbedLayout implements BaseLayout {
       });
     }
 
-    // 3. Buffers in order
+    // 4. Buffers in order
     const bufferOrder: ('BufferA' | 'BufferB' | 'BufferC' | 'BufferD')[] = [
       'BufferA', 'BufferB', 'BufferC', 'BufferD',
     ];
@@ -260,7 +292,7 @@ export class TabbedLayout implements BaseLayout {
       }
     }
 
-    // 4. Image pass
+    // 5. Image pass
     const imagePass = this.project.passes.Image;
     this.tabs.push({
       kind: 'code',
@@ -269,7 +301,7 @@ export class TabbedLayout implements BaseLayout {
       source: imagePass.glslSource,
     });
 
-    // 5. Textures (images)
+    // 6. Textures (images)
     for (const texture of this.project.textures) {
       this.tabs.push({
         kind: 'image',
@@ -291,10 +323,11 @@ export class TabbedLayout implements BaseLayout {
         b.classList.toggle('active', i === tabIndex);
       });
 
-      // Hide all content first
+      // Hide all content first (except canvas for uniforms overlay)
       this.canvasContainer.style.visibility = 'hidden';
       this.imageViewer.style.visibility = 'hidden';
       this.editorContainer.style.visibility = 'hidden';
+      this.uniformsContainer.style.visibility = 'hidden';
       this.buttonContainer.style.display = 'none';
 
       // Destroy previous editor instance
@@ -303,9 +336,39 @@ export class TabbedLayout implements BaseLayout {
         this.editorInstance = null;
       }
 
+      // Destroy previous uniform controls
+      if (this.uniformControls) {
+        this.uniformControls.destroy();
+        this.uniformControls = null;
+      }
+
       if (tab.kind === 'shader') {
         // Show shader canvas
         this.canvasContainer.style.visibility = 'visible';
+      } else if (tab.kind === 'uniforms') {
+        // Show both canvas AND uniforms overlay (semi-transparent)
+        this.canvasContainer.style.visibility = 'visible';
+        this.uniformsContainer.style.visibility = 'visible';
+
+        // Load uniform controls
+        this.uniformsContainer.innerHTML = '';
+        try {
+          const { UniformControls } = await import('../uniforms/UniformControls');
+          this.uniformControls = new UniformControls({
+            container: this.uniformsContainer,
+            uniforms: this.project.uniforms,
+            initialValues: this.uniformValues,
+            onChange: (name: string, value: UniformValue) => {
+              this.uniformValues[name] = value;
+              if (this.uniformChangeHandler) {
+                this.uniformChangeHandler(name, value);
+              }
+            },
+          });
+        } catch (err) {
+          console.error('Failed to load uniform controls:', err);
+          this.uniformsContainer.textContent = 'Failed to load uniform controls';
+        }
       } else if (tab.kind === 'code') {
         // Show editor and buttons
         this.editorContainer.style.visibility = 'visible';
@@ -337,7 +400,7 @@ export class TabbedLayout implements BaseLayout {
         this.imageViewer.style.visibility = 'visible';
 
         const img = document.createElement('img');
-        img.src = tab.url;
+        img.src = (tab as ImageTab).url;
         img.alt = tab.name;
 
         this.imageViewer.innerHTML = '';
@@ -351,10 +414,29 @@ export class TabbedLayout implements BaseLayout {
       tabButton.className = 'tabbed-tab-button';
       if (tab.kind === 'shader') {
         tabButton.classList.add('shader-tab');
+      } else if (tab.kind === 'uniforms') {
+        tabButton.classList.add('uniforms-tab');
+        // Use sliders icon instead of text
+        tabButton.innerHTML = `
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="uniforms-icon">
+            <line x1="4" y1="21" x2="4" y2="14"></line>
+            <line x1="4" y1="10" x2="4" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="12"></line>
+            <line x1="12" y1="8" x2="12" y2="3"></line>
+            <line x1="20" y1="21" x2="20" y2="16"></line>
+            <line x1="20" y1="12" x2="20" y2="3"></line>
+            <line x1="1" y1="14" x2="7" y2="14"></line>
+            <line x1="9" y1="8" x2="15" y2="8"></line>
+            <line x1="17" y1="16" x2="23" y2="16"></line>
+          </svg>
+        `;
+        tabButton.title = 'Uniforms';
       } else if (tab.kind === 'image') {
         tabButton.classList.add('image-tab');
+        tabButton.textContent = tab.name;
+      } else {
+        tabButton.textContent = tab.name;
       }
-      tabButton.textContent = tab.name;
       if (index === 0) tabButton.classList.add('active');
 
       tabButton.addEventListener('click', () => showTab(index));
