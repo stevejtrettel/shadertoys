@@ -157,10 +157,8 @@ export class App {
       this.showErrorOverlay(this.engine.getCompilationErrors());
     }
 
-    // Create floating uniforms panel only for fullscreen layout
-    // (split/tabbed layouts have uniforms in the editor panel tabs)
-    const hasEditorPanel = opts.project.layout === 'split' || opts.project.layout === 'tabbed';
-    if (!hasEditorPanel && opts.project.uniforms && Object.keys(opts.project.uniforms).length > 0) {
+    // Create floating uniforms panel (used in all layout modes)
+    if (opts.project.uniforms && Object.keys(opts.project.uniforms).length > 0) {
       this.uniformsPanel = new UniformsPanel({
         container: this.container,
         uniforms: opts.project.uniforms,
