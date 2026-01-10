@@ -6,7 +6,7 @@
 .prism-editor-wrapper {
   display: flex;
   height: 100%;
-  background: #ffffff;
+  background: var(--code-bg);
   font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
   font-size: 13px;
   line-height: 1.6;
@@ -17,8 +17,8 @@
   flex-shrink: 0;
   padding: 16px 12px 16px 16px;
   text-align: right;
-  color: #999;
-  border-right: 1px solid #e0e0e0;
+  color: var(--code-line-number);
+  border-right: 1px solid var(--code-line-border);
   user-select: none;
   overflow: hidden;
 }
@@ -59,24 +59,24 @@
 .prism-editor-textarea {
   background: transparent;
   color: transparent;
-  caret-color: #000;
+  caret-color: var(--code-text);
   resize: none;
   z-index: 1;
   -webkit-text-fill-color: transparent;
 }
 
 .prism-editor-textarea::selection {
-  background: rgba(173, 214, 255, 0.4);
+  background: var(--code-selection);
 }
 
 .prism-editor-textarea::-moz-selection {
-  background: rgba(173, 214, 255, 0.4);
+  background: var(--code-selection);
 }
 
 /* Highlighted code overlay */
 .prism-editor-highlight {
-  background: #ffffff;
-  color: #000;
+  background: var(--code-bg);
+  color: var(--code-text);
   pointer-events: none;
   z-index: 0;
 }
@@ -89,11 +89,11 @@
 }
 
 /* Prism syntax highlighting colors */
-.prism-editor-highlight .token.comment { color: #6a9955; }
-.prism-editor-highlight .token.keyword { color: #0000ff; }
-.prism-editor-highlight .token.string { color: #a31515; }
-.prism-editor-highlight .token.number { color: #098658; }
-.prism-editor-highlight .token.operator { color: #000000; }
-.prism-editor-highlight .token.function { color: #795e26; }
-.prism-editor-highlight .token.class-name { color: #267f99; }
-.prism-editor-highlight .token.punctuation { color: #000000; }
+.prism-editor-highlight .token.comment { color: var(--syntax-comment); }
+.prism-editor-highlight .token.keyword { color: var(--syntax-keyword); }
+.prism-editor-highlight .token.string { color: var(--syntax-string); }
+.prism-editor-highlight .token.number { color: var(--syntax-number); }
+.prism-editor-highlight .token.operator { color: var(--syntax-operator); }
+.prism-editor-highlight .token.function { color: var(--syntax-function); }
+.prism-editor-highlight .token.class-name { color: var(--syntax-class); }
+.prism-editor-highlight .token.punctuation { color: var(--syntax-punctuation); }
