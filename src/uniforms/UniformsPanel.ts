@@ -1,8 +1,8 @@
 /**
  * Uniforms Panel - Floating overlay for uniform controls
  *
- * A compact, always-visible panel that floats on the right side of the canvas.
- * Shows when uniforms are defined in the project.
+ * A compact panel that floats on the right side of the canvas.
+ * Includes a toggle button to show/hide. Starts closed by default.
  */
 
 import './uniforms-panel.css';
@@ -19,39 +19,80 @@ export interface UniformsPanelOptions {
   onChange: (name: string, value: UniformValue) => void;
   /** Initial values (optional) */
   initialValues?: UniformValues;
+  /** Start with panel open (default: false) */
+  startOpen?: boolean;
 }
 
 export class UniformsPanel {
+  private wrapper: HTMLElement;
   private panel: HTMLElement;
+  private toggleButton: HTMLElement;
   private controls: UniformControls | null = null;
   private uniforms: UniformDefinitions;
   private onChange: (name: string, value: UniformValue) => void;
   private values: UniformValues = {};
+  private isOpen: boolean;
 
   constructor(opts: UniformsPanelOptions) {
     this.uniforms = opts.uniforms;
     this.onChange = opts.onChange;
+    this.isOpen = opts.startOpen ?? false;
 
     // Initialize values
     for (const [name, def] of Object.entries(this.uniforms)) {
       this.values[name] = opts.initialValues?.[name] ?? def.value;
     }
 
+    // Create wrapper for both toggle button and panel
+    this.wrapper = document.createElement('div');
+    this.wrapper.className = 'uniforms-panel-wrapper';
+
+    // Create toggle button (always visible)
+    this.toggleButton = document.createElement('button');
+    this.toggleButton.className = 'uniforms-toggle-button';
+    this.toggleButton.title = 'Toggle Uniforms Panel';
+    this.toggleButton.innerHTML = `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="4" y1="21" x2="4" y2="14"></line>
+        <line x1="4" y1="10" x2="4" y2="3"></line>
+        <line x1="12" y1="21" x2="12" y2="12"></line>
+        <line x1="12" y1="8" x2="12" y2="3"></line>
+        <line x1="20" y1="21" x2="20" y2="16"></line>
+        <line x1="20" y1="12" x2="20" y2="3"></line>
+        <line x1="1" y1="14" x2="7" y2="14"></line>
+        <line x1="9" y1="8" x2="15" y2="8"></line>
+        <line x1="17" y1="16" x2="23" y2="16"></line>
+      </svg>
+    `;
+    this.toggleButton.addEventListener('click', () => this.toggle());
+    this.wrapper.appendChild(this.toggleButton);
+
     // Create panel element
     this.panel = document.createElement('div');
     this.panel.className = 'uniforms-panel';
 
-    // Only show if there are uniforms
+    // Only create content if there are uniforms
     if (Object.keys(this.uniforms).length === 0) {
-      this.panel.style.display = 'none';
-      opts.container.appendChild(this.panel);
+      this.wrapper.style.display = 'none';
+      opts.container.appendChild(this.wrapper);
       return;
     }
 
-    // Header
+    // Header with close button
     const header = document.createElement('div');
     header.className = 'uniforms-panel-header';
-    header.textContent = 'Uniforms';
+
+    const title = document.createElement('span');
+    title.textContent = 'Uniforms';
+    header.appendChild(title);
+
+    const closeButton = document.createElement('button');
+    closeButton.className = 'uniforms-panel-close';
+    closeButton.innerHTML = '&times;';
+    closeButton.title = 'Close';
+    closeButton.addEventListener('click', () => this.hide());
+    header.appendChild(closeButton);
+
     this.panel.appendChild(header);
 
     // Content area for controls
@@ -70,8 +111,15 @@ export class UniformsPanel {
       },
     });
 
+    this.wrapper.appendChild(this.panel);
+
+    // Set initial state
+    if (!this.isOpen) {
+      this.panel.classList.add('closed');
+    }
+
     // Append to container
-    opts.container.appendChild(this.panel);
+    opts.container.appendChild(this.wrapper);
   }
 
   /**
@@ -94,7 +142,8 @@ export class UniformsPanel {
    */
   show(): void {
     if (Object.keys(this.uniforms).length > 0) {
-      this.panel.style.display = '';
+      this.isOpen = true;
+      this.panel.classList.remove('closed');
     }
   }
 
@@ -102,17 +151,18 @@ export class UniformsPanel {
    * Hide the panel.
    */
   hide(): void {
-    this.panel.style.display = 'none';
+    this.isOpen = false;
+    this.panel.classList.add('closed');
   }
 
   /**
    * Toggle panel visibility.
    */
   toggle(): void {
-    if (this.panel.style.display === 'none') {
-      this.show();
-    } else {
+    if (this.isOpen) {
       this.hide();
+    } else {
+      this.show();
     }
   }
 
@@ -120,7 +170,7 @@ export class UniformsPanel {
    * Check if panel is visible.
    */
   isVisible(): boolean {
-    return this.panel.style.display !== 'none';
+    return this.isOpen;
   }
 
   /**
@@ -128,6 +178,6 @@ export class UniformsPanel {
    */
   destroy(): void {
     this.controls?.destroy();
-    this.panel.remove();
+    this.wrapper.remove();
   }
 }
