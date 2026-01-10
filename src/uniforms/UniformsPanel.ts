@@ -143,6 +143,7 @@ export class UniformsPanel {
   show(): void {
     if (Object.keys(this.uniforms).length > 0) {
       this.isOpen = true;
+      this.toggleButton.classList.add('hidden');
       this.panel.classList.remove('closed');
     }
   }
@@ -153,6 +154,7 @@ export class UniformsPanel {
   hide(): void {
     this.isOpen = false;
     this.panel.classList.add('closed');
+    this.toggleButton.classList.remove('hidden');
   }
 
   /**
