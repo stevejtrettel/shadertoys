@@ -61,8 +61,8 @@ export async function loadDemo(
   jsonFiles: Record<string, () => Promise<ShadertoyConfig>>,
   imageFiles: Record<string, () => Promise<string>>
 ): Promise<ShadertoyProject> {
-  // Normalize path - handle both "./shaders/name" and "shaders/name" formats
-  const normalizedPath = demoPath.startsWith('./') ? demoPath : `./${demoPath}`;
+  // Normalize path - Vite glob keys start with "/" so we need to match that format
+  const normalizedPath = demoPath.startsWith('/') ? demoPath : `/${demoPath}`;
   const configPath = `${normalizedPath}/config.json`;
   const hasConfig = configPath in jsonFiles;
 

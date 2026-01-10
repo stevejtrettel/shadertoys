@@ -27,7 +27,7 @@ try {
 import { loadDemo } from './loaderHelper';
 import { ShadertoyConfig } from './types';
 
-export const DEMO_NAME = '${demo}';
+export const DEMO_NAME = 'demos/${demo}';
 
 export async function loadDemoProject() {
   const glslFiles = import.meta.glob<string>('/demos/${demo}/**/*.glsl', {
