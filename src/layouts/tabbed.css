@@ -264,24 +264,24 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  background: var(--accent-primary);
+  background: var(--recompile-bg);
   border: none;
-  color: #fff;
+  color: var(--recompile-text);
   padding: 6px 12px;
   border-radius: 4px;
   cursor: pointer;
   font-family: inherit;
   font-size: 12px;
   font-weight: 500;
-  transition: background 0.15s;
+  transition: background 0.15s, color 0.15s;
 }
 
 .tabbed-recompile-button:hover {
-  background: var(--accent-primary-hover);
+  background: var(--recompile-bg-hover);
 }
 
 .tabbed-recompile-button:active {
-  background: var(--accent-primary-active);
+  background: var(--recompile-bg-active);
 }
 
 .tabbed-recompile-button svg {

@@ -79,6 +79,12 @@
   --button-border-hover: #999999;
   --button-text-hover: #333333;
 
+  /* Recompile button */
+  --recompile-bg: #e8e8e8;
+  --recompile-text: #333333;
+  --recompile-bg-hover: #d8d8d8;
+  --recompile-bg-active: #c8c8c8;
+
   /* Image viewer */
   --image-viewer-bg: #f5f5f5;
 }
@@ -156,6 +162,12 @@
   --button-border-hover: #5a5a5a;
   --button-text-hover: #e0e0e0;
 
+  /* Recompile button */
+  --recompile-bg: #3a3a3a;
+  --recompile-text: #e0e0e0;
+  --recompile-bg-hover: #4a4a4a;
+  --recompile-bg-active: #5a5a5a;
+
   /* Image viewer */
   --image-viewer-bg: #2a2a2a;
 }
@@ -212,6 +224,10 @@
   --button-bg-hover: #f0f0f0;
   --button-border-hover: #999999;
   --button-text-hover: #333333;
+  --recompile-bg: #e8e8e8;
+  --recompile-text: #333333;
+  --recompile-bg-hover: #d8d8d8;
+  --recompile-bg-active: #c8c8c8;
   --image-viewer-bg: #f5f5f5;
 }
 
@@ -267,6 +283,10 @@
     --button-bg-hover: #3a3a3a;
     --button-border-hover: #5a5a5a;
     --button-text-hover: #e0e0e0;
+    --recompile-bg: #3a3a3a;
+    --recompile-text: #e0e0e0;
+    --recompile-bg-hover: #4a4a4a;
+    --recompile-bg-active: #5a5a5a;
     --image-viewer-bg: #2a2a2a;
   }
 }
