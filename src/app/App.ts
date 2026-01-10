@@ -50,6 +50,10 @@ export class App {
   private intersectionObserver: IntersectionObserver;
   private isVisible: boolean = true;
 
+  // WebGL context loss handling
+  private contextLostOverlay: HTMLElement | null = null;
+  private isContextLost: boolean = false;
+
   constructor(opts: AppOptions) {
     this.container = opts.container;
     this.project = opts.project;
@@ -88,6 +92,9 @@ export class App {
     }
 
     this.gl = gl;
+
+    // Set up WebGL context loss handling
+    this.setupContextLossHandling();
 
     // Initialize canvas size
     this.updateCanvasSize();
@@ -190,6 +197,8 @@ export class App {
     this.engine.dispose();
     this.container.removeChild(this.canvas);
     this.container.removeChild(this.fpsDisplay);
+    this.hideContextLostOverlay();
+    this.hideErrorOverlay();
   }
 
   // ===========================================================================
@@ -200,8 +209,8 @@ export class App {
     // Schedule next frame first (even if paused or invisible)
     this.animationId = requestAnimationFrame(this.animate);
 
-    // Skip rendering if paused or off-screen
-    if (this.isPaused || !this.isVisible) {
+    // Skip rendering if paused, off-screen, or context lost
+    if (this.isPaused || !this.isVisible || this.isContextLost) {
       return;
     }
 
@@ -422,6 +431,116 @@ export class App {
         this.reset();
       }
     });
+  }
+
+  // ===========================================================================
+  // WebGL Context Loss Handling
+  // ===========================================================================
+
+  /**
+   * Set up handlers for WebGL context loss and restoration.
+   * Context can be lost due to GPU driver issues, system sleep, etc.
+   */
+  private setupContextLossHandling(): void {
+    this.canvas.addEventListener('webglcontextlost', (e: Event) => {
+      e.preventDefault(); // Required to allow context restoration
+      this.handleContextLost();
+    });
+
+    this.canvas.addEventListener('webglcontextrestored', () => {
+      this.handleContextRestored();
+    });
+  }
+
+  /**
+   * Handle WebGL context loss - pause rendering and show overlay.
+   */
+  private handleContextLost(): void {
+    this.isContextLost = true;
+    this.stop();
+    this.showContextLostOverlay();
+    console.warn('WebGL context lost. Waiting for restoration...');
+  }
+
+  /**
+   * Handle WebGL context restoration - reinitialize and resume.
+   */
+  private handleContextRestored(): void {
+    console.log('WebGL context restored. Reinitializing...');
+
+    try {
+      // Dispose old engine resources (they're invalid now)
+      this.engine.dispose();
+
+      // Reinitialize engine with fresh GL state
+      this.engine = new ShadertoyEngine({
+        gl: this.gl,
+        project: this.project,
+      });
+
+      // Check for compilation errors
+      if (this.engine.hasErrors()) {
+        this.showErrorOverlay(this.engine.getCompilationErrors());
+      }
+
+      // Resize to current dimensions
+      this.engine.resize(this.canvas.width, this.canvas.height);
+
+      // Hide context lost overlay and resume
+      this.hideContextLostOverlay();
+      this.isContextLost = false;
+      this.reset();
+      this.start();
+
+      console.log('WebGL context successfully restored');
+    } catch (error) {
+      console.error('Failed to restore WebGL context:', error);
+      this.showContextLostOverlay(true); // Show with reload prompt
+    }
+  }
+
+  /**
+   * Show overlay when WebGL context is lost.
+   */
+  private showContextLostOverlay(showReload: boolean = false): void {
+    if (!this.contextLostOverlay) {
+      this.contextLostOverlay = document.createElement('div');
+      this.contextLostOverlay.className = 'context-lost-overlay';
+      this.container.appendChild(this.contextLostOverlay);
+    }
+
+    if (showReload) {
+      this.contextLostOverlay.innerHTML = `
+        <div class="context-lost-content">
+          <div class="context-lost-icon">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+            </svg>
+          </div>
+          <div class="context-lost-title">WebGL Context Lost</div>
+          <div class="context-lost-message">Unable to restore automatically.</div>
+          <button class="context-lost-reload" onclick="location.reload()">Reload Page</button>
+        </div>
+      `;
+    } else {
+      this.contextLostOverlay.innerHTML = `
+        <div class="context-lost-content">
+          <div class="context-lost-spinner"></div>
+          <div class="context-lost-title">WebGL Context Lost</div>
+          <div class="context-lost-message">Attempting to restore...</div>
+        </div>
+      `;
+    }
+  }
+
+  /**
+   * Hide the context lost overlay.
+   */
+  private hideContextLostOverlay(): void {
+    if (this.contextLostOverlay) {
+      this.contextLostOverlay.remove();
+      this.contextLostOverlay = null;
+    }
   }
 
   /**

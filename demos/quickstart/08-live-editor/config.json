@@ -2,6 +2,7 @@
   "title": "Live Editor",
   "description": "Edit shader code live and see changes instantly",
   "layout": "split",
+  "theme": "dark",
   "controls": true,
   "Image": {}
 }

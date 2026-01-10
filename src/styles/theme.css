@@ -1,0 +1,268 @@
+/**
+ * Theme Variables - Centralized theming for light/dark/system modes
+ *
+ * Usage: Apply [data-theme="light"], [data-theme="dark"], or [data-theme="system"] to html element
+ * System mode uses prefers-color-scheme media query
+ */
+
+/* ===== Light Theme (Default) ===== */
+:root,
+[data-theme="light"] {
+  /* Background colors */
+  --bg-primary: #f5f5f5;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #f8f8f8;
+  --bg-canvas: #000000;
+
+  /* Text colors */
+  --text-primary: #000000;
+  --text-secondary: #333333;
+  --text-muted: #666666;
+  --text-disabled: #999999;
+
+  /* Border colors */
+  --border-primary: #e0e0e0;
+  --border-secondary: #cccccc;
+
+  /* Accent colors */
+  --accent-primary: #4a9eff;
+  --accent-primary-hover: #3a8eef;
+  --accent-primary-active: #2a7edf;
+  --accent-secondary: #7c4dff;
+
+  /* Status colors */
+  --error-bg: #fff0f0;
+  --error-text: #cc0000;
+  --error-border: #ffcccc;
+  --success-bg: #e8f5e9;
+  --success-text: #4caf50;
+  --success-border: #4caf50;
+
+  /* Overlay colors */
+  --overlay-bg: rgba(0, 0, 0, 0.75);
+  --overlay-backdrop: rgba(0, 0, 0, 0.95);
+
+  /* Shadow */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 10px 30px rgba(0, 0, 0, 0.2);
+  --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.25);
+
+  /* Code viewer / Editor */
+  --code-bg: #ffffff;
+  --code-text: #000000;
+  --code-line-number: #999999;
+  --code-line-border: #e0e0e0;
+
+  /* Syntax highlighting (light theme) */
+  --syntax-comment: #6a9955;
+  --syntax-keyword: #0000ff;
+  --syntax-string: #a31515;
+  --syntax-number: #098658;
+  --syntax-operator: #000000;
+  --syntax-function: #795e26;
+  --syntax-class: #267f99;
+  --syntax-punctuation: #000000;
+
+  /* Tab bar */
+  --tab-bg: #f8f8f8;
+  --tab-text: #666666;
+  --tab-text-hover: #333333;
+  --tab-text-active: #000000;
+  --tab-border-active: #4a9eff;
+
+  /* Buttons */
+  --button-bg: transparent;
+  --button-border: #cccccc;
+  --button-text: #666666;
+  --button-bg-hover: #f0f0f0;
+  --button-border-hover: #999999;
+  --button-text-hover: #333333;
+
+  /* Image viewer */
+  --image-viewer-bg: #f5f5f5;
+}
+
+/* ===== Dark Theme ===== */
+[data-theme="dark"] {
+  /* Background colors */
+  --bg-primary: #1a1a1a;
+  --bg-secondary: #252525;
+  --bg-tertiary: #2a2a2a;
+  --bg-canvas: #000000;
+
+  /* Text colors */
+  --text-primary: #ffffff;
+  --text-secondary: #e0e0e0;
+  --text-muted: #a0a0a0;
+  --text-disabled: #666666;
+
+  /* Border colors */
+  --border-primary: #3a3a3a;
+  --border-secondary: #4a4a4a;
+
+  /* Accent colors */
+  --accent-primary: #4a9eff;
+  --accent-primary-hover: #5aadff;
+  --accent-primary-active: #3a8eef;
+  --accent-secondary: #9c7cff;
+
+  /* Status colors */
+  --error-bg: #3a1a1a;
+  --error-text: #ff6b6b;
+  --error-border: #5a2a2a;
+  --success-bg: #1a3a1a;
+  --success-text: #6bcf6b;
+  --success-border: #2a5a2a;
+
+  /* Overlay colors */
+  --overlay-bg: rgba(0, 0, 0, 0.85);
+  --overlay-backdrop: rgba(0, 0, 0, 0.98);
+
+  /* Shadow */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 10px 30px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.5);
+
+  /* Code viewer / Editor */
+  --code-bg: #1e1e1e;
+  --code-text: #d4d4d4;
+  --code-line-number: #858585;
+  --code-line-border: #3a3a3a;
+
+  /* Syntax highlighting (dark theme - VS Code style) */
+  --syntax-comment: #6a9955;
+  --syntax-keyword: #569cd6;
+  --syntax-string: #ce9178;
+  --syntax-number: #b5cea8;
+  --syntax-operator: #d4d4d4;
+  --syntax-function: #dcdcaa;
+  --syntax-class: #4ec9b0;
+  --syntax-punctuation: #d4d4d4;
+
+  /* Tab bar */
+  --tab-bg: #2a2a2a;
+  --tab-text: #a0a0a0;
+  --tab-text-hover: #d0d0d0;
+  --tab-text-active: #ffffff;
+  --tab-border-active: #4a9eff;
+
+  /* Buttons */
+  --button-bg: transparent;
+  --button-border: #4a4a4a;
+  --button-text: #a0a0a0;
+  --button-bg-hover: #3a3a3a;
+  --button-border-hover: #5a5a5a;
+  --button-text-hover: #e0e0e0;
+
+  /* Image viewer */
+  --image-viewer-bg: #2a2a2a;
+}
+
+/* ===== System Theme (follows OS preference) ===== */
+[data-theme="system"] {
+  /* Default to light theme variables */
+  --bg-primary: #f5f5f5;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #f8f8f8;
+  --bg-canvas: #000000;
+  --text-primary: #000000;
+  --text-secondary: #333333;
+  --text-muted: #666666;
+  --text-disabled: #999999;
+  --border-primary: #e0e0e0;
+  --border-secondary: #cccccc;
+  --accent-primary: #4a9eff;
+  --accent-primary-hover: #3a8eef;
+  --accent-primary-active: #2a7edf;
+  --accent-secondary: #7c4dff;
+  --error-bg: #fff0f0;
+  --error-text: #cc0000;
+  --error-border: #ffcccc;
+  --success-bg: #e8f5e9;
+  --success-text: #4caf50;
+  --success-border: #4caf50;
+  --overlay-bg: rgba(0, 0, 0, 0.75);
+  --overlay-backdrop: rgba(0, 0, 0, 0.95);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 10px 30px rgba(0, 0, 0, 0.2);
+  --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.25);
+  --code-bg: #ffffff;
+  --code-text: #000000;
+  --code-line-number: #999999;
+  --code-line-border: #e0e0e0;
+  --syntax-comment: #6a9955;
+  --syntax-keyword: #0000ff;
+  --syntax-string: #a31515;
+  --syntax-number: #098658;
+  --syntax-operator: #000000;
+  --syntax-function: #795e26;
+  --syntax-class: #267f99;
+  --syntax-punctuation: #000000;
+  --tab-bg: #f8f8f8;
+  --tab-text: #666666;
+  --tab-text-hover: #333333;
+  --tab-text-active: #000000;
+  --tab-border-active: #4a9eff;
+  --button-bg: transparent;
+  --button-border: #cccccc;
+  --button-text: #666666;
+  --button-bg-hover: #f0f0f0;
+  --button-border-hover: #999999;
+  --button-text-hover: #333333;
+  --image-viewer-bg: #f5f5f5;
+}
+
+/* Override with dark theme when system prefers dark */
+@media (prefers-color-scheme: dark) {
+  [data-theme="system"] {
+    --bg-primary: #1a1a1a;
+    --bg-secondary: #252525;
+    --bg-tertiary: #2a2a2a;
+    --bg-canvas: #000000;
+    --text-primary: #ffffff;
+    --text-secondary: #e0e0e0;
+    --text-muted: #a0a0a0;
+    --text-disabled: #666666;
+    --border-primary: #3a3a3a;
+    --border-secondary: #4a4a4a;
+    --accent-primary: #4a9eff;
+    --accent-primary-hover: #5aadff;
+    --accent-primary-active: #3a8eef;
+    --accent-secondary: #9c7cff;
+    --error-bg: #3a1a1a;
+    --error-text: #ff6b6b;
+    --error-border: #5a2a2a;
+    --success-bg: #1a3a1a;
+    --success-text: #6bcf6b;
+    --success-border: #2a5a2a;
+    --overlay-bg: rgba(0, 0, 0, 0.85);
+    --overlay-backdrop: rgba(0, 0, 0, 0.98);
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 10px 30px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.5);
+    --code-bg: #1e1e1e;
+    --code-text: #d4d4d4;
+    --code-line-number: #858585;
+    --code-line-border: #3a3a3a;
+    --syntax-comment: #6a9955;
+    --syntax-keyword: #569cd6;
+    --syntax-string: #ce9178;
+    --syntax-number: #b5cea8;
+    --syntax-operator: #d4d4d4;
+    --syntax-function: #dcdcaa;
+    --syntax-class: #4ec9b0;
+    --syntax-punctuation: #d4d4d4;
+    --tab-bg: #2a2a2a;
+    --tab-text: #a0a0a0;
+    --tab-text-hover: #d0d0d0;
+    --tab-text-active: #ffffff;
+    --tab-border-active: #4a9eff;
+    --button-bg: transparent;
+    --button-border: #4a4a4a;
+    --button-text: #a0a0a0;
+    --button-bg-hover: #3a3a3a;
+    --button-border-hover: #5a5a5a;
+    --button-text-hover: #e0e0e0;
+    --image-viewer-bg: #2a2a2a;
+  }
+}

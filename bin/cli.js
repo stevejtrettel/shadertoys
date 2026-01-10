@@ -63,24 +63,41 @@ function copyDir(src, dest, skipFiles = []) {
   }
 }
 
-function listShaders(cwd) {
+function getShaderList(cwd) {
   const shadersDir = path.join(cwd, 'shaders');
   if (!fs.existsSync(shadersDir)) {
-    console.error('Error: shaders/ directory not found');
-    console.error('Run "shader init" first');
-    process.exit(1);
+    return null;
   }
 
   const entries = fs.readdirSync(shadersDir, { withFileTypes: true });
-  const shaders = entries.filter(e => e.isDirectory()).map(e => e.name);
+  return entries.filter(e => e.isDirectory()).map(e => e.name);
+}
+
+function listShaders(cwd) {
+  const shaders = getShaderList(cwd);
+
+  if (shaders === null) {
+    console.error('Error: shaders/ directory not found');
+    console.error('');
+    console.error('To get started:');
+    console.error('  shader init     Initialize shaders in current directory');
+    console.error('  shader create   Create a new shader project');
+    process.exit(1);
+  }
 
   if (shaders.length === 0) {
-    console.log('No shaders found. Run "shader new <name>" to create one.');
+    console.log('No shaders found.');
+    console.log('');
+    console.log('Create your first shader:');
+    console.log('  shader new my-shader');
     return;
   }
 
   console.log('Available shaders:');
   shaders.forEach(s => console.log(`  ${s}`));
+  console.log('');
+  console.log('Run a shader:');
+  console.log(`  shader dev ${shaders[0]}`);
 }
 
 async function create(projectName) {
@@ -328,18 +345,61 @@ switch (command) {
 
   case 'dev': {
     const shaderName = args[1];
+    const cwd = process.cwd();
+
     if (!shaderName) {
-      console.error('Error: Specify a shader name');
-      console.error('  shader dev <shader-name>');
-      console.error('  shader list');
+      const shaders = getShaderList(cwd);
+
+      if (shaders === null) {
+        console.error('Error: shaders/ directory not found');
+        console.error('');
+        console.error('To get started:');
+        console.error('  shader init     Initialize shaders in current directory');
+        console.error('  shader create   Create a new shader project');
+        process.exit(1);
+      }
+
+      if (shaders.length === 0) {
+        console.error('Error: No shaders found');
+        console.error('');
+        console.error('Create your first shader:');
+        console.error('  shader new my-shader');
+        process.exit(1);
+      }
+
+      console.error('Error: Specify which shader to run');
+      console.error('');
+      console.error('Available shaders:');
+      shaders.forEach(s => console.error(`  ${s}`));
+      console.error('');
+      console.error('Usage:');
+      console.error(`  shader dev ${shaders[0]}`);
       process.exit(1);
     }
 
-    const cwd = process.cwd();
     const shaderPath = path.join(cwd, 'shaders', shaderName);
     if (!fs.existsSync(shaderPath)) {
+      const shaders = getShaderList(cwd);
+
       console.error(`Error: Shader "${shaderName}" not found`);
-      console.error('Run "shader list" to see available shaders');
+
+      if (shaders && shaders.length > 0) {
+        // Check for similar names (typo detection)
+        const similar = shaders.filter(s =>
+          s.toLowerCase().includes(shaderName.toLowerCase()) ||
+          shaderName.toLowerCase().includes(s.toLowerCase())
+        );
+
+        if (similar.length > 0) {
+          console.error('');
+          console.error('Did you mean:');
+          similar.forEach(s => console.error(`  ${s}`));
+        } else {
+          console.error('');
+          console.error('Available shaders:');
+          shaders.forEach(s => console.error(`  ${s}`));
+        }
+      }
       process.exit(1);
     }
 
@@ -350,16 +410,48 @@ switch (command) {
 
   case 'build': {
     const shaderName = args[1];
+    const cwd = process.cwd();
+
     if (!shaderName) {
-      console.error('Error: Specify a shader name');
-      console.error('  shader build <shader-name>');
+      const shaders = getShaderList(cwd);
+
+      if (shaders && shaders.length > 0) {
+        console.error('Error: Specify which shader to build');
+        console.error('');
+        console.error('Available shaders:');
+        shaders.forEach(s => console.error(`  ${s}`));
+        console.error('');
+        console.error('Usage:');
+        console.error(`  shader build ${shaders[0]}`);
+      } else {
+        console.error('Error: Specify a shader name');
+        console.error('  shader build <shader-name>');
+      }
       process.exit(1);
     }
 
-    const cwd = process.cwd();
     const shaderPath = path.join(cwd, 'shaders', shaderName);
     if (!fs.existsSync(shaderPath)) {
+      const shaders = getShaderList(cwd);
+
       console.error(`Error: Shader "${shaderName}" not found`);
+
+      if (shaders && shaders.length > 0) {
+        const similar = shaders.filter(s =>
+          s.toLowerCase().includes(shaderName.toLowerCase()) ||
+          shaderName.toLowerCase().includes(s.toLowerCase())
+        );
+
+        if (similar.length > 0) {
+          console.error('');
+          console.error('Did you mean:');
+          similar.forEach(s => console.error(`  ${s}`));
+        } else {
+          console.error('');
+          console.error('Available shaders:');
+          shaders.forEach(s => console.error(`  ${s}`));
+        }
+      }
       process.exit(1);
     }
 

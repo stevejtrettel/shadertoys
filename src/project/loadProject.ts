@@ -405,6 +405,7 @@ async function loadProjectWithConfig(root: string, config: ShadertoyConfig): Pro
     root,
     meta: { title, author, description },
     layout: config.layout ?? 'default',
+    theme: config.theme ?? 'light',
     controls: config.controls ?? false,
     commonSource,
     passes: {

@@ -2,6 +2,8 @@
  * Base Styles - Global resets and root element styling
  */
 
+@import './theme.css';
+
 * {
   margin: 0;
   padding: 0;
@@ -16,7 +18,9 @@ html, body {
 }
 
 body {
-  background: #f5f5f5;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 #app {
