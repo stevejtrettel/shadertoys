@@ -2,7 +2,7 @@
  * Layout Types - Common interface for all layout modes
  */
 
-import { ShadertoyProject, PassName } from '../project/types';
+import { ShadertoyProject, PassName, UniformValue } from '../project/types';
 
 /**
  * Result of a recompilation attempt.
@@ -30,7 +30,7 @@ export type RecompileHandler = (
  */
 export type UniformChangeHandler = (
   name: string,
-  value: number | boolean | number[]
+  value: UniformValue
 ) => void;
 
 /**

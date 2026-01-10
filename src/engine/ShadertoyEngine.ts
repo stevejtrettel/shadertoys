@@ -14,8 +14,11 @@ import {
   ShadertoyProject,
   ChannelSource,
   PassName,
+  UniformValue,
   UniformValues,
 } from '../project/types';
+
+import { UniformStore } from '../uniforms/UniformStore';
 
 import {
   EngineOptions,
@@ -104,8 +107,8 @@ export class ShadertoyEngine {
     originalLine: number | null;
   }> = [];
 
-  // Custom uniform values (current state)
-  private _uniformValues: UniformValues = {};
+  // Custom uniform state manager (initialized in initCustomUniforms called by constructor)
+  private _uniforms!: UniformStore;
 
   constructor(opts: EngineOptions) {
     this.gl = opts.gl;
@@ -142,13 +145,10 @@ export class ShadertoyEngine {
   }
 
   /**
-   * Initialize custom uniform values from project config.
+   * Initialize custom uniform store from project config.
    */
   private initCustomUniforms(): void {
-    const uniforms = this.project.uniforms;
-    for (const [name, def] of Object.entries(uniforms)) {
-      this._uniformValues[name] = def.value;
-    }
+    this._uniforms = new UniformStore(this.project.uniforms);
   }
 
   // ===========================================================================
@@ -196,38 +196,39 @@ export class ShadertoyEngine {
   }
 
   /**
+   * Get the uniform store for direct access to uniform state.
+   */
+  getUniformStore(): UniformStore {
+    return this._uniforms;
+  }
+
+  /**
    * Get the current value of a custom uniform.
    */
-  getUniformValue(name: string): number | boolean | number[] | undefined {
-    return this._uniformValues[name];
+  getUniformValue(name: string): UniformValue | undefined {
+    return this._uniforms.get(name);
   }
 
   /**
    * Get all custom uniform values.
    */
   getUniformValues(): UniformValues {
-    return { ...this._uniformValues };
+    return this._uniforms.getAll();
   }
 
   /**
    * Set the value of a custom uniform.
    * The value will be applied on the next render frame.
    */
-  setUniformValue(name: string, value: number | boolean | number[]): void {
-    if (name in this.project.uniforms) {
-      this._uniformValues[name] = value;
-    }
+  setUniformValue(name: string, value: UniformValue): void {
+    this._uniforms.set(name, value);
   }
 
   /**
    * Set multiple custom uniform values at once.
    */
   setUniformValues(values: Partial<UniformValues>): void {
-    for (const [name, value] of Object.entries(values)) {
-      if (name in this.project.uniforms && value !== undefined) {
-        this._uniformValues[name] = value;
-      }
-    }
+    this._uniforms.setAll(values);
   }
 
   /**
@@ -419,28 +420,7 @@ export class ShadertoyEngine {
       gl.deleteProgram(runtimePass.uniforms.program);
 
       // Cache new uniform locations
-      const customLocations = new Map<string, WebGLUniformLocation | null>();
-      for (const name of Object.keys(this.project.uniforms)) {
-        customLocations.set(name, gl.getUniformLocation(newProgram, name));
-      }
-
-      const uniforms: PassUniformLocations = {
-        program: newProgram,
-        iResolution: gl.getUniformLocation(newProgram, 'iResolution'),
-        iTime: gl.getUniformLocation(newProgram, 'iTime'),
-        iTimeDelta: gl.getUniformLocation(newProgram, 'iTimeDelta'),
-        iFrame: gl.getUniformLocation(newProgram, 'iFrame'),
-        iMouse: gl.getUniformLocation(newProgram, 'iMouse'),
-        iChannel: [
-          gl.getUniformLocation(newProgram, 'iChannel0'),
-          gl.getUniformLocation(newProgram, 'iChannel1'),
-          gl.getUniformLocation(newProgram, 'iChannel2'),
-          gl.getUniformLocation(newProgram, 'iChannel3'),
-        ],
-        custom: customLocations,
-      };
-
-      runtimePass.uniforms = uniforms;
+      runtimePass.uniforms = this.cacheUniformLocations(newProgram);
 
       // Update the stored source in the project
       projectPass.glslSource = newSource;
@@ -563,6 +543,36 @@ export class ShadertoyEngine {
   }
 
   /**
+   * Cache uniform locations for a compiled program.
+   * Returns a PassUniformLocations object with all standard and custom uniform locations.
+   */
+  private cacheUniformLocations(program: WebGLProgram): PassUniformLocations {
+    const gl = this.gl;
+
+    // Cache custom uniform locations
+    const customLocations = new Map<string, WebGLUniformLocation | null>();
+    for (const name of Object.keys(this.project.uniforms)) {
+      customLocations.set(name, gl.getUniformLocation(program, name));
+    }
+
+    return {
+      program,
+      iResolution: gl.getUniformLocation(program, 'iResolution'),
+      iTime: gl.getUniformLocation(program, 'iTime'),
+      iTimeDelta: gl.getUniformLocation(program, 'iTimeDelta'),
+      iFrame: gl.getUniformLocation(program, 'iFrame'),
+      iMouse: gl.getUniformLocation(program, 'iMouse'),
+      iChannel: [
+        gl.getUniformLocation(program, 'iChannel0'),
+        gl.getUniformLocation(program, 'iChannel1'),
+        gl.getUniformLocation(program, 'iChannel2'),
+        gl.getUniformLocation(program, 'iChannel3'),
+      ],
+      custom: customLocations,
+    };
+  }
+
+  /**
    * Initialize external textures based on project.textures.
    *
    * NOTE: This function as written assumes that actual image loading
@@ -654,26 +664,7 @@ export class ShadertoyEngine {
         const program = createProgramFromSources(gl, VERTEX_SHADER_SOURCE, fragmentSource);
 
         // Cache uniform locations
-        const customLocations = new Map<string, WebGLUniformLocation | null>();
-        for (const name of Object.keys(this.project.uniforms)) {
-          customLocations.set(name, gl.getUniformLocation(program, name));
-        }
-
-        const uniforms: PassUniformLocations = {
-          program,
-          iResolution: gl.getUniformLocation(program, 'iResolution'),
-          iTime: gl.getUniformLocation(program, 'iTime'),
-          iTimeDelta: gl.getUniformLocation(program, 'iTimeDelta'),
-          iFrame: gl.getUniformLocation(program, 'iFrame'),
-          iMouse: gl.getUniformLocation(program, 'iMouse'),
-          iChannel: [
-            gl.getUniformLocation(program, 'iChannel0'),
-            gl.getUniformLocation(program, 'iChannel1'),
-            gl.getUniformLocation(program, 'iChannel2'),
-            gl.getUniformLocation(program, 'iChannel3'),
-          ],
-          custom: customLocations,
-        };
+        const uniforms = this.cacheUniformLocations(program);
 
         // Create ping-pong textures (MUST allocate both for all passes)
         const currentTexture = createRenderTargetTexture(gl, this._width, this._height);
@@ -910,12 +901,9 @@ void main() {
   private bindCustomUniforms(uniforms: PassUniformLocations): void {
     const gl = this.gl;
 
-    for (const [name, location] of uniforms.custom) {
+    for (const [name, def, value] of this._uniforms.entries()) {
+      const location = uniforms.custom.get(name);
       if (!location) continue;
-
-      const value = this._uniformValues[name];
-      const def = this.project.uniforms[name];
-      if (value === undefined || !def) continue;
 
       switch (def.type) {
         case 'float':

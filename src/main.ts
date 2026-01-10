@@ -17,7 +17,7 @@ import './styles/base.css';
 import { App } from './app/App';
 import { createLayout } from './layouts';
 import { loadDemoProject, DEMO_NAME } from './project/generatedLoader';
-import { PassName } from './project/types';
+import { PassName, UniformValue } from './project/types';
 import { RecompileResult } from './layouts/types';
 
 async function main() {
@@ -81,7 +81,7 @@ async function main() {
 
     // Wire up uniform change handler for layouts that support it (split, tabbed)
     if (layout.setUniformHandler) {
-      layout.setUniformHandler((name: string, value: number | boolean | number[]) => {
+      layout.setUniformHandler((name: string, value: UniformValue) => {
         const engine = app.getEngine();
         if (engine) {
           engine.setUniformValue(name, value);

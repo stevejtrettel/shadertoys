@@ -8,8 +8,9 @@
  * - Tab management for multiple passes
  */
 
-import { ShadertoyProject, PassName } from '../project/types';
+import { ShadertoyProject, PassName, UniformValue, UniformValues } from '../project/types';
 import { RecompileHandler, UniformChangeHandler } from '../layouts/types';
+import type { UniformControls as UniformControlsType } from '../uniforms/UniformControls';
 
 import './editor-panel.css';
 
@@ -46,14 +47,22 @@ export class EditorPanel {
   private editorInstance: EditorInstance | null = null;
 
   // Uniform controls instance (null if not viewing uniforms tab)
-  private uniformControls: any = null;
+  private uniformControls: UniformControlsType | null = null;
 
   // Track modified sources (passName -> modified source)
   private modifiedSources: Map<string, string> = new Map();
 
+  // Track current uniform values (persists across tab switches)
+  private uniformValues: UniformValues = {};
+
   constructor(container: HTMLElement, project: ShadertoyProject) {
     this.container = container;
     this.project = project;
+
+    // Initialize uniform values from project defaults
+    for (const [name, def] of Object.entries(project.uniforms)) {
+      this.uniformValues[name] = def.value;
+    }
 
     // Build tabs
     this.buildTabs();
@@ -137,7 +146,15 @@ export class EditorPanel {
   private buildTabs(): void {
     this.tabs = [];
 
-    // 1. Common first (if exists)
+    // 1. Uniforms tab FIRST (if project has custom uniforms)
+    if (Object.keys(this.project.uniforms).length > 0) {
+      this.tabs.push({
+        kind: 'uniforms',
+        name: 'Uniforms',
+      });
+    }
+
+    // 2. Common (if exists)
     if (this.project.commonSource) {
       this.tabs.push({
         kind: 'code',
@@ -147,7 +164,7 @@ export class EditorPanel {
       });
     }
 
-    // 2. Buffers in order (A, B, C, D)
+    // 3. Buffers in order (A, B, C, D)
     const bufferOrder: ('BufferA' | 'BufferB' | 'BufferC' | 'BufferD')[] = [
       'BufferA', 'BufferB', 'BufferC', 'BufferD',
     ];
@@ -163,7 +180,7 @@ export class EditorPanel {
       }
     }
 
-    // 3. Image pass
+    // 4. Image pass
     const imagePass = this.project.passes.Image;
     this.tabs.push({
       kind: 'code',
@@ -172,20 +189,12 @@ export class EditorPanel {
       source: imagePass.glslSource,
     });
 
-    // 4. Textures (images) - not editable
+    // 5. Textures (images) - not editable
     for (const texture of this.project.textures) {
       this.tabs.push({
         kind: 'image',
         name: texture.filename || texture.name,
         url: texture.source,
-      });
-    }
-
-    // 5. Uniforms tab (if project has custom uniforms)
-    if (Object.keys(this.project.uniforms).length > 0) {
-      this.tabs.push({
-        kind: 'uniforms',
-        name: 'Uniforms',
       });
     }
   }
@@ -201,8 +210,24 @@ export class EditorPanel {
       }
       if (tab.kind === 'uniforms') {
         tabButton.classList.add('uniforms-tab');
+        // Use sliders icon instead of text
+        tabButton.innerHTML = `
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="uniforms-icon">
+            <line x1="4" y1="21" x2="4" y2="14"></line>
+            <line x1="4" y1="10" x2="4" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="12"></line>
+            <line x1="12" y1="8" x2="12" y2="3"></line>
+            <line x1="20" y1="21" x2="20" y2="16"></line>
+            <line x1="20" y1="12" x2="20" y2="3"></line>
+            <line x1="1" y1="14" x2="7" y2="14"></line>
+            <line x1="9" y1="8" x2="15" y2="8"></line>
+            <line x1="17" y1="16" x2="23" y2="16"></line>
+          </svg>
+        `;
+        tabButton.title = 'Uniforms';
+      } else {
+        tabButton.textContent = tab.name;
       }
-      tabButton.textContent = tab.name;
       if (index === this.activeTabIndex) {
         tabButton.classList.add('active');
       }
@@ -286,7 +311,11 @@ export class EditorPanel {
         this.uniformControls = new UniformControls({
           container: uniformsContainer,
           uniforms: this.project.uniforms,
-          onChange: (name, value) => {
+          initialValues: this.uniformValues,
+          onChange: (name: string, value: UniformValue) => {
+            // Track the value locally
+            this.uniformValues[name] = value;
+            // Notify the engine
             if (this.uniformChangeHandler) {
               this.uniformChangeHandler(name, value);
             }

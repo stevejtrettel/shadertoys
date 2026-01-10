@@ -1,0 +1,277 @@
+/**
+ * Uniforms Panel - Floating overlay styles
+ */
+
+/* Wrapper positions both toggle button and panel in same location */
+.uniforms-panel-wrapper {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+/* Toggle button - uses shared glass variables from app.css */
+.uniforms-toggle-button {
+  width: 32px;
+  height: 32px;
+  padding: 6px;
+  background: var(--glass-bg);
+  border: var(--glass-border);
+  border-radius: var(--glass-radius-sm);
+  color: var(--glass-text);
+  cursor: pointer;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-shadow-sm);
+  transition: all 0.2s ease, opacity 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.uniforms-toggle-button:hover {
+  background: var(--glass-bg-hover);
+  transform: scale(1.05);
+}
+
+.uniforms-toggle-button:active {
+  transform: scale(0.95);
+}
+
+.uniforms-toggle-button svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Hidden state for toggle button when panel is open */
+.uniforms-toggle-button.hidden {
+  opacity: 0;
+  transform: scale(0.8);
+  pointer-events: none;
+  position: absolute;
+}
+
+/* Panel - uses shared glass variables */
+.uniforms-panel {
+  width: 150px;
+  max-height: calc(100vh - 100px);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-radius: var(--glass-radius);
+  border: var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transform-origin: top right;
+  transition: opacity 0.2s ease, transform 0.2s ease, max-height 0.2s ease;
+}
+
+/* Closed state - scales down to toggle button size from top-right */
+.uniforms-panel.closed {
+  opacity: 0;
+  transform: scale(0.18) translateX(0);
+  transform-origin: top right;
+  pointer-events: none;
+  max-height: 0;
+  padding: 0;
+}
+
+/* Header */
+.uniforms-panel-header {
+  padding: 10px 14px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--glass-text-muted);
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Close button in header */
+.uniforms-panel-close {
+  background: transparent;
+  border: none;
+  color: var(--glass-text-muted);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+}
+
+.uniforms-panel-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--glass-text);
+}
+
+/* Content area */
+.uniforms-panel-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Override uniform controls styles for compact glass panel */
+.uniforms-panel .uniform-controls {
+  padding: 12px;
+  gap: 12px;
+  background: transparent;
+}
+
+.uniforms-panel .uniform-controls-header {
+  display: none; /* Hide the reset button header in compact mode */
+}
+
+.uniforms-panel .uniform-controls-list {
+  gap: 14px;
+}
+
+.uniforms-panel .uniform-control {
+  gap: 6px;
+}
+
+.uniforms-panel .uniform-control-label {
+  font-size: 11px;
+  color: var(--glass-text);
+}
+
+.uniforms-panel .uniform-control-value {
+  font-size: 10px;
+  padding: 1px 4px;
+  min-width: 40px;
+  color: var(--glass-text-muted);
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+
+/* Compact slider - glass style */
+.uniforms-panel .uniform-control-slider {
+  height: 4px;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.uniforms-panel .uniform-control-slider::-webkit-slider-runnable-track {
+  height: 4px;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.uniforms-panel .uniform-control-slider::-webkit-slider-thumb {
+  width: 12px;
+  height: 12px;
+  margin-top: -4px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+.uniforms-panel .uniform-control-slider::-moz-range-track {
+  height: 4px;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.uniforms-panel .uniform-control-slider::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Compact toggle */
+.uniforms-panel .uniform-control-toggle {
+  width: 34px;
+  height: 18px;
+}
+
+.uniforms-panel .uniform-control-toggle-slider {
+  border-radius: 18px;
+}
+
+.uniforms-panel .uniform-control-toggle-slider::before {
+  width: 12px;
+  height: 12px;
+  left: 3px;
+  bottom: 3px;
+}
+
+.uniforms-panel .uniform-control-toggle input:checked + .uniform-control-toggle-slider::before {
+  transform: translateX(16px);
+}
+
+/* Compact XY pad */
+.uniforms-panel .uniform-control-xy-pad {
+  height: 100px;
+}
+
+.uniforms-panel .uniform-control-xy-handle {
+  width: 12px;
+  height: 12px;
+}
+
+/* Compact color swatch */
+.uniforms-panel .uniform-control-color-swatch {
+  height: 28px;
+}
+
+/* Compact vec3 sliders - glass style */
+.uniforms-panel .uniform-control-vec-slider-row {
+  gap: 6px;
+}
+
+.uniforms-panel .uniform-control-vec-component {
+  font-size: 9px;
+  width: 12px;
+  color: var(--glass-text-muted);
+}
+
+.uniforms-panel .uniform-control-vec-value {
+  font-size: 9px;
+  min-width: 32px;
+  color: var(--glass-text-muted);
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+
+/* XY pad glass style */
+.uniforms-panel .uniform-control-xy-pad {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.uniforms-panel .uniform-control-xy-handle {
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
+/* Scrollbar styling for glass panel */
+.uniforms-panel-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.uniforms-panel-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.uniforms-panel-content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+.uniforms-panel-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.35);
+}

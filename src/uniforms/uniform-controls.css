@@ -20,6 +20,43 @@
   padding: 20px;
 }
 
+/* Header with reset button */
+.uniform-controls-header {
+  display: flex;
+  justify-content: flex-end;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-primary);
+  margin-bottom: 8px;
+}
+
+.uniform-controls-reset {
+  font-family: inherit;
+  font-size: 11px;
+  padding: 4px 10px;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-primary);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.uniform-controls-reset:hover {
+  background: var(--border-primary);
+  color: var(--text-primary);
+}
+
+.uniform-controls-reset:active {
+  transform: translateY(1px);
+}
+
+/* Control list container */
+.uniform-controls-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
 /* Individual control wrapper */
 .uniform-control {
   display: flex;
@@ -131,4 +168,175 @@
 
 .uniform-control-slider:focus::-moz-range-thumb {
   box-shadow: 0 0 0 3px var(--code-selection);
+}
+
+/* ===========================================================================
+ * Bool Toggle Switch
+ * =========================================================================== */
+
+.uniform-control-toggle {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 22px;
+  cursor: pointer;
+}
+
+.uniform-control-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.uniform-control-toggle-slider {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--border-primary);
+  border-radius: 22px;
+  transition: background 0.2s ease;
+}
+
+.uniform-control-toggle-slider::before {
+  content: '';
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  left: 3px;
+  bottom: 3px;
+  background: var(--text-muted);
+  border-radius: 50%;
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.uniform-control-toggle input:checked + .uniform-control-toggle-slider {
+  background: var(--accent-primary);
+}
+
+.uniform-control-toggle input:checked + .uniform-control-toggle-slider::before {
+  transform: translateX(18px);
+  background: white;
+}
+
+.uniform-control-toggle input:focus + .uniform-control-toggle-slider {
+  box-shadow: 0 0 0 2px var(--code-selection);
+}
+
+/* ===========================================================================
+ * Vec2 XY Pad
+ * =========================================================================== */
+
+.uniform-control-xy-pad {
+  position: relative;
+  width: 100%;
+  height: 120px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-primary);
+  border-radius: 4px;
+  cursor: crosshair;
+  overflow: hidden;
+}
+
+/* Grid lines */
+.uniform-control-xy-pad::before,
+.uniform-control-xy-pad::after {
+  content: '';
+  position: absolute;
+  background: var(--border-primary);
+  opacity: 0.5;
+}
+
+.uniform-control-xy-pad::before {
+  /* Vertical center line */
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+}
+
+.uniform-control-xy-pad::after {
+  /* Horizontal center line */
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+}
+
+.uniform-control-xy-handle {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  background: var(--accent-primary);
+  border: 2px solid white;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ===========================================================================
+ * Vec3 Color Picker
+ * =========================================================================== */
+
+.uniform-control-color-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.uniform-control-color-swatch {
+  width: 100%;
+  height: 32px;
+  border-radius: 4px;
+  border: 1px solid var(--border-primary);
+  cursor: pointer;
+  transition: box-shadow 0.15s ease;
+}
+
+.uniform-control-color-swatch:hover {
+  box-shadow: 0 0 0 2px var(--accent-primary);
+}
+
+.uniform-control-color-input {
+  /* Hide the native input but keep it functional */
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ===========================================================================
+ * Vec3 Sliders (non-color)
+ * =========================================================================== */
+
+.uniform-control-vec3 {
+  gap: 6px;
+}
+
+.uniform-control-vec-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.uniform-control-vec-component {
+  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  width: 14px;
+  text-align: center;
+}
+
+.uniform-control-vec-slider {
+  flex: 1;
+}
+
+.uniform-control-vec-value {
+  min-width: 40px;
+  font-size: 10px;
 }

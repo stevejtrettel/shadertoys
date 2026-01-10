@@ -1,44 +1,136 @@
 /**
- * App Styles - FPS counter and shader error overlay
+ * App Styles - Floating overlays on shader canvas
+ *
+ * All floating elements use consistent "liquid glass" styling:
+ * - Semi-transparent background with blur
+ * - Subtle border and shadow
+ * - 6px corner radius (smaller than canvas container's 8px per concentric radius rule)
  */
 
-/* ===== FPS Counter ===== */
-.fps-counter {
+/* ===== Shared Glass Overlay Variables ===== */
+:root {
+  --glass-bg: rgba(30, 30, 35, 0.65);
+  --glass-bg-hover: rgba(30, 30, 35, 0.8);
+  --glass-border: 1px solid rgba(255, 255, 255, 0.1);
+  --glass-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.25),
+    0 2px 4px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  --glass-shadow-sm:
+    0 2px 8px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  --glass-blur: blur(20px);
+  --glass-radius: 6px;    /* all overlays use same radius, smaller than canvas (8px) */
+  --glass-radius-sm: 6px; /* same as above for consistency */
+  --glass-text: rgba(255, 255, 255, 0.9);
+  --glass-text-muted: rgba(255, 255, 255, 0.6);
+}
+
+/* ===== Stats Container (FPS + expandable stats) ===== */
+.stats-container {
   position: absolute;
-  bottom: 8px;
-  left: 8px;
-  padding: 6px 10px;
-  background: rgba(0, 0, 0, 0.75);
-  color: white;
-  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
-  font-size: 12px;
-  font-weight: 500;
-  border-radius: 4px;
-  pointer-events: none;
-  user-select: none;
+  bottom: 12px;
+  left: 12px;
   z-index: 1000;
-  backdrop-filter: blur(4px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+/* FPS Counter (clickable button) */
+.fps-counter {
+  padding: 6px 10px;
+  background: var(--glass-bg);
+  color: var(--glass-text);
+  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: var(--glass-radius-sm);
+  border: var(--glass-border);
+  cursor: pointer;
+  user-select: none;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-shadow-sm);
+  transition: all 0.2s ease;
+}
+
+.fps-counter:hover {
+  background: var(--glass-bg-hover);
+}
+
+/* Stats Grid (expandable) */
+.stats-grid {
+  display: flex;
+  flex-direction: row;
+  gap: 6px;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(8px);
+  transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
+  pointer-events: none;
+}
+
+.stats-grid.open {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+/* Individual stat item */
+.stat-item {
+  padding: 6px 10px;
+  background: var(--glass-bg);
+  border-radius: var(--glass-radius-sm);
+  border: var(--glass-border);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-shadow-sm);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 48px;
+}
+
+.stat-value {
+  color: var(--glass-text);
+  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.stat-label {
+  color: var(--glass-text-muted);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 9px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 /* ===== Playback Controls ===== */
 .playback-controls {
   position: absolute;
-  bottom: 8px;
-  right: 8px;
+  bottom: 12px;
+  right: 12px;
   z-index: 1000;
 }
 
 /* Menu toggle button (+ / -) */
 .controls-menu-button {
   padding: 6px 8px;
-  background: rgba(0, 0, 0, 0.75);
-  color: white;
-  border: none;
-  border-radius: 4px;
+  background: var(--glass-bg);
+  color: var(--glass-text);
+  border: var(--glass-border);
+  border-radius: var(--glass-radius-sm);
   cursor: pointer;
-  backdrop-filter: blur(4px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-shadow-sm);
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
@@ -51,7 +143,7 @@
 }
 
 .controls-menu-button:hover {
-  background: rgba(0, 0, 0, 0.85);
+  background: var(--glass-bg-hover);
   transform: scale(1.05);
 }
 
@@ -67,7 +159,7 @@
   display: grid;
   grid-template-columns: 32px 32px;
   grid-template-rows: 32px 32px;
-  gap: 8px;
+  gap: 6px;
   opacity: 0;
   visibility: hidden;
   transform: scale(0.8);
@@ -85,13 +177,14 @@
 
 .control-button {
   padding: 6px 8px;
-  background: rgba(0, 0, 0, 0.75);
-  color: white;
-  border: none;
-  border-radius: 4px;
+  background: var(--glass-bg);
+  color: var(--glass-text);
+  border: var(--glass-border);
+  border-radius: var(--glass-radius-sm);
   cursor: pointer;
-  backdrop-filter: blur(4px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-shadow-sm);
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
@@ -101,7 +194,7 @@
 }
 
 .control-button:hover {
-  background: rgba(0, 0, 0, 0.85);
+  background: var(--glass-bg-hover);
   transform: scale(1.05);
 }
 
