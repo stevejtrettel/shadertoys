@@ -36,6 +36,15 @@ export class App {
   private lastFpsUpdate: number = 0;
   private currentFps: number = 0;
 
+  // Stats panel (expandable from FPS counter)
+  private statsContainer: HTMLElement | null = null;
+  private statsGrid: HTMLElement | null = null;
+  private timeDisplay: HTMLElement | null = null;
+  private frameDisplay: HTMLElement | null = null;
+  private resolutionDisplay: HTMLElement | null = null;
+  private totalFrameCount: number = 0;
+  private isStatsOpen: boolean = false;
+
   // Playback controls
   private controlsContainer: HTMLElement | null = null;
   private controlsGrid: HTMLElement | null = null;
@@ -73,11 +82,42 @@ export class App {
     this.canvas.style.display = 'block';
     this.container.appendChild(this.canvas);
 
-    // Create FPS display overlay
-    this.fpsDisplay = document.createElement('div');
+    // Create stats container (holds FPS button and expandable stats)
+    this.statsContainer = document.createElement('div');
+    this.statsContainer.className = 'stats-container';
+
+    // Create FPS display (clickable to expand stats)
+    this.fpsDisplay = document.createElement('button');
     this.fpsDisplay.className = 'fps-counter';
     this.fpsDisplay.textContent = '0 FPS';
-    this.container.appendChild(this.fpsDisplay);
+    this.fpsDisplay.title = 'Click to show stats';
+    this.fpsDisplay.addEventListener('click', () => this.toggleStats());
+
+    // Create stats grid (hidden by default)
+    this.statsGrid = document.createElement('div');
+    this.statsGrid.className = 'stats-grid';
+
+    // Time display
+    this.timeDisplay = document.createElement('div');
+    this.timeDisplay.className = 'stat-item';
+    this.timeDisplay.innerHTML = '<span class="stat-value">0:00</span><span class="stat-label">time</span>';
+    this.statsGrid.appendChild(this.timeDisplay);
+
+    // Frame display
+    this.frameDisplay = document.createElement('div');
+    this.frameDisplay.className = 'stat-item';
+    this.frameDisplay.innerHTML = '<span class="stat-value">0</span><span class="stat-label">frame</span>';
+    this.statsGrid.appendChild(this.frameDisplay);
+
+    // Resolution display
+    this.resolutionDisplay = document.createElement('div');
+    this.resolutionDisplay.className = 'stat-item';
+    this.resolutionDisplay.innerHTML = '<span class="stat-value">0×0</span><span class="stat-label">res</span>';
+    this.statsGrid.appendChild(this.resolutionDisplay);
+
+    this.statsContainer.appendChild(this.statsGrid);
+    this.statsContainer.appendChild(this.fpsDisplay);
+    this.container.appendChild(this.statsContainer);
 
     // Create playback controls if enabled
     if (opts.project.controls) {
@@ -217,7 +257,9 @@ export class App {
     this.uniformsPanel?.destroy();
     this.engine.dispose();
     this.container.removeChild(this.canvas);
-    this.container.removeChild(this.fpsDisplay);
+    if (this.statsContainer) {
+      this.container.removeChild(this.statsContainer);
+    }
     this.hideContextLostOverlay();
     this.hideErrorOverlay();
   }
@@ -238,8 +280,8 @@ export class App {
     const currentTimeSec = currentTimeMs / 1000;
     const elapsedTime = currentTimeSec - this.startTime;
 
-    // Update FPS counter
-    this.updateFps(currentTimeSec);
+    // Update FPS counter and stats
+    this.updateFps(currentTimeSec, elapsedTime);
 
     // Update keyboard texture with current key states
     this.engine.updateKeyboardTexture();
@@ -255,8 +297,9 @@ export class App {
    * Update FPS counter.
    * Updates the display roughly once per second.
    */
-  private updateFps(currentTimeSec: number): void {
+  private updateFps(currentTimeSec: number, elapsedTime: number): void {
     this.frameCount++;
+    this.totalFrameCount++;
 
     // Update FPS display once per second
     if (currentTimeSec - this.lastFpsUpdate >= 1.0) {
@@ -264,6 +307,73 @@ export class App {
       this.fpsDisplay.textContent = `${Math.round(this.currentFps)} FPS`;
       this.frameCount = 0;
       this.lastFpsUpdate = currentTimeSec;
+
+      // Update stats displays if open
+      if (this.isStatsOpen) {
+        this.updateStatsDisplay(elapsedTime);
+      }
+    }
+  }
+
+  /**
+   * Update the expanded stats display.
+   */
+  private updateStatsDisplay(elapsedTime: number): void {
+    // Format time as M:SS or H:MM:SS
+    const totalSeconds = Math.floor(elapsedTime);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    let timeStr: string;
+    if (hours > 0) {
+      timeStr = `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    } else {
+      timeStr = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    }
+
+    if (this.timeDisplay) {
+      this.timeDisplay.querySelector('.stat-value')!.textContent = timeStr;
+    }
+
+    if (this.frameDisplay) {
+      // Format large numbers with K/M suffix
+      let frameStr: string;
+      if (this.totalFrameCount >= 1000000) {
+        frameStr = (this.totalFrameCount / 1000000).toFixed(1) + 'M';
+      } else if (this.totalFrameCount >= 1000) {
+        frameStr = (this.totalFrameCount / 1000).toFixed(1) + 'K';
+      } else {
+        frameStr = this.totalFrameCount.toString();
+      }
+      this.frameDisplay.querySelector('.stat-value')!.textContent = frameStr;
+    }
+
+    if (this.resolutionDisplay) {
+      const w = this.canvas.width;
+      const h = this.canvas.height;
+      this.resolutionDisplay.querySelector('.stat-value')!.textContent = `${w}×${h}`;
+    }
+  }
+
+  /**
+   * Toggle the stats panel open/closed.
+   */
+  private toggleStats(): void {
+    this.isStatsOpen = !this.isStatsOpen;
+
+    if (this.statsGrid) {
+      this.statsGrid.classList.toggle('open', this.isStatsOpen);
+    }
+
+    if (this.statsContainer) {
+      this.statsContainer.classList.toggle('open', this.isStatsOpen);
+    }
+
+    // Update stats immediately when opening
+    if (this.isStatsOpen) {
+      const elapsedTime = (performance.now() / 1000) - this.startTime;
+      this.updateStatsDisplay(elapsedTime);
     }
   }
 
@@ -614,8 +724,14 @@ export class App {
   private reset(): void {
     this.startTime = performance.now() / 1000;
     this.frameCount = 0;
+    this.totalFrameCount = 0;
     this.lastFpsUpdate = 0;
     this.engine.reset();
+
+    // Update stats display if open
+    if (this.isStatsOpen) {
+      this.updateStatsDisplay(0);
+    }
   }
 
   /**

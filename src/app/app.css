@@ -26,11 +26,20 @@
   --glass-text-muted: rgba(255, 255, 255, 0.6);
 }
 
-/* ===== FPS Counter ===== */
-.fps-counter {
+/* ===== Stats Container (FPS + expandable stats) ===== */
+.stats-container {
   position: absolute;
   bottom: 12px;
   left: 12px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+/* FPS Counter (clickable button) */
+.fps-counter {
   padding: 6px 10px;
   background: var(--glass-bg);
   color: var(--glass-text);
@@ -39,12 +48,68 @@
   font-weight: 500;
   border-radius: var(--glass-radius-sm);
   border: var(--glass-border);
-  pointer-events: none;
+  cursor: pointer;
   user-select: none;
-  z-index: 1000;
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   box-shadow: var(--glass-shadow-sm);
+  transition: all 0.2s ease;
+}
+
+.fps-counter:hover {
+  background: var(--glass-bg-hover);
+}
+
+/* Stats Grid (expandable) */
+.stats-grid {
+  display: flex;
+  flex-direction: row;
+  gap: 6px;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(8px);
+  transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
+  pointer-events: none;
+}
+
+.stats-grid.open {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+/* Individual stat item */
+.stat-item {
+  padding: 6px 10px;
+  background: var(--glass-bg);
+  border-radius: var(--glass-radius-sm);
+  border: var(--glass-border);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-shadow-sm);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 48px;
+}
+
+.stat-value {
+  color: var(--glass-text);
+  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.stat-label {
+  color: var(--glass-text-muted);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 9px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 /* ===== Playback Controls ===== */
