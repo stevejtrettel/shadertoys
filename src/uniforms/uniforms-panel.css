@@ -14,18 +14,19 @@
   gap: 8px;
 }
 
-/* Toggle button - always visible */
+/* Toggle button - uses shared glass variables from app.css */
 .uniforms-toggle-button {
   width: 36px;
   height: 36px;
   padding: 8px;
-  background: rgba(0, 0, 0, 0.7);
-  border: none;
-  border-radius: 8px;
-  color: rgba(255, 255, 255, 0.8);
+  background: var(--glass-bg);
+  border: var(--glass-border);
+  border-radius: var(--glass-radius-sm);
+  color: var(--glass-text);
   cursor: pointer;
-  backdrop-filter: blur(8px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-shadow-sm);
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
@@ -33,8 +34,7 @@
 }
 
 .uniforms-toggle-button:hover {
-  background: rgba(0, 0, 0, 0.85);
-  color: white;
+  background: var(--glass-bg-hover);
   transform: scale(1.05);
 }
 
@@ -47,19 +47,16 @@
   height: 20px;
 }
 
-/* Panel - Liquid glass style */
+/* Panel - uses shared glass variables */
 .uniforms-panel {
   width: 200px;
   max-height: calc(100vh - 100px);
-  background: rgba(30, 30, 35, 0.65);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.3),
-    0 2px 8px rgba(0, 0, 0, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-radius: var(--glass-radius);
+  border: var(--glass-border);
+  box-shadow: var(--glass-shadow);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -75,7 +72,7 @@
   overflow: hidden;
 }
 
-/* Header - subtle glass effect */
+/* Header */
 .uniforms-panel-header {
   padding: 10px 14px;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -83,9 +80,9 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: rgba(255, 255, 255, 0.7);
-  background: rgba(255, 255, 255, 0.05);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--glass-text-muted);
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   flex-shrink: 0;
   display: flex;
   justify-content: space-between;
@@ -96,7 +93,7 @@
 .uniforms-panel-close {
   background: transparent;
   border: none;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--glass-text-muted);
   font-size: 18px;
   line-height: 1;
   cursor: pointer;
@@ -112,7 +109,7 @@
 
 .uniforms-panel-close:hover {
   background: rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--glass-text);
 }
 
 /* Content area */
@@ -143,15 +140,16 @@
 
 .uniforms-panel .uniform-control-label {
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--glass-text);
 }
 
 .uniforms-panel .uniform-control-value {
   font-size: 10px;
   padding: 1px 4px;
   min-width: 40px;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--glass-text-muted);
   background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
 }
 
 /* Compact slider - glass style */
@@ -229,14 +227,15 @@
 .uniforms-panel .uniform-control-vec-component {
   font-size: 9px;
   width: 12px;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--glass-text-muted);
 }
 
 .uniforms-panel .uniform-control-vec-value {
   font-size: 9px;
   min-width: 32px;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--glass-text-muted);
   background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
 }
 
 /* XY pad glass style */
