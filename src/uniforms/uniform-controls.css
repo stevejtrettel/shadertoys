@@ -20,6 +20,43 @@
   padding: 20px;
 }
 
+/* Header with reset button */
+.uniform-controls-header {
+  display: flex;
+  justify-content: flex-end;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-primary);
+  margin-bottom: 8px;
+}
+
+.uniform-controls-reset {
+  font-family: inherit;
+  font-size: 11px;
+  padding: 4px 10px;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-primary);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.uniform-controls-reset:hover {
+  background: var(--border-primary);
+  color: var(--text-primary);
+}
+
+.uniform-controls-reset:active {
+  transform: translateY(1px);
+}
+
+/* Control list container */
+.uniform-controls-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
 /* Individual control wrapper */
 .uniform-control {
   display: flex;

@@ -8,8 +8,9 @@
  * - Tab management for multiple passes
  */
 
-import { ShadertoyProject, PassName } from '../project/types';
+import { ShadertoyProject, PassName, UniformValue, UniformValues } from '../project/types';
 import { RecompileHandler, UniformChangeHandler } from '../layouts/types';
+import type { UniformControls as UniformControlsType } from '../uniforms/UniformControls';
 
 import './editor-panel.css';
 
@@ -46,14 +47,22 @@ export class EditorPanel {
   private editorInstance: EditorInstance | null = null;
 
   // Uniform controls instance (null if not viewing uniforms tab)
-  private uniformControls: any = null;
+  private uniformControls: UniformControlsType | null = null;
 
   // Track modified sources (passName -> modified source)
   private modifiedSources: Map<string, string> = new Map();
 
+  // Track current uniform values (persists across tab switches)
+  private uniformValues: UniformValues = {};
+
   constructor(container: HTMLElement, project: ShadertoyProject) {
     this.container = container;
     this.project = project;
+
+    // Initialize uniform values from project defaults
+    for (const [name, def] of Object.entries(project.uniforms)) {
+      this.uniformValues[name] = def.value;
+    }
 
     // Build tabs
     this.buildTabs();
@@ -286,7 +295,11 @@ export class EditorPanel {
         this.uniformControls = new UniformControls({
           container: uniformsContainer,
           uniforms: this.project.uniforms,
-          onChange: (name, value) => {
+          initialValues: this.uniformValues,
+          onChange: (name: string, value: UniformValue) => {
+            // Track the value locally
+            this.uniformValues[name] = value;
+            // Notify the engine
             if (this.uniformChangeHandler) {
               this.uniformChangeHandler(name, value);
             }

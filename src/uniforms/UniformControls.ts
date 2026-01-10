@@ -10,6 +10,8 @@ import './uniform-controls.css';
 import {
   UniformDefinitions,
   UniformDefinition,
+  UniformValue,
+  UniformValues,
   FloatUniformDefinition,
 } from '../project/types';
 
@@ -19,16 +21,16 @@ export interface UniformControlsOptions {
   /** Uniform definitions from project config */
   uniforms: UniformDefinitions;
   /** Callback when a uniform value changes */
-  onChange: (name: string, value: number | boolean | number[]) => void;
+  onChange: (name: string, value: UniformValue) => void;
   /** Initial values (optional, defaults to definition values) */
-  initialValues?: Record<string, number | boolean | number[]>;
+  initialValues?: UniformValues;
 }
 
 export class UniformControls {
   private container: HTMLElement;
   private uniforms: UniformDefinitions;
-  private onChange: (name: string, value: number | boolean | number[]) => void;
-  private values: Record<string, number | boolean | number[]> = {};
+  private onChange: (name: string, value: UniformValue) => void;
+  private values: UniformValues = {};
   private controlElements: Map<string, HTMLElement> = new Map();
 
   constructor(opts: UniformControlsOptions) {
@@ -61,13 +63,32 @@ export class UniformControls {
       return;
     }
 
+    // Header with reset button
+    const header = document.createElement('div');
+    header.className = 'uniform-controls-header';
+
+    const resetButton = document.createElement('button');
+    resetButton.className = 'uniform-controls-reset';
+    resetButton.textContent = 'Reset';
+    resetButton.title = 'Reset all uniforms to defaults';
+    resetButton.addEventListener('click', () => this.resetToDefaults());
+
+    header.appendChild(resetButton);
+    this.container.appendChild(header);
+
+    // Control list
+    const controlList = document.createElement('div');
+    controlList.className = 'uniform-controls-list';
+
     for (const [name, def] of uniformEntries) {
       const control = this.createControl(name, def);
       if (control) {
         this.controlElements.set(name, control);
-        this.container.appendChild(control);
+        controlList.appendChild(control);
       }
     }
+
+    this.container.appendChild(controlList);
   }
 
   /**
@@ -147,7 +168,7 @@ export class UniformControls {
   /**
    * Update a uniform value externally (e.g., from reset).
    */
-  setValue(name: string, value: number | boolean | number[]): void {
+  setValue(name: string, value: UniformValue): void {
     if (!(name in this.uniforms)) return;
 
     this.values[name] = value;

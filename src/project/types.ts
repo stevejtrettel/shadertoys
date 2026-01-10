@@ -114,10 +114,15 @@ export type UniformDefinition =
 export type UniformDefinitions = Record<string, UniformDefinition>;
 
 /**
+ * A single uniform value at runtime.
+ */
+export type UniformValue = number | boolean | number[];
+
+/**
  * Runtime uniform values (current state).
  * Keys are uniform names, values are the current value.
  */
-export type UniformValues = Record<string, number | boolean | number[]>;
+export type UniformValues = Record<string, UniformValue>;
 
 // =============================================================================
 // Channel Definitions (JSON Config Format)
