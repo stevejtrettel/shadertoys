@@ -1,40 +1,43 @@
 // Uniform Controls Test Shader
-// Adjust the sliders in the Uniforms tab to change the animation!
+// Demonstrates all uniform types: float, int, bool, vec2, vec3
 
-// Custom uniforms - must be declared here
+// Custom uniforms - declare all types
 uniform float uSpeed;
 uniform float uScale;
-uniform float uBrightness;
+uniform int uRings;
+uniform bool uAnimate;
+uniform vec3 uColor;
+uniform vec2 uOffset;
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // Normalized pixel coordinates (from 0 to 1)
     vec2 uv = fragCoord / iResolution.xy;
 
-    // Center the coordinates
-    vec2 p = uv - 0.5;
+    // Apply offset from XY pad (center position)
+    vec2 p = uv - uOffset;
 
-    // Apply scale to pattern
+    // Correct aspect ratio
+    p.x *= iResolution.x / iResolution.y;
+
+    // Apply scale
     p *= uScale;
 
-    // Create an animated pattern using the speed uniform
-    float t = iTime * uSpeed;
+    // Animate based on toggle
+    float t = uAnimate ? iTime * uSpeed : 0.0;
 
-    // Interesting pattern with rings and waves
+    // Create ring pattern using int uniform
     float d = length(p);
+    float rings = sin(d * float(uRings) * 2.0 - t) * 0.5 + 0.5;
+
+    // Add some angular variation
     float angle = atan(p.y, p.x);
+    float pattern = rings * (sin(angle * 4.0 + t * 0.5) * 0.3 + 0.7);
 
-    float pattern = sin(d * 10.0 - t) * 0.5 + 0.5;
-    pattern *= sin(angle * 6.0 + t * 0.5) * 0.5 + 0.5;
+    // Apply the color from color picker
+    vec3 col = uColor * pattern;
 
-    // Create colorful output
-    vec3 col = vec3(
-        sin(pattern * 3.14159 + 0.0) * 0.5 + 0.5,
-        sin(pattern * 3.14159 + 2.094) * 0.5 + 0.5,
-        sin(pattern * 3.14159 + 4.188) * 0.5 + 0.5
-    );
-
-    // Apply brightness
-    col *= uBrightness + 0.5;
+    // Add subtle glow at center
+    col += uColor * 0.3 * exp(-d * 3.0);
 
     // Output to screen
     fragColor = vec4(col, 1.0);
