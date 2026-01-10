@@ -15,9 +15,9 @@
 
 /* Toggle button - uses shared glass variables from app.css */
 .uniforms-toggle-button {
-  width: 36px;
-  height: 36px;
-  padding: 8px;
+  width: 32px;
+  height: 32px;
+  padding: 6px;
   background: var(--glass-bg);
   border: var(--glass-border);
   border-radius: var(--glass-radius-sm);
@@ -42,8 +42,8 @@
 }
 
 .uniforms-toggle-button svg {
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
 }
 
 /* Hidden state for toggle button when panel is open */
