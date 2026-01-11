@@ -59,7 +59,8 @@ export async function loadDemo(
   demoPath: string,
   glslFiles: Record<string, () => Promise<string>>,
   jsonFiles: Record<string, () => Promise<ShadertoyConfig>>,
-  imageFiles: Record<string, () => Promise<string>>
+  imageFiles: Record<string, () => Promise<string>>,
+  markdownFiles?: Record<string, () => Promise<string>>
 ): Promise<ShadertoyProject> {
   // Normalize path - handle both "./path" and "path" formats
   const normalizedPath = demoPath.startsWith('./') ? demoPath : `./${demoPath}`;
@@ -72,20 +73,21 @@ export async function loadDemo(
                            config.BufferC || config.BufferD;
 
     if (hasPassConfigs) {
-      return loadWithConfig(normalizedPath, config, glslFiles, imageFiles);
+      return loadWithConfig(normalizedPath, config, glslFiles, imageFiles, markdownFiles);
     } else {
       // Config with only settings (layout, controls, etc.) but no passes
-      return loadSinglePass(normalizedPath, glslFiles, config);
+      return loadSinglePass(normalizedPath, glslFiles, config, markdownFiles);
     }
   } else {
-    return loadSinglePass(normalizedPath, glslFiles);
+    return loadSinglePass(normalizedPath, glslFiles, undefined, markdownFiles);
   }
 }
 
 async function loadSinglePass(
   demoPath: string,
   glslFiles: Record<string, () => Promise<string>>,
-  configOverrides?: Partial<ShadertoyConfig>
+  configOverrides?: Partial<ShadertoyConfig>,
+  markdownFiles?: Record<string, () => Promise<string>>
 ): Promise<ShadertoyProject> {
   const imagePath = `${demoPath}/image.glsl`;
   const actualImagePath = findFileCaseInsensitive(glslFiles, imagePath);
@@ -104,6 +106,17 @@ async function loadSinglePass(
                 demoName.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 
   const theme = configOverrides?.theme || 'light';
+
+  // Load info markdown (from config or auto-detect info.md)
+  let infoMarkdown: string | null = null;
+  if (markdownFiles) {
+    const infoFileName = configOverrides?.info || 'info.md';
+    const infoPath = `${demoPath}/${infoFileName}`;
+    const actualInfoPath = findFileCaseInsensitive(markdownFiles, infoPath);
+    if (actualInfoPath) {
+      infoMarkdown = await markdownFiles[actualInfoPath]();
+    }
+  }
 
   return {
     root: demoPath,
@@ -130,6 +143,7 @@ async function loadSinglePass(
     },
     textures: [],
     uniforms: {},
+    infoMarkdown,
   };
 }
 
@@ -137,7 +151,8 @@ async function loadWithConfig(
   demoPath: string,
   config: ShadertoyConfig,
   glslFiles: Record<string, () => Promise<string>>,
-  imageFiles: Record<string, () => Promise<string>>
+  imageFiles: Record<string, () => Promise<string>>,
+  markdownFiles?: Record<string, () => Promise<string>>
 ): Promise<ShadertoyProject> {
 
   // Extract pass configs from top level
@@ -264,6 +279,17 @@ async function loadWithConfig(
   const theme = config.theme || 'light';
   const controls = config.controls ?? true;
 
+  // Load info markdown (from config or auto-detect info.md)
+  let infoMarkdown: string | null = null;
+  if (markdownFiles) {
+    const infoFileName = config.info || 'info.md';
+    const infoPath = `${demoPath}/${infoFileName}`;
+    const actualInfoPath = findFileCaseInsensitive(markdownFiles, infoPath);
+    if (actualInfoPath) {
+      infoMarkdown = await markdownFiles[actualInfoPath]();
+    }
+  }
+
   return {
     root: demoPath,
     meta: { title, author, description },
@@ -274,6 +300,7 @@ async function loadWithConfig(
     passes,
     textures,
     uniforms: config.uniforms ?? {},
+    infoMarkdown,
   };
 }
 

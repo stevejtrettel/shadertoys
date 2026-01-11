@@ -45,7 +45,12 @@ export async function loadDemoProject() {
     import: 'default',
   });
 
-  return loadDemo(DEMO_NAME, glslFiles, jsonFiles, imageFiles);
+  const markdownFiles = import.meta.glob<string>('/demos/${demo}/**/*.md', {
+    query: '?raw',
+    import: 'default',
+  });
+
+  return loadDemo(DEMO_NAME, glslFiles, jsonFiles, imageFiles, markdownFiles);
 }
 `;
 

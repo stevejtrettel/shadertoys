@@ -13,7 +13,8 @@ import { ShadertoyProject, PassName } from '../project/types';
 type ShaderTab = { kind: 'shader'; name: string };
 type CodeTab = { kind: 'code'; name: string; passName: 'common' | PassName; source: string };
 type ImageTab = { kind: 'image'; name: string; url: string };
-type Tab = ShaderTab | CodeTab | ImageTab;
+type InfoTab = { kind: 'info'; name: string; markdown: string };
+type Tab = ShaderTab | CodeTab | ImageTab | InfoTab;
 
 export class TabbedLayout implements BaseLayout {
   private container: HTMLElement;
@@ -22,6 +23,7 @@ export class TabbedLayout implements BaseLayout {
   private canvasContainer: HTMLElement;
   private contentArea: HTMLElement;
   private imageViewer: HTMLElement;
+  private infoViewer: HTMLElement;
 
   private editorContainer: HTMLElement;
   private editorInstance: any = null;
@@ -59,8 +61,14 @@ export class TabbedLayout implements BaseLayout {
     this.imageViewer.className = 'tabbed-image-viewer';
     this.imageViewer.style.visibility = 'hidden';
 
+    // Create info viewer (shown when info tab is active)
+    this.infoViewer = document.createElement('div');
+    this.infoViewer.className = 'tabbed-info-viewer';
+    this.infoViewer.style.visibility = 'hidden';
+
     this.contentArea.appendChild(this.canvasContainer);
     this.contentArea.appendChild(this.imageViewer);
+    this.contentArea.appendChild(this.infoViewer);
 
     // Create editor container
     this.editorContainer = document.createElement('div');
@@ -228,13 +236,22 @@ export class TabbedLayout implements BaseLayout {
     const tabBar = document.createElement('div');
     tabBar.className = 'tabbed-tab-bar';
 
-    // Build tabs: Shader first, then code files, then textures
+    // Build tabs: Shader first, then info (if present), then code files, then textures
     this.tabs = [];
 
     // 1. Shader output tab
     this.tabs.push({ kind: 'shader', name: 'Shader' });
 
-    // 2. Common (if exists)
+    // 2. Info markdown (if exists) - right after Shader
+    if (this.project.infoMarkdown) {
+      this.tabs.push({
+        kind: 'info',
+        name: 'Info',
+        markdown: this.project.infoMarkdown,
+      });
+    }
+
+    // 3. Common (if exists)
     if (this.project.commonSource) {
       this.tabs.push({
         kind: 'code',
@@ -244,7 +261,7 @@ export class TabbedLayout implements BaseLayout {
       });
     }
 
-    // 3. Buffers in order
+    // 4. Buffers in order
     const bufferOrder: ('BufferA' | 'BufferB' | 'BufferC' | 'BufferD')[] = [
       'BufferA', 'BufferB', 'BufferC', 'BufferD',
     ];
@@ -260,7 +277,7 @@ export class TabbedLayout implements BaseLayout {
       }
     }
 
-    // 4. Image pass
+    // 5. Image pass
     const imagePass = this.project.passes.Image;
     this.tabs.push({
       kind: 'code',
@@ -269,7 +286,7 @@ export class TabbedLayout implements BaseLayout {
       source: imagePass.glslSource,
     });
 
-    // 5. Textures (images)
+    // 6. Textures (images)
     for (const texture of this.project.textures) {
       this.tabs.push({
         kind: 'image',
@@ -294,6 +311,7 @@ export class TabbedLayout implements BaseLayout {
       // Hide all content first
       this.canvasContainer.style.visibility = 'hidden';
       this.imageViewer.style.visibility = 'hidden';
+      this.infoViewer.style.visibility = 'hidden';
       this.editorContainer.style.visibility = 'hidden';
       this.buttonContainer.style.display = 'none';
 
@@ -306,6 +324,22 @@ export class TabbedLayout implements BaseLayout {
       if (tab.kind === 'shader') {
         // Show shader canvas
         this.canvasContainer.style.visibility = 'visible';
+      } else if (tab.kind === 'info') {
+        // Show info viewer with rendered markdown
+        this.infoViewer.style.visibility = 'visible';
+
+        // Dynamically load marked and render markdown
+        this.infoViewer.innerHTML = '';
+        try {
+          const { marked } = await import('marked');
+          this.infoViewer.innerHTML = await marked(tab.markdown);
+        } catch (err) {
+          console.error('Failed to load markdown renderer:', err);
+          // Fallback to preformatted text
+          const pre = document.createElement('pre');
+          pre.textContent = tab.markdown;
+          this.infoViewer.appendChild(pre);
+        }
       } else if (tab.kind === 'code') {
         // Show editor and buttons
         this.editorContainer.style.visibility = 'visible';
@@ -353,6 +387,8 @@ export class TabbedLayout implements BaseLayout {
         tabButton.classList.add('shader-tab');
       } else if (tab.kind === 'image') {
         tabButton.classList.add('image-tab');
+      } else if (tab.kind === 'info') {
+        tabButton.classList.add('info-tab');
       }
       tabButton.textContent = tab.name;
       if (index === 0) tabButton.classList.add('active');

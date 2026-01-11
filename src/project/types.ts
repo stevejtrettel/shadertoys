@@ -228,6 +228,9 @@ export interface ShadertoyConfig {
   controls?: boolean;
   common?: string;
 
+  // Info markdown file (optional, auto-detects info.md if not specified)
+  info?: string;
+
   // Custom uniforms (user-defined controls)
   uniforms?: UniformDefinitions;
 
@@ -369,4 +372,10 @@ export interface ShadertoyProject {
    * Users must declare these uniforms in their shader code.
    */
   uniforms: UniformDefinitions;
+
+  /**
+   * Info markdown content (optional).
+   * Loaded from info.md or custom path specified in config.
+   */
+  infoMarkdown: string | null;
 }

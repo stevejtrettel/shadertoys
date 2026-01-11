@@ -164,6 +164,13 @@ async function loadSinglePassProject(root: string): Promise<ShadertoyProject> {
   const imageSource = await fs.readFile(imagePath, 'utf8');
   const title = path.basename(root);
 
+  // Auto-detect info.md
+  let infoMarkdown: string | null = null;
+  const defaultInfoPath = path.join(root, 'info.md');
+  if (await fileExists(defaultInfoPath)) {
+    infoMarkdown = await fs.readFile(defaultInfoPath, 'utf8');
+  }
+
   const project: ShadertoyProject = {
     root,
     meta: {
@@ -189,6 +196,7 @@ async function loadSinglePassProject(root: string): Promise<ShadertoyProject> {
     },
     textures: [],
     uniforms: {},
+    infoMarkdown,
   };
 
   return project;
@@ -403,6 +411,25 @@ async function loadProjectWithConfig(root: string, config: ShadertoyConfig): Pro
   const author = config.author ?? null;
   const description = config.description ?? null;
 
+  // Load info markdown
+  let infoMarkdown: string | null = null;
+  if (config.info) {
+    // Explicit info file specified
+    const infoPath = path.join(root, config.info);
+    if (!(await fileExists(infoPath))) {
+      throw new Error(
+        `Info markdown file '${config.info}' not found in '${root}'.`
+      );
+    }
+    infoMarkdown = await fs.readFile(infoPath, 'utf8');
+  } else {
+    // Auto-detect info.md
+    const defaultInfoPath = path.join(root, 'info.md');
+    if (await fileExists(defaultInfoPath)) {
+      infoMarkdown = await fs.readFile(defaultInfoPath, 'utf8');
+    }
+  }
+
   const project: ShadertoyProject = {
     root,
     meta: { title, author, description },
@@ -419,6 +446,7 @@ async function loadProjectWithConfig(root: string, config: ShadertoyConfig): Pro
     },
     textures: Array.from(textureMap.values()),
     uniforms: config.uniforms ?? {},
+    infoMarkdown,
   };
 
   return project;

@@ -6,6 +6,7 @@
  * - Recompile button with keyboard shortcut
  * - Error display
  * - Tab management for multiple passes
+ * - Info markdown tab (optional)
  */
 
 import { ShadertoyProject, PassName } from '../project/types';
@@ -15,7 +16,8 @@ import './editor-panel.css';
 
 type CodeTab = { kind: 'code'; name: string; passName: 'common' | PassName; source: string };
 type ImageTab = { kind: 'image'; name: string; url: string };
-type Tab = CodeTab | ImageTab;
+type InfoTab = { kind: 'info'; name: string; markdown: string };
+type Tab = CodeTab | ImageTab | InfoTab;
 
 interface EditorInstance {
   getSource: () => string;
@@ -121,7 +123,16 @@ export class EditorPanel {
   private buildTabs(): void {
     this.tabs = [];
 
-    // 1. Common (if exists)
+    // 1. Info markdown (if exists) - shown first, and is the default tab
+    if (this.project.infoMarkdown) {
+      this.tabs.push({
+        kind: 'info',
+        name: 'Info',
+        markdown: this.project.infoMarkdown,
+      });
+    }
+
+    // 2. Common (if exists)
     if (this.project.commonSource) {
       this.tabs.push({
         kind: 'code',
@@ -131,7 +142,7 @@ export class EditorPanel {
       });
     }
 
-    // 2. Buffers in order (A, B, C, D)
+    // 3. Buffers in order (A, B, C, D)
     const bufferOrder: ('BufferA' | 'BufferB' | 'BufferC' | 'BufferD')[] = [
       'BufferA', 'BufferB', 'BufferC', 'BufferD',
     ];
@@ -147,7 +158,7 @@ export class EditorPanel {
       }
     }
 
-    // 3. Image pass
+    // 4. Image pass
     const imagePass = this.project.passes.Image;
     this.tabs.push({
       kind: 'code',
@@ -156,7 +167,7 @@ export class EditorPanel {
       source: imagePass.glslSource,
     });
 
-    // 4. Textures (images) - not editable
+    // 5. Textures (images) - not editable
     for (const texture of this.project.textures) {
       this.tabs.push({
         kind: 'image',
@@ -174,6 +185,8 @@ export class EditorPanel {
       tabButton.className = 'editor-tab-button';
       if (tab.kind === 'image') {
         tabButton.classList.add('image-tab');
+      } else if (tab.kind === 'info') {
+        tabButton.classList.add('info-tab');
       }
       tabButton.textContent = tab.name;
       if (index === this.activeTabIndex) {
@@ -237,6 +250,28 @@ export class EditorPanel {
         });
         editorContainer.appendChild(textarea);
       }
+    } else if (tab.kind === 'info') {
+      // Hide buttons for info tab
+      this.copyButton.style.display = 'none';
+      this.recompileButton.style.display = 'none';
+
+      // Show rendered markdown
+      const infoContainer = document.createElement('div');
+      infoContainer.className = 'editor-info-viewer';
+
+      // Dynamically load marked and render markdown
+      try {
+        const { marked } = await import('marked');
+        infoContainer.innerHTML = await marked(tab.markdown);
+      } catch (err) {
+        console.error('Failed to load markdown renderer:', err);
+        // Fallback to preformatted text
+        const pre = document.createElement('pre');
+        pre.textContent = tab.markdown;
+        infoContainer.appendChild(pre);
+      }
+
+      this.contentArea.appendChild(infoContainer);
     } else {
       // Hide buttons for image tabs
       this.copyButton.style.display = 'none';

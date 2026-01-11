@@ -57,12 +57,18 @@ export async function loadDemoProject() {
     import: 'default',
   });
 
+  const markdownFilesRaw = import.meta.glob<string>('/demos/${demo}/**/*.md', {
+    query: '?raw',
+    import: 'default',
+  });
+
   // Transform keys to ./ format that loadDemo expects
   const glslFiles = transformKeys(glslFilesRaw);
   const jsonFiles = transformKeys(jsonFilesRaw);
   const imageFiles = transformKeys(imageFilesRaw);
+  const markdownFiles = transformKeys(markdownFilesRaw);
 
-  return loadDemo(DEMO_NAME, glslFiles, jsonFiles, imageFiles);
+  return loadDemo(DEMO_NAME, glslFiles, jsonFiles, imageFiles, markdownFiles);
 }
 `;
 
