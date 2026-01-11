@@ -25,6 +25,18 @@ export interface AppOptions {
    * Set to 1 for performance, or higher for retina displays.
    */
   pixelRatio?: number;
+
+  /**
+   * Skip creating the floating uniforms panel.
+   * Used by 'ui' layout which has its own uniforms panel.
+   */
+  skipUniformsPanel?: boolean;
+
+  /**
+   * Skip creating the playback controls overlay.
+   * Used by 'ui' layout which has its own playback controls.
+   */
+  skipPlaybackControls?: boolean;
 }
 
 /**

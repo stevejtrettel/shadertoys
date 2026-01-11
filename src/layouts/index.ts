@@ -1,23 +1,26 @@
 /**
  * Layouts - Modular layout system for Shadertoy viewer
  *
- * Provides four layout modes:
+ * Provides five layout modes:
  * - Default: Canvas centered with styling
  * - Fullscreen: Canvas fills entire viewport
  * - Split: Canvas on left, code viewer on right
  * - Tabbed: Single window with tabs for shader and code
+ * - UI: Canvas on left, uniforms panel on right
  */
 
 export { FullscreenLayout } from './FullscreenLayout';
 export { DefaultLayout } from './DefaultLayout';
 export { SplitLayout } from './SplitLayout';
 export { TabbedLayout } from './TabbedLayout';
+export { UILayout } from './UILayout';
 export type { BaseLayout, LayoutOptions, LayoutMode } from './types';
 
 import { FullscreenLayout } from './FullscreenLayout';
 import { DefaultLayout } from './DefaultLayout';
 import { SplitLayout } from './SplitLayout';
 import { TabbedLayout } from './TabbedLayout';
+import { UILayout } from './UILayout';
 import { BaseLayout, LayoutOptions, LayoutMode } from './types';
 import { ThemeMode } from '../project/types';
 
@@ -54,5 +57,7 @@ export function createLayout(
       return new SplitLayout(options);
     case 'tabbed':
       return new TabbedLayout(options);
+    case 'ui':
+      return new UILayout(options);
   }
 }
