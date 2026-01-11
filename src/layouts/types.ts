@@ -71,4 +71,4 @@ export interface LayoutOptions {
 /**
  * Available layout modes.
  */
-export type LayoutMode = 'fullscreen' | 'default' | 'split' | 'tabbed';
+export type LayoutMode = 'fullscreen' | 'default' | 'split' | 'tabbed' | 'ui';

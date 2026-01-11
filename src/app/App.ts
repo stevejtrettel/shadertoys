@@ -119,8 +119,8 @@ export class App {
     this.statsContainer.appendChild(this.fpsDisplay);
     this.container.appendChild(this.statsContainer);
 
-    // Create playback controls if enabled
-    if (opts.project.controls) {
+    // Create playback controls if enabled (skip for 'ui' layout which has its own)
+    if (opts.project.controls && !opts.skipPlaybackControls) {
       this.createControls();
     }
 
@@ -157,10 +157,8 @@ export class App {
       this.showErrorOverlay(this.engine.getCompilationErrors());
     }
 
-    // Create floating uniforms panel only for fullscreen layout
-    // (split/tabbed layouts have uniforms in the editor panel tabs)
-    const hasEditorPanel = opts.project.layout === 'split' || opts.project.layout === 'tabbed';
-    if (!hasEditorPanel && opts.project.uniforms && Object.keys(opts.project.uniforms).length > 0) {
+    // Create floating uniforms panel (skip for 'ui' layout which has its own)
+    if (!opts.skipUniformsPanel && opts.project.uniforms && Object.keys(opts.project.uniforms).length > 0) {
       this.uniformsPanel = new UniformsPanel({
         container: this.container,
         uniforms: opts.project.uniforms,
@@ -728,16 +726,25 @@ export class App {
 
   /**
    * Toggle between play and pause states.
+   * Public for UILayout to call.
    */
-  private togglePlayPause(): void {
+  togglePlayPause(): void {
     this.isPaused = !this.isPaused;
     this.updatePlayPauseButton();
   }
 
   /**
-   * Reset the shader to frame 0.
+   * Get current paused state.
    */
-  private reset(): void {
+  getPaused(): boolean {
+    return this.isPaused;
+  }
+
+  /**
+   * Reset the shader to frame 0.
+   * Public for UILayout to call.
+   */
+  reset(): void {
     this.startTime = performance.now() / 1000;
     this.frameCount = 0;
     this.totalFrameCount = 0;
@@ -755,8 +762,9 @@ export class App {
   /**
    * Capture and download a screenshot of the current canvas as PNG.
    * Filename format: shadertoy-{folderName}-{timestamp}.png
+   * Public for UILayout to call.
    */
-  private screenshot(): void {
+  screenshot(): void {
     // Extract folder name from project root (e.g., "/demos/keyboard-test" -> "keyboard-test")
     const folderName = this.project.root.split('/').pop() || 'shader';
 

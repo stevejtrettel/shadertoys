@@ -16,6 +16,7 @@ import './styles/base.css';
 
 import { App } from './app/App';
 import { createLayout } from './layouts';
+import { UILayout } from './layouts/UILayout';
 import { loadDemoProject, DEMO_NAME } from './project/generatedLoader';
 import { PassName, UniformValue } from './project/types';
 import { RecompileResult } from './layouts/types';
@@ -46,11 +47,16 @@ async function main() {
     // Get canvas container from layout
     const canvasContainer = layout.getCanvasContainer();
 
+    // Check if this is a UILayout (which has its own uniforms panel and playback controls)
+    const isUILayout = layout instanceof UILayout;
+
     // Create app
     const app = new App({
       container: canvasContainer,
       project,
       pixelRatio: window.devicePixelRatio,
+      skipUniformsPanel: isUILayout,
+      skipPlaybackControls: isUILayout,
     });
 
     // Wire up recompile handler for layouts that support it (split, tabbed)
@@ -82,6 +88,25 @@ async function main() {
     // Wire up uniform change handler for layouts that support it (split, tabbed)
     if (layout.setUniformHandler) {
       layout.setUniformHandler((name: string, value: UniformValue) => {
+        const engine = app.getEngine();
+        if (engine) {
+          engine.setUniformValue(name, value);
+        }
+      });
+    }
+
+    // Wire up UILayout callbacks (playback controls and uniforms)
+    if (layout instanceof UILayout) {
+      layout.setPlaybackCallbacks({
+        onPlayPause: () => {
+          app.togglePlayPause();
+          layout.setPaused(app.getPaused());
+        },
+        onReset: () => app.reset(),
+        onScreenshot: () => app.screenshot(),
+      });
+
+      layout.setUniformCallback((name: string, value: UniformValue) => {
         const engine = app.getEngine();
         if (engine) {
           engine.setUniformValue(name, value);
