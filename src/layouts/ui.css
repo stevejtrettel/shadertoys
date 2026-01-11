@@ -16,6 +16,7 @@
 .layout-ui .ui-canvas-container {
   position: relative;
   flex: 1;
+  max-width: 1200px;
   background: var(--bg-canvas);
   border-radius: 8px;
   box-shadow: var(--shadow-md), var(--shadow-sm);
@@ -56,7 +57,7 @@
 
 /* Override uniform controls for UI panel */
 .layout-ui .uniform-controls {
-  padding: 20px 16px;
+  padding: 20px;
   gap: 16px;
   background: transparent;
 }
