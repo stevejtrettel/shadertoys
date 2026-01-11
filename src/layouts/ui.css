@@ -24,7 +24,7 @@
 
 /* UI Panel - fixed width on right */
 .layout-ui .ui-panel {
-  width: 200px;
+  width: 220px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -43,7 +43,7 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 16px;
+  padding: 24px 20px;
 }
 
 /* Empty state for no uniforms */
@@ -57,7 +57,7 @@
 /* Override uniform controls for UI panel */
 .layout-ui .uniform-controls {
   padding: 0;
-  gap: 12px;
+  gap: 16px;
   background: transparent;
 }
 
@@ -66,25 +66,27 @@
 }
 
 .layout-ui .uniform-controls-list {
-  gap: 14px;
+  gap: 20px;
 }
 
 .layout-ui .uniform-control {
-  gap: 6px;
+  gap: 8px;
 }
 
 .layout-ui .uniform-control-label {
-  font-size: 11px;
+  font-size: 12px;
+  font-weight: 500;
   color: var(--text-primary);
+  letter-spacing: 0.01em;
 }
 
 .layout-ui .uniform-control-value {
-  font-size: 10px;
-  padding: 2px 6px;
-  min-width: 40px;
+  font-size: 11px;
+  padding: 3px 8px;
+  min-width: 44px;
   color: var(--text-muted);
   background: var(--bg-tertiary);
-  border-radius: 3px;
+  border-radius: 4px;
 }
 
 /* Slider styling */
@@ -173,17 +175,19 @@
 
 /* Vec component labels */
 .layout-ui .uniform-control-vec-component {
-  font-size: 9px;
-  width: 12px;
+  font-size: 10px;
+  width: 14px;
   color: var(--text-muted);
+  font-weight: 500;
 }
 
 .layout-ui .uniform-control-vec-value {
-  font-size: 9px;
-  min-width: 32px;
+  font-size: 10px;
+  min-width: 36px;
+  padding: 2px 6px;
   color: var(--text-muted);
   background: var(--bg-tertiary);
-  border-radius: 3px;
+  border-radius: 4px;
 }
 
 /* Scrollbar styling */
@@ -208,21 +212,21 @@
 .layout-ui .ui-playback-container {
   display: flex;
   justify-content: center;
-  gap: 8px;
-  padding: 12px;
+  gap: 12px;
+  padding: 16px 20px;
   border-top: 1px solid var(--border-primary);
   background: var(--bg-tertiary);
 }
 
 .layout-ui .ui-control-button {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: var(--button-bg);
   border: 1px solid var(--border-primary);
-  border-radius: 6px;
+  border-radius: 8px;
   color: var(--text-primary);
   cursor: pointer;
   transition: all 0.15s ease;
@@ -238,8 +242,8 @@
 }
 
 .layout-ui .ui-control-button svg {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   fill: currentColor;
 }
 
@@ -264,7 +268,7 @@
   }
 
   .layout-ui .ui-panel {
-    width: 180px;
+    width: 200px;
   }
 }
 
