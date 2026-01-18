@@ -1451,6 +1451,10 @@ function createRenderTarget(w, h) {
   const fb = gl.createFramebuffer();
   gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
   gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+  const status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+  if (status !== gl.FRAMEBUFFER_COMPLETE) {
+    console.error('Framebuffer not complete:', status);
+  }
   return { texture: tex, framebuffer: fb };
 }
 
@@ -1459,8 +1463,9 @@ const container = canvas.parentElement;
 let width = canvas.width = container.clientWidth * devicePixelRatio;
 let height = canvas.height = container.clientHeight * devicePixelRatio;
 
-// Enable float textures
-gl.getExtension('EXT_color_buffer_float');
+// Enable float textures (required for multi-buffer feedback)
+const floatExt = gl.getExtension('EXT_color_buffer_float');
+if (!floatExt) console.warn('EXT_color_buffer_float not supported - multi-buffer may not work');
 
 const runtimePasses = PASSES.map(pass => {
   const fragSource = FRAGMENT_PREAMBLE + (COMMON_SOURCE ? '\\n// Common\\n' + COMMON_SOURCE + '\\n' : '') + '\\n// User code\\n' + pass.source + FRAGMENT_SUFFIX;
@@ -1520,13 +1525,13 @@ new ResizeObserver(() => {
 // Animation
 let frame = 0;
 let startTime = performance.now() / 1000;
-let lastTime = startTime;
+let lastTime = 0;
 
 function render(now) {
   requestAnimationFrame(render);
 
   const time = now / 1000 - startTime;
-  const deltaTime = time - lastTime;
+  const deltaTime = Math.max(0, time - lastTime);  // Ensure non-negative
   lastTime = time;
 
   const date = new Date();
