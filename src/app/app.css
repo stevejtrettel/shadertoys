@@ -157,7 +157,7 @@
   bottom: 0;
   right: 38px; /* Offset to make room for menu button (32px + 6px gap) */
   display: grid;
-  grid-template-columns: 32px 32px;
+  grid-template-columns: 32px 32px 32px;
   grid-template-rows: 32px 32px;
   gap: 6px;
   opacity: 0;
