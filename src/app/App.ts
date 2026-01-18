@@ -1539,10 +1539,18 @@ new ResizeObserver(() => {
     [p.current, p.previous].forEach(rt => {
       gl.bindTexture(gl.TEXTURE_2D, rt.texture);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, width, height, 0, gl.RGBA, gl.FLOAT, null);
+      // Validate framebuffer after resize
+      gl.bindFramebuffer(gl.FRAMEBUFFER, rt.framebuffer);
+      const status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+      if (status !== gl.FRAMEBUFFER_COMPLETE) {
+        console.error('Framebuffer incomplete after resize:', status);
+      }
     });
   });
   frame = 0;
-  console.log('ResizeObserver: reset frame to 0');
+  startTime = performance.now() / 1000;  // Reset time too
+  lastTime = 0;
+  console.log('ResizeObserver: reset frame to 0, time reset');
 }).observe(container);
 
 // Animation
@@ -1621,6 +1629,12 @@ function render(now) {
   // Blit Image pass to screen
   const imagePass = findPass('Image');
   if (imagePass) {
+    // Clear default framebuffer first
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.viewport(0, 0, width, height);
+    gl.clearColor(0, 0, 0, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
     gl.bindFramebuffer(gl.READ_FRAMEBUFFER, imagePass.previous.framebuffer);
     gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null);
     gl.blitFramebuffer(0, 0, width, height, 0, 0, width, height, gl.COLOR_BUFFER_BIT, gl.NEAREST);
