@@ -742,16 +742,26 @@ export class App {
     `;
     exportButton.addEventListener('click', () => this.exportHTML());
 
+    // Menu button clone for inside grid (6th cell)
+    const menuButtonInGrid = document.createElement('button');
+    menuButtonInGrid.className = 'control-button';
+    menuButtonInGrid.title = 'Close';
+    menuButtonInGrid.textContent = '−';
+    menuButtonInGrid.style.fontSize = '20px';
+    menuButtonInGrid.style.fontWeight = '300';
+    menuButtonInGrid.addEventListener('click', () => this.toggleControlsMenu());
+
     // Add buttons to grid (positioned in 2x3 layout)
     // Row 1: Play/Pause, Reset, Export
-    // Row 2: Screenshot, Record, (menu button overlays here)
+    // Row 2: Screenshot, Record, Menu (close)
     this.controlsGrid.appendChild(this.playPauseButton);
     this.controlsGrid.appendChild(resetButton);
     this.controlsGrid.appendChild(exportButton);
     this.controlsGrid.appendChild(screenshotButton);
     this.controlsGrid.appendChild(this.recordButton);
+    this.controlsGrid.appendChild(menuButtonInGrid);
 
-    // Add grid and menu button to container
+    // Add grid and standalone menu button to container
     this.controlsContainer.appendChild(this.controlsGrid);
     this.controlsContainer.appendChild(this.menuButton);
     this.container.appendChild(this.controlsContainer);
@@ -1286,12 +1296,24 @@ export class App {
   <title>${title}</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
+    html, body { width: 100%; height: 100%; background: #1a1a1a; }
+    body { display: flex; align-items: center; justify-content: center; }
+    .container {
+      width: 90vw;
+      max-width: 1200px;
+      aspect-ratio: 16 / 9;
+      background: #000;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    }
     canvas { display: block; width: 100%; height: 100%; }
   </style>
 </head>
 <body>
-  <canvas id="canvas"></canvas>
+  <div class="container">
+    <canvas id="canvas"></canvas>
+  </div>
   <script>
 // Shader Sandbox Export - ${title}
 // Generated ${new Date().toISOString()}
@@ -1433,8 +1455,9 @@ function createRenderTarget(w, h) {
 }
 
 // Initialize passes
-let width = canvas.width = window.innerWidth * devicePixelRatio;
-let height = canvas.height = window.innerHeight * devicePixelRatio;
+const container = canvas.parentElement;
+let width = canvas.width = container.clientWidth * devicePixelRatio;
+let height = canvas.height = container.clientHeight * devicePixelRatio;
 
 // Enable float textures
 gl.getExtension('EXT_color_buffer_float');
@@ -1482,9 +1505,9 @@ canvas.addEventListener('click', e => {
 });
 
 // Resize handler
-window.addEventListener('resize', () => {
-  width = canvas.width = window.innerWidth * devicePixelRatio;
-  height = canvas.height = window.innerHeight * devicePixelRatio;
+new ResizeObserver(() => {
+  width = canvas.width = container.clientWidth * devicePixelRatio;
+  height = canvas.height = container.clientHeight * devicePixelRatio;
   runtimePasses.forEach(p => {
     [p.current, p.previous].forEach(rt => {
       gl.bindTexture(gl.TEXTURE_2D, rt.texture);
@@ -1492,7 +1515,7 @@ window.addEventListener('resize', () => {
     });
   });
   frame = 0;
-});
+}).observe(container);
 
 // Animation
 let frame = 0;

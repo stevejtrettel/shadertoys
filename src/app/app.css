@@ -151,11 +151,11 @@
   transform: scale(0.95);
 }
 
-/* Control buttons grid - positioned to the left of menu button */
+/* Control buttons grid - 2x3 with menu button as last cell */
 .controls-grid {
   position: absolute;
   bottom: 0;
-  right: 38px; /* Offset to make room for menu button (32px + 6px gap) */
+  right: 0;
   display: grid;
   grid-template-columns: 32px 32px 32px;
   grid-template-rows: 32px 32px;
@@ -208,16 +208,16 @@
   fill: currentColor;
 }
 
-/* Menu button stays at bottom-right, grid expands to its left */
+/* Menu button - standalone when closed, part of grid when open */
 .playback-controls .controls-menu-button {
   position: relative;
   z-index: 1;
 }
 
-.playback-controls.open .controls-menu-button {
-  position: absolute;
-  bottom: 0;
-  right: 0;
+/* When open, hide standalone button (it's now in the grid) */
+.playback-controls.open > .controls-menu-button {
+  opacity: 0;
+  pointer-events: none;
 }
 
 /* ===== Shader Error Overlay ===== */
