@@ -14,7 +14,7 @@ import './app.css';
 import { ShadertoyEngine } from '../engine/ShadertoyEngine';
 import { ShadertoyProject } from '../project/types';
 import { UniformsPanel } from '../uniforms/UniformsPanel';
-import { AppOptions, MouseState } from './types';
+import { AppOptions, MouseState, TouchState, TouchPoint, PointerData } from './types';
 
 export class App {
   private container: HTMLElement;
@@ -29,6 +29,19 @@ export class App {
 
   // Mouse state for iMouse uniform
   private mouse: MouseState = [0, 0, -1, -1];
+
+  // Touch state for touch uniforms
+  private touchState: TouchState = {
+    count: 0,
+    touches: [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]],
+    pinch: 1.0,
+    pinchDelta: 0.0,
+    pinchCenter: [0, 0],
+  };
+
+  // Pointer tracking for gesture recognition
+  private activePointers: Map<number, PointerData> = new Map();
+  private lastPinchDistance: number = 0;
 
   // FPS tracking
   private fpsDisplay: HTMLElement;
@@ -199,6 +212,9 @@ export class App {
     // Set up mouse tracking
     this.setupMouseTracking();
 
+    // Set up touch/pointer tracking
+    this.setupTouchTracking();
+
     // Set up keyboard tracking for shader keyboard texture
     this.setupKeyboardTracking();
 
@@ -292,8 +308,17 @@ export class App {
     // Update keyboard texture with current key states
     this.engine.updateKeyboardTexture();
 
-    // Run engine step
-    this.engine.step(elapsedTime, this.mouse);
+    // Run engine step with mouse and touch data
+    this.engine.step(elapsedTime, this.mouse, {
+      count: this.touchState.count,
+      touches: this.touchState.touches,
+      pinch: this.touchState.pinch,
+      pinchDelta: this.touchState.pinchDelta,
+      pinchCenter: this.touchState.pinchCenter,
+    });
+
+    // Reset pinchDelta after frame (it's a per-frame delta)
+    this.touchState.pinchDelta = 0;
 
     // Present Image pass output to screen
     this.presentToScreen();
@@ -475,6 +500,156 @@ export class App {
 
     this.canvas.addEventListener('mousemove', updateMouse);
     this.canvas.addEventListener('click', handleClick);
+  }
+
+  // ===========================================================================
+  // Touch/Pointer Tracking
+  // ===========================================================================
+
+  /**
+   * Set up pointer event tracking for touch support.
+   * Uses Pointer Events API for unified mouse/touch/pen handling.
+   */
+  private setupTouchTracking(): void {
+    // Prevent default touch actions (scroll, zoom) on canvas
+    this.canvas.style.touchAction = 'none';
+
+    const getCanvasCoords = (clientX: number, clientY: number): [number, number] => {
+      const rect = this.canvas.getBoundingClientRect();
+      const x = (clientX - rect.left) * this.pixelRatio;
+      const y = (rect.height - (clientY - rect.top)) * this.pixelRatio; // Flip Y
+      return [x, y];
+    };
+
+    const handlePointerDown = (e: PointerEvent) => {
+      // Only track touch and pen (mouse is handled separately)
+      if (e.pointerType === 'mouse') return;
+
+      const [x, y] = getCanvasCoords(e.clientX, e.clientY);
+
+      this.activePointers.set(e.pointerId, {
+        id: e.pointerId,
+        x, y,
+        startX: x,
+        startY: y,
+      });
+
+      // Capture pointer to receive events even outside canvas
+      this.canvas.setPointerCapture(e.pointerId);
+
+      this.updateTouchState();
+
+      // Single touch also updates iMouse for compatibility
+      if (this.activePointers.size === 1) {
+        this.mouse[0] = x;
+        this.mouse[1] = y;
+        this.mouse[2] = x; // Click position
+        this.mouse[3] = y;
+      }
+
+      e.preventDefault();
+    };
+
+    const handlePointerMove = (e: PointerEvent) => {
+      if (e.pointerType === 'mouse') return;
+
+      const pointer = this.activePointers.get(e.pointerId);
+      if (!pointer) return;
+
+      const [x, y] = getCanvasCoords(e.clientX, e.clientY);
+      pointer.x = x;
+      pointer.y = y;
+
+      this.updateTouchState();
+
+      // Single touch also updates iMouse
+      if (this.activePointers.size === 1) {
+        this.mouse[0] = x;
+        this.mouse[1] = y;
+      }
+
+      e.preventDefault();
+    };
+
+    const handlePointerUp = (e: PointerEvent) => {
+      if (e.pointerType === 'mouse') return;
+
+      this.activePointers.delete(e.pointerId);
+      this.canvas.releasePointerCapture(e.pointerId);
+
+      this.updateTouchState();
+      e.preventDefault();
+    };
+
+    const handlePointerCancel = (e: PointerEvent) => {
+      // Same as pointer up - finger lifted or system interrupted
+      handlePointerUp(e);
+    };
+
+    this.canvas.addEventListener('pointerdown', handlePointerDown);
+    this.canvas.addEventListener('pointermove', handlePointerMove);
+    this.canvas.addEventListener('pointerup', handlePointerUp);
+    this.canvas.addEventListener('pointercancel', handlePointerCancel);
+  }
+
+  /**
+   * Update touch state from active pointers.
+   * Calculates pinch gesture when 2+ fingers are active.
+   */
+  private updateTouchState(): void {
+    const pointers = Array.from(this.activePointers.values());
+    const count = pointers.length;
+
+    this.touchState.count = count;
+
+    // Update individual touch points (up to 3)
+    for (let i = 0; i < 3; i++) {
+      if (i < pointers.length) {
+        const p = pointers[i];
+        this.touchState.touches[i] = [p.x, p.y, p.startX, p.startY];
+      } else {
+        this.touchState.touches[i] = [0, 0, 0, 0];
+      }
+    }
+
+    // Calculate pinch gesture (requires 2 fingers)
+    if (count >= 2) {
+      const p1 = pointers[0];
+      const p2 = pointers[1];
+
+      // Current distance
+      const dx = p2.x - p1.x;
+      const dy = p2.y - p1.y;
+      const currentDistance = Math.sqrt(dx * dx + dy * dy);
+
+      // Initial distance (from start positions)
+      const sdx = p2.startX - p1.startX;
+      const sdy = p2.startY - p1.startY;
+      const startDistance = Math.sqrt(sdx * sdx + sdy * sdy);
+
+      // Pinch scale relative to start
+      if (startDistance > 0) {
+        const newPinch = currentDistance / startDistance;
+        this.touchState.pinchDelta = newPinch - this.touchState.pinch;
+        this.touchState.pinch = newPinch;
+      }
+
+      // Pinch center
+      this.touchState.pinchCenter = [
+        (p1.x + p2.x) / 2,
+        (p1.y + p2.y) / 2,
+      ];
+
+      this.lastPinchDistance = currentDistance;
+    } else {
+      // Reset pinch when less than 2 fingers
+      this.touchState.pinchDelta = 0;
+      // Keep pinch at current value (don't reset to 1.0 until all fingers lift)
+      if (count === 0) {
+        this.touchState.pinch = 1.0;
+        this.touchState.pinchCenter = [0, 0];
+      }
+    }
   }
 
   // ===========================================================================

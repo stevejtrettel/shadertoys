@@ -54,6 +54,13 @@ export interface PassUniformLocations {
   // iChannelResolution[4] - resolution of each channel texture
   iChannelResolution: (WebGLUniformLocation | null)[];
 
+  // Touch uniforms (Shader Sandbox extensions)
+  iTouchCount: WebGLUniformLocation | null;
+  iTouch: (WebGLUniformLocation | null)[]; // iTouch0, iTouch1, iTouch2
+  iPinch: WebGLUniformLocation | null;
+  iPinchDelta: WebGLUniformLocation | null;
+  iPinchCenter: WebGLUniformLocation | null;
+
   // Custom uniforms (from project config)
   custom: Map<string, WebGLUniformLocation | null>;
 }

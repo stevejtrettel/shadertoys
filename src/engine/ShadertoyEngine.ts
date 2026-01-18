@@ -245,8 +245,15 @@ export class ShadertoyEngine {
    *
    * @param timeSeconds - global time in seconds (monotone, from App)
    * @param mouse - iMouse as [x, y, clickX, clickY]
+   * @param touch - optional touch state for touch uniforms
    */
-  step(timeSeconds: number, mouse: [number, number, number, number]): void {
+  step(timeSeconds: number, mouse: [number, number, number, number], touch?: {
+    count: number;
+    touches: [[number, number, number, number], [number, number, number, number], [number, number, number, number]];
+    pinch: number;
+    pinchDelta: number;
+    pinchCenter: [number, number];
+  }): void {
     const gl = this.gl;
 
     // Compute time/deltaTime/iFrame
@@ -273,6 +280,15 @@ export class ShadertoyEngine {
     // Compute iFrameRate (smoothed via deltaTime)
     const iFrameRate = deltaTime > 0 ? 1.0 / deltaTime : 60.0;
 
+    // Default touch state if not provided
+    const touchState = touch ?? {
+      count: 0,
+      touches: [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]] as [[number, number, number, number], [number, number, number, number], [number, number, number, number]],
+      pinch: 1.0,
+      pinchDelta: 0.0,
+      pinchCenter: [0, 0] as [number, number],
+    };
+
     // Set viewport for all passes
     gl.viewport(0, 0, this._width, this._height);
 
@@ -291,6 +307,11 @@ export class ShadertoyEngine {
         iMouse,
         iDate,
         iFrameRate,
+        iTouchCount: touchState.count,
+        iTouch: touchState.touches,
+        iPinch: touchState.pinch,
+        iPinchDelta: touchState.pinchDelta,
+        iPinchCenter: touchState.pinchCenter,
       });
 
       // Swap ping-pong textures after pass execution
@@ -591,6 +612,16 @@ export class ShadertoyEngine {
         gl.getUniformLocation(program, 'iChannelResolution[2]'),
         gl.getUniformLocation(program, 'iChannelResolution[3]'),
       ],
+      // Touch uniforms
+      iTouchCount: gl.getUniformLocation(program, 'iTouchCount'),
+      iTouch: [
+        gl.getUniformLocation(program, 'iTouch0'),
+        gl.getUniformLocation(program, 'iTouch1'),
+        gl.getUniformLocation(program, 'iTouch2'),
+      ],
+      iPinch: gl.getUniformLocation(program, 'iPinch'),
+      iPinchDelta: gl.getUniformLocation(program, 'iPinchDelta'),
+      iPinchCenter: gl.getUniformLocation(program, 'iPinchCenter'),
       custom: customLocations,
     };
   }
@@ -787,6 +818,15 @@ uniform sampler2D iChannel0;
 uniform sampler2D iChannel1;
 uniform sampler2D iChannel2;
 uniform sampler2D iChannel3;
+
+// Shader Sandbox touch extensions (not in Shadertoy)
+uniform int   iTouchCount;          // Number of active touches (0-10)
+uniform vec4  iTouch0;              // Primary touch: (x, y, startX, startY)
+uniform vec4  iTouch1;              // Second touch
+uniform vec4  iTouch2;              // Third touch
+uniform float iPinch;               // Pinch scale factor (1.0 = no pinch)
+uniform float iPinchDelta;          // Pinch change since last frame
+uniform vec2  iPinchCenter;         // Center point of pinch gesture
 `);
 
     // Preprocess user shader code to handle cubemap-style texture sampling
@@ -859,6 +899,11 @@ void main() {
       iMouse: [number, number, number, number];
       iDate: readonly [number, number, number, number];
       iFrameRate: number;
+      iTouchCount: number;
+      iTouch: [[number, number, number, number], [number, number, number, number], [number, number, number, number]];
+      iPinch: number;
+      iPinchDelta: number;
+      iPinchCenter: [number, number];
     }
   ): void {
     const gl = this.gl;
@@ -900,6 +945,11 @@ void main() {
       iMouse: [number, number, number, number];
       iDate: readonly [number, number, number, number];
       iFrameRate: number;
+      iTouchCount: number;
+      iTouch: [[number, number, number, number], [number, number, number, number], [number, number, number, number]];
+      iPinch: number;
+      iPinchDelta: number;
+      iPinchCenter: [number, number];
     }
   ): void {
     const gl = this.gl;
@@ -930,6 +980,32 @@ void main() {
 
     if (uniforms.iFrameRate) {
       gl.uniform1f(uniforms.iFrameRate, values.iFrameRate);
+    }
+
+    // Touch uniforms
+    if (uniforms.iTouchCount) {
+      gl.uniform1i(uniforms.iTouchCount, values.iTouchCount);
+    }
+
+    // Bind individual touch points (iTouch0, iTouch1, iTouch2)
+    for (let i = 0; i < 3; i++) {
+      const loc = uniforms.iTouch[i];
+      if (loc) {
+        const t = values.iTouch[i];
+        gl.uniform4f(loc, t[0], t[1], t[2], t[3]);
+      }
+    }
+
+    if (uniforms.iPinch) {
+      gl.uniform1f(uniforms.iPinch, values.iPinch);
+    }
+
+    if (uniforms.iPinchDelta) {
+      gl.uniform1f(uniforms.iPinchDelta, values.iPinchDelta);
+    }
+
+    if (uniforms.iPinchCenter) {
+      gl.uniform2f(uniforms.iPinchCenter, values.iPinchCenter[0], values.iPinchCenter[1]);
     }
   }
 
