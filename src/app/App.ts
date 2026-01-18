@@ -1477,7 +1477,7 @@ if (!floatExt) {
 }
 
 const runtimePasses = PASSES.map(pass => {
-  console.log('Creating pass:', pass.name, 'channels:', pass.channels);
+  console.log('Creating pass:', pass.name, 'channels:', JSON.stringify(pass.channels));
   const fragSource = FRAGMENT_PREAMBLE + (COMMON_SOURCE ? '\\n// Common\\n' + COMMON_SOURCE + '\\n' : '') + '\\n// User code\\n' + pass.source + FRAGMENT_SUFFIX;
   const program = createProgram(fragSource);
   console.log('  Program created for', pass.name);
@@ -1604,6 +1604,7 @@ function render(now) {
         gl.bindTexture(gl.TEXTURE_2D, proceduralTex);
       } else if (['BufferA', 'BufferB', 'BufferC', 'BufferD', 'Image'].includes(ch)) {
         const srcPass = findPass(ch);
+        if (frame < 2) console.log('  ', pass.name, 'ch'+i, '=', ch, srcPass ? 'FOUND' : 'NOT FOUND');
         gl.bindTexture(gl.TEXTURE_2D, srcPass ? srcPass.previous.texture : blackTex);
       } else {
         gl.bindTexture(gl.TEXTURE_2D, blackTex);
