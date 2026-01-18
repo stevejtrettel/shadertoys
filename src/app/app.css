@@ -151,11 +151,11 @@
   transform: scale(0.95);
 }
 
-/* Control buttons grid - positioned around menu button */
+/* Control buttons grid - positioned to the left of menu button */
 .controls-grid {
   position: absolute;
   bottom: 0;
-  right: 0;
+  right: 38px; /* Offset to make room for menu button (32px + 6px gap) */
   display: grid;
   grid-template-columns: 32px 32px;
   grid-template-rows: 32px 32px;
@@ -208,7 +208,7 @@
   fill: currentColor;
 }
 
-/* Position the menu button in bottom-right of grid when open */
+/* Menu button stays at bottom-right, grid expands to its left */
 .playback-controls .controls-menu-button {
   position: relative;
   z-index: 1;
