@@ -1463,15 +1463,28 @@ const container = canvas.parentElement;
 let width = canvas.width = container.clientWidth * devicePixelRatio;
 let height = canvas.height = container.clientHeight * devicePixelRatio;
 
+console.log('Canvas initialized:', width, 'x', height);
+if (width === 0 || height === 0) {
+  console.error('Canvas has zero dimensions!');
+}
+
 // Enable float textures (required for multi-buffer feedback)
 const floatExt = gl.getExtension('EXT_color_buffer_float');
-if (!floatExt) console.warn('EXT_color_buffer_float not supported - multi-buffer may not work');
+if (!floatExt) {
+  console.error('EXT_color_buffer_float not supported - multi-buffer will NOT work!');
+} else {
+  console.log('EXT_color_buffer_float enabled');
+}
 
 const runtimePasses = PASSES.map(pass => {
+  console.log('Creating pass:', pass.name, 'channels:', pass.channels);
   const fragSource = FRAGMENT_PREAMBLE + (COMMON_SOURCE ? '\\n// Common\\n' + COMMON_SOURCE + '\\n' : '') + '\\n// User code\\n' + pass.source + FRAGMENT_SUFFIX;
   const program = createProgram(fragSource);
+  console.log('  Program created for', pass.name);
   const current = createRenderTarget(width, height);
+  console.log('  Current RT created, FB status:', gl.checkFramebufferStatus(gl.FRAMEBUFFER));
   const previous = createRenderTarget(width, height);
+  console.log('  Previous RT created, FB status:', gl.checkFramebufferStatus(gl.FRAMEBUFFER));
   return {
     name: pass.name,
     channels: pass.channels,
@@ -1494,6 +1507,7 @@ const runtimePasses = PASSES.map(pass => {
     }
   };
 });
+console.log('All passes created:', runtimePasses.map(p => p.name));
 
 // Find pass by name
 const findPass = name => runtimePasses.find(p => p.name === name);
@@ -1514,7 +1528,11 @@ let lastWidth = width, lastHeight = height;
 new ResizeObserver(() => {
   const newWidth = container.clientWidth * devicePixelRatio;
   const newHeight = container.clientHeight * devicePixelRatio;
-  if (newWidth === lastWidth && newHeight === lastHeight) return;  // Skip if no change
+  if (newWidth === lastWidth && newHeight === lastHeight) {
+    console.log('ResizeObserver: skipped (no change)');
+    return;
+  }
+  console.log('ResizeObserver: resizing from', lastWidth, 'x', lastHeight, 'to', newWidth, 'x', newHeight);
   lastWidth = width = canvas.width = newWidth;
   lastHeight = height = canvas.height = newHeight;
   runtimePasses.forEach(p => {
@@ -1524,6 +1542,7 @@ new ResizeObserver(() => {
     });
   });
   frame = 0;
+  console.log('ResizeObserver: reset frame to 0');
 }).observe(container);
 
 // Animation
@@ -1537,6 +1556,11 @@ function render(now) {
   const time = now / 1000 - startTime;
   const deltaTime = Math.max(0, time - lastTime);  // Ensure non-negative
   lastTime = time;
+
+  // Log first 3 frames
+  if (frame < 3) {
+    console.log('Frame', frame, '- time:', time.toFixed(3), 'delta:', deltaTime.toFixed(3));
+  }
 
   const date = new Date();
   const iDate = [date.getFullYear(), date.getMonth(), date.getDate(),
@@ -1599,6 +1623,12 @@ function render(now) {
     gl.bindFramebuffer(gl.READ_FRAMEBUFFER, imagePass.previous.framebuffer);
     gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null);
     gl.blitFramebuffer(0, 0, width, height, 0, 0, width, height, gl.COLOR_BUFFER_BIT, gl.NEAREST);
+
+    // Check for GL errors on first few frames
+    if (frame < 3) {
+      const err = gl.getError();
+      if (err !== gl.NO_ERROR) console.error('GL Error after blit:', err);
+    }
   }
 
   frame++;
