@@ -1509,10 +1509,14 @@ canvas.addEventListener('click', e => {
   mouse[3] = (canvas.clientHeight - e.clientY) * devicePixelRatio;
 });
 
-// Resize handler
+// Resize handler - only resize if dimensions actually changed
+let lastWidth = width, lastHeight = height;
 new ResizeObserver(() => {
-  width = canvas.width = container.clientWidth * devicePixelRatio;
-  height = canvas.height = container.clientHeight * devicePixelRatio;
+  const newWidth = container.clientWidth * devicePixelRatio;
+  const newHeight = container.clientHeight * devicePixelRatio;
+  if (newWidth === lastWidth && newHeight === lastHeight) return;  // Skip if no change
+  lastWidth = width = canvas.width = newWidth;
+  lastHeight = height = canvas.height = newHeight;
   runtimePasses.forEach(p => {
     [p.current, p.previous].forEach(rt => {
       gl.bindTexture(gl.TEXTURE_2D, rt.texture);
@@ -1533,11 +1537,6 @@ function render(now) {
   const time = now / 1000 - startTime;
   const deltaTime = Math.max(0, time - lastTime);  // Ensure non-negative
   lastTime = time;
-
-  // Debug: log first few frames
-  if (frame < 3) {
-    console.log('Frame', frame, 'time', time.toFixed(3), 'passes:', runtimePasses.map(p => p.name));
-  }
 
   const date = new Date();
   const iDate = [date.getFullYear(), date.getMonth(), date.getDate(),
@@ -1581,7 +1580,6 @@ function render(now) {
         gl.bindTexture(gl.TEXTURE_2D, proceduralTex);
       } else if (['BufferA', 'BufferB', 'BufferC', 'BufferD', 'Image'].includes(ch)) {
         const srcPass = findPass(ch);
-        if (frame < 2) console.log('  ', pass.name, 'ch'+i, '=', ch, srcPass ? 'found' : 'NOT FOUND');
         gl.bindTexture(gl.TEXTURE_2D, srcPass ? srcPass.previous.texture : blackTex);
       } else {
         gl.bindTexture(gl.TEXTURE_2D, blackTex);
