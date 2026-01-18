@@ -71,7 +71,8 @@ vec2 _st_dirToEquirect(vec3 dir) {
 `;
 
 // Line count computed from actual preamble (for error line mapping)
-const PREAMBLE_LINE_COUNT = FRAGMENT_PREAMBLE.split('\n').length - 1; // -1 because split adds empty at end
+// Count actual newlines in the preamble string
+const PREAMBLE_LINE_COUNT = (FRAGMENT_PREAMBLE.match(/\n/g) || []).length;
 
 // =============================================================================
 // ShadertoyEngine Implementation

@@ -37,6 +37,9 @@ export class UniformControls {
   private values: UniformValues = {};
   private controlElements: Map<string, HTMLElement> = new Map();
 
+  // Track document-level event listeners for cleanup
+  private documentListeners: Array<{ type: string; handler: EventListener }> = [];
+
   constructor(opts: UniformControlsOptions) {
     this.container = opts.container;
     this.uniforms = opts.uniforms;
@@ -365,16 +368,27 @@ export class UniformControls {
     document.addEventListener('mousemove', onMouseMove);
     document.addEventListener('mouseup', onMouseUp);
 
+    // Track document listeners for cleanup
+    this.documentListeners.push({ type: 'mousemove', handler: onMouseMove });
+    this.documentListeners.push({ type: 'mouseup', handler: onMouseUp });
+
     // Touch support
-    padContainer.addEventListener('touchstart', (e) => {
+    const onTouchStart = (e: TouchEvent) => {
       isDragging = true;
       updateFromEvent(e);
       e.preventDefault();
-    });
-    document.addEventListener('touchmove', (e) => {
+    };
+    const onTouchMove = (e: TouchEvent) => {
       if (isDragging) updateFromEvent(e);
-    });
+    };
+
+    padContainer.addEventListener('touchstart', onTouchStart);
+    document.addEventListener('touchmove', onTouchMove as EventListener);
     document.addEventListener('touchend', onMouseUp);
+
+    // Track document listeners for cleanup
+    this.documentListeners.push({ type: 'touchmove', handler: onTouchMove as EventListener });
+    this.documentListeners.push({ type: 'touchend', handler: onMouseUp });
 
     wrapper.appendChild(labelRow);
     wrapper.appendChild(padContainer);
@@ -628,6 +642,12 @@ export class UniformControls {
    * Destroy the controls and clean up.
    */
   destroy(): void {
+    // Remove document-level event listeners to prevent memory leaks
+    for (const { type, handler } of this.documentListeners) {
+      document.removeEventListener(type, handler);
+    }
+    this.documentListeners = [];
+
     this.container.innerHTML = '';
     this.controlElements.clear();
   }
