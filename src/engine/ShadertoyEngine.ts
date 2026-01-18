@@ -261,6 +261,18 @@ export class ShadertoyEngine {
     const iFrame = this._frame;
     const iMouse = mouse;
 
+    // Compute iDate: (year, month, day, seconds since midnight)
+    const now = new Date();
+    const iDate = [
+      now.getFullYear(),
+      now.getMonth(),      // 0-11 (matches Shadertoy)
+      now.getDate(),       // 1-31
+      now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds() + now.getMilliseconds() / 1000
+    ] as const;
+
+    // Compute iFrameRate (smoothed via deltaTime)
+    const iFrameRate = deltaTime > 0 ? 1.0 / deltaTime : 60.0;
+
     // Set viewport for all passes
     gl.viewport(0, 0, this._width, this._height);
 
@@ -277,6 +289,8 @@ export class ShadertoyEngine {
         iTimeDelta,
         iFrame,
         iMouse,
+        iDate,
+        iFrameRate,
       });
 
       // Swap ping-pong textures after pass execution
@@ -563,11 +577,19 @@ export class ShadertoyEngine {
       iTimeDelta: gl.getUniformLocation(program, 'iTimeDelta'),
       iFrame: gl.getUniformLocation(program, 'iFrame'),
       iMouse: gl.getUniformLocation(program, 'iMouse'),
+      iDate: gl.getUniformLocation(program, 'iDate'),
+      iFrameRate: gl.getUniformLocation(program, 'iFrameRate'),
       iChannel: [
         gl.getUniformLocation(program, 'iChannel0'),
         gl.getUniformLocation(program, 'iChannel1'),
         gl.getUniformLocation(program, 'iChannel2'),
         gl.getUniformLocation(program, 'iChannel3'),
+      ],
+      iChannelResolution: [
+        gl.getUniformLocation(program, 'iChannelResolution[0]'),
+        gl.getUniformLocation(program, 'iChannelResolution[1]'),
+        gl.getUniformLocation(program, 'iChannelResolution[2]'),
+        gl.getUniformLocation(program, 'iChannelResolution[3]'),
       ],
       custom: customLocations,
     };
@@ -758,6 +780,9 @@ uniform float iTime;
 uniform float iTimeDelta;
 uniform int   iFrame;
 uniform vec4  iMouse;
+uniform vec4  iDate;
+uniform float iFrameRate;
+uniform vec3  iChannelResolution[4];
 uniform sampler2D iChannel0;
 uniform sampler2D iChannel1;
 uniform sampler2D iChannel2;
@@ -832,6 +857,8 @@ void main() {
       iTimeDelta: number;
       iFrame: number;
       iMouse: [number, number, number, number];
+      iDate: readonly [number, number, number, number];
+      iFrameRate: number;
     }
   ): void {
     const gl = this.gl;
@@ -851,7 +878,7 @@ void main() {
     // Bind custom uniforms
     this.bindCustomUniforms(runtimePass.uniforms);
 
-    // Bind iChannel textures
+    // Bind iChannel textures and their resolutions
     this.bindChannelTextures(runtimePass);
 
     // Draw fullscreen triangle
@@ -871,6 +898,8 @@ void main() {
       iTimeDelta: number;
       iFrame: number;
       iMouse: [number, number, number, number];
+      iDate: readonly [number, number, number, number];
+      iFrameRate: number;
     }
   ): void {
     const gl = this.gl;
@@ -893,6 +922,14 @@ void main() {
 
     if (uniforms.iMouse) {
       gl.uniform4f(uniforms.iMouse, values.iMouse[0], values.iMouse[1], values.iMouse[2], values.iMouse[3]);
+    }
+
+    if (uniforms.iDate) {
+      gl.uniform4f(uniforms.iDate, values.iDate[0], values.iDate[1], values.iDate[2], values.iDate[3]);
+    }
+
+    if (uniforms.iFrameRate) {
+      gl.uniform1f(uniforms.iFrameRate, values.iFrameRate);
     }
   }
 
@@ -941,6 +978,7 @@ void main() {
     for (let i = 0; i < 4; i++) {
       const channelSource = runtimePass.projectChannels[i];
       const texture = this.resolveChannelTexture(channelSource);
+      const resolution = this.resolveChannelResolution(channelSource);
 
       // Bind texture to texture unit i
       gl.activeTexture(gl.TEXTURE0 + i);
@@ -950,6 +988,12 @@ void main() {
       const uniformLoc = runtimePass.uniforms.iChannel[i];
       if (uniformLoc) {
         gl.uniform1i(uniformLoc, i);
+      }
+
+      // Set iChannelResolution[i]
+      const resLoc = runtimePass.uniforms.iChannelResolution[i];
+      if (resLoc) {
+        gl.uniform3f(resLoc, resolution[0], resolution[1], 1.0);
       }
     }
   }
@@ -993,6 +1037,40 @@ void main() {
           throw new Error('Internal error: keyboard texture not initialized');
         }
         return this._keyboardTexture.texture;
+
+      default:
+        // Exhaustive check
+        const _exhaustive: never = source;
+        throw new Error(`Unknown channel source: ${JSON.stringify(_exhaustive)}`);
+    }
+  }
+
+  /**
+   * Resolve a ChannelSource to its resolution [width, height].
+   * Returns [0, 0] for unused channels.
+   */
+  private resolveChannelResolution(source: ChannelSource): [number, number] {
+    switch (source.kind) {
+      case 'none':
+        return [0, 0];
+
+      case 'buffer': {
+        // Buffer passes use the engine's current resolution
+        return [this._width, this._height];
+      }
+
+      case 'texture': {
+        // External texture - find its dimensions
+        const tex = this._textures.find((t) => t.name === source.name);
+        if (!tex) {
+          return [0, 0];
+        }
+        return [tex.width, tex.height];
+      }
+
+      case 'keyboard':
+        // Keyboard texture is always 256x3
+        return [256, 3];
 
       default:
         // Exhaustive check

@@ -45,9 +45,14 @@ export interface PassUniformLocations {
   iTimeDelta: WebGLUniformLocation | null;
   iFrame: WebGLUniformLocation | null;
   iMouse: WebGLUniformLocation | null;
+  iDate: WebGLUniformLocation | null;
+  iFrameRate: WebGLUniformLocation | null;
 
   // iChannel0..3
   iChannel: (WebGLUniformLocation | null)[];
+
+  // iChannelResolution[4] - resolution of each channel texture
+  iChannelResolution: (WebGLUniformLocation | null)[];
 
   // Custom uniforms (from project config)
   custom: Map<string, WebGLUniformLocation | null>;

@@ -50,7 +50,7 @@ export class App {
   private controlsGrid: HTMLElement | null = null;
   private menuButton: HTMLElement | null = null;
   private playPauseButton: HTMLElement | null = null;
-  private isPaused: boolean = false;
+  private isPaused: boolean = false; // Will be set from project.startPaused in constructor
   private isMenuOpen: boolean = false;
 
   // Error overlay
@@ -73,7 +73,8 @@ export class App {
   constructor(opts: AppOptions) {
     this.container = opts.container;
     this.project = opts.project;
-    this.pixelRatio = opts.pixelRatio ?? window.devicePixelRatio;
+    // Priority: opts.pixelRatio > project.pixelRatio > window.devicePixelRatio
+    this.pixelRatio = opts.pixelRatio ?? opts.project.pixelRatio ?? window.devicePixelRatio;
 
     // Create canvas
     this.canvas = document.createElement('canvas');
@@ -122,6 +123,13 @@ export class App {
     // Create playback controls if enabled (skip for 'ui' layout which has its own)
     if (opts.project.controls && !opts.skipPlaybackControls) {
       this.createControls();
+    }
+
+    // Handle startPaused option
+    if (opts.project.startPaused) {
+      this.isPaused = true;
+      // Update button if controls exist (will be created above)
+      this.updatePlayPauseButton();
     }
 
     // Get WebGL2 context

@@ -174,6 +174,8 @@ async function loadSinglePassProject(root: string): Promise<ShadertoyProject> {
     layout: 'default',
     theme: 'light',
     controls: false,
+    startPaused: false,
+    pixelRatio: null,
     commonSource: null,
     passes: {
       Image: {
@@ -409,6 +411,8 @@ async function loadProjectWithConfig(root: string, config: ShadertoyConfig): Pro
     layout: config.layout ?? 'default',
     theme: config.theme ?? 'light',
     controls: config.controls ?? false,
+    startPaused: config.startPaused ?? false,
+    pixelRatio: config.pixelRatio ?? null,
     commonSource,
     passes: {
       Image: imagePass,

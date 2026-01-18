@@ -228,6 +228,14 @@ export interface ShadertoyConfig {
   controls?: boolean;
   common?: string;
 
+  // Playback settings
+  /** Start paused on first frame (default: false) */
+  startPaused?: boolean;
+
+  // Resolution settings
+  /** Pixel ratio multiplier (default: window.devicePixelRatio). Use <1 for lower resolution. */
+  pixelRatio?: number;
+
   // Custom uniforms (user-defined controls)
   uniforms?: UniformDefinitions;
 
@@ -340,6 +348,19 @@ export interface ShadertoyProject {
    * Whether to show playback controls (play/pause, reset).
    */
   controls: boolean;
+
+  /**
+   * Whether to start paused on first frame.
+   * Defaults to false.
+   */
+  startPaused: boolean;
+
+  /**
+   * Pixel ratio for resolution scaling.
+   * Defaults to null (use window.devicePixelRatio).
+   * Use values < 1 for lower resolution (better performance).
+   */
+  pixelRatio: number | null;
 
   /**
    * Common GLSL code (prepended to all shaders), or null if none.
