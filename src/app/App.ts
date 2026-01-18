@@ -14,7 +14,7 @@ import './app.css';
 import { ShadertoyEngine } from '../engine/ShadertoyEngine';
 import { ShadertoyProject } from '../project/types';
 import { UniformsPanel } from '../uniforms/UniformsPanel';
-import { AppOptions, MouseState, TouchState, TouchPoint, PointerData } from './types';
+import { AppOptions, MouseState, TouchState, PointerData } from './types';
 
 export class App {
   private container: HTMLElement;
@@ -41,7 +41,6 @@ export class App {
 
   // Pointer tracking for gesture recognition
   private activePointers: Map<number, PointerData> = new Map();
-  private lastPinchDistance: number = 0;
 
   // FPS tracking
   private fpsDisplay: HTMLElement;
@@ -82,6 +81,13 @@ export class App {
 
   // Floating uniforms panel
   private uniformsPanel: UniformsPanel | null = null;
+
+  // Recording state
+  private isRecording: boolean = false;
+  private mediaRecorder: MediaRecorder | null = null;
+  private recordedChunks: Blob[] = [];
+  private recordButton: HTMLElement | null = null;
+  private recordingIndicator: HTMLElement | null = null;
 
   constructor(opts: AppOptions) {
     this.container = opts.container;
@@ -274,6 +280,10 @@ export class App {
    */
   dispose(): void {
     this.stop();
+    // Stop recording if active
+    if (this.isRecording) {
+      this.stopRecording();
+    }
     this.resizeObserver.disconnect();
     this.intersectionObserver.disconnect();
     this.uniformsPanel?.destroy();
@@ -284,6 +294,7 @@ export class App {
     }
     this.hideContextLostOverlay();
     this.hideErrorOverlay();
+    this.hideRecordingIndicator();
   }
 
   // ===========================================================================
@@ -639,8 +650,6 @@ export class App {
         (p1.x + p2.x) / 2,
         (p1.y + p2.y) / 2,
       ];
-
-      this.lastPinchDistance = currentDistance;
     } else {
       // Reset pinch when less than 2 fingers
       this.touchState.pinchDelta = 0;
@@ -710,12 +719,24 @@ export class App {
     `;
     screenshotButton.addEventListener('click', () => this.screenshot());
 
+    // Record button
+    this.recordButton = document.createElement('button');
+    this.recordButton.className = 'control-button';
+    this.recordButton.title = 'Record Video';
+    this.recordButton.innerHTML = `
+      <svg viewBox="0 0 16 16">
+        <circle cx="8" cy="8" r="5"/>
+      </svg>
+    `;
+    this.recordButton.addEventListener('click', () => this.toggleRecording());
+
     // Add buttons to grid (positioned in 2x2 layout)
     // Top-left: Play/Pause, Top-right: Reset
-    // Bottom-left: Screenshot, Bottom-right: (empty for menu button overlay)
+    // Bottom-left: Screenshot, Bottom-right: Record
     this.controlsGrid.appendChild(this.playPauseButton);
     this.controlsGrid.appendChild(resetButton);
     this.controlsGrid.appendChild(screenshotButton);
+    this.controlsGrid.appendChild(this.recordButton);
 
     // Add grid and menu button to container
     this.controlsContainer.appendChild(this.controlsGrid);
@@ -981,6 +1002,155 @@ export class App {
 
       console.log(`Screenshot saved: ${filename}`);
     }, 'image/png');
+  }
+
+  // ===========================================================================
+  // Video Recording
+  // ===========================================================================
+
+  /**
+   * Toggle video recording on/off.
+   * Public for UILayout to call.
+   */
+  toggleRecording(): void {
+    if (this.isRecording) {
+      this.stopRecording();
+    } else {
+      this.startRecording();
+    }
+  }
+
+  /**
+   * Start recording the canvas as WebM video.
+   */
+  private startRecording(): void {
+    // Check if MediaRecorder is supported
+    if (!MediaRecorder.isTypeSupported('video/webm')) {
+      console.error('WebM recording not supported in this browser');
+      return;
+    }
+
+    // Unpause if paused (can't record a paused shader)
+    if (this.isPaused) {
+      this.togglePlayPause();
+    }
+
+    // Get canvas stream at 60fps
+    const stream = this.canvas.captureStream(60);
+
+    // Create MediaRecorder with WebM format
+    this.mediaRecorder = new MediaRecorder(stream, {
+      mimeType: 'video/webm;codecs=vp9',
+      videoBitsPerSecond: 8000000, // 8 Mbps for high quality
+    });
+
+    this.recordedChunks = [];
+
+    // Collect recorded chunks
+    this.mediaRecorder.ondataavailable = (event) => {
+      if (event.data.size > 0) {
+        this.recordedChunks.push(event.data);
+      }
+    };
+
+    // Handle recording stop - download the video
+    this.mediaRecorder.onstop = () => {
+      const blob = new Blob(this.recordedChunks, { type: 'video/webm' });
+
+      // Generate filename
+      const folderName = this.project.root.split('/').pop() || 'shader';
+      const now = new Date();
+      const timestamp = now.getFullYear().toString() +
+        (now.getMonth() + 1).toString().padStart(2, '0') +
+        now.getDate().toString().padStart(2, '0') + '-' +
+        now.getHours().toString().padStart(2, '0') +
+        now.getMinutes().toString().padStart(2, '0') +
+        now.getSeconds().toString().padStart(2, '0');
+      const filename = `shadertoy-${folderName}-${timestamp}.webm`;
+
+      // Download
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      link.click();
+      URL.revokeObjectURL(url);
+
+      console.log(`Recording saved: ${filename}`);
+    };
+
+    // Start recording
+    this.mediaRecorder.start();
+    this.isRecording = true;
+    this.updateRecordButton();
+    this.showRecordingIndicator();
+    console.log('Recording started');
+  }
+
+  /**
+   * Stop recording and trigger download.
+   */
+  private stopRecording(): void {
+    if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+      this.mediaRecorder.stop();
+    }
+    this.isRecording = false;
+    this.mediaRecorder = null;
+    this.updateRecordButton();
+    this.hideRecordingIndicator();
+    console.log('Recording stopped');
+  }
+
+  /**
+   * Update record button appearance based on recording state.
+   */
+  private updateRecordButton(): void {
+    if (!this.recordButton) return;
+
+    if (this.isRecording) {
+      // Show stop icon (square)
+      this.recordButton.innerHTML = `
+        <svg viewBox="0 0 16 16">
+          <rect x="4" y="4" width="8" height="8"/>
+        </svg>
+      `;
+      this.recordButton.title = 'Stop Recording';
+      this.recordButton.classList.add('recording');
+    } else {
+      // Show record icon (circle)
+      this.recordButton.innerHTML = `
+        <svg viewBox="0 0 16 16">
+          <circle cx="8" cy="8" r="5"/>
+        </svg>
+      `;
+      this.recordButton.title = 'Record Video';
+      this.recordButton.classList.remove('recording');
+    }
+  }
+
+  /**
+   * Show the recording indicator (pulsing red dot in corner).
+   */
+  private showRecordingIndicator(): void {
+    if (this.recordingIndicator) return;
+
+    this.recordingIndicator = document.createElement('div');
+    this.recordingIndicator.className = 'recording-indicator';
+    this.recordingIndicator.innerHTML = `
+      <span class="recording-dot"></span>
+      <span class="recording-text">REC</span>
+    `;
+    this.container.appendChild(this.recordingIndicator);
+  }
+
+  /**
+   * Hide the recording indicator.
+   */
+  private hideRecordingIndicator(): void {
+    if (this.recordingIndicator) {
+      this.recordingIndicator.remove();
+      this.recordingIndicator = null;
+    }
   }
 
   /**
