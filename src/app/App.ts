@@ -1534,6 +1534,11 @@ function render(now) {
   const deltaTime = Math.max(0, time - lastTime);  // Ensure non-negative
   lastTime = time;
 
+  // Debug: log first few frames
+  if (frame < 3) {
+    console.log('Frame', frame, 'time', time.toFixed(3), 'passes:', runtimePasses.map(p => p.name));
+  }
+
   const date = new Date();
   const iDate = [date.getFullYear(), date.getMonth(), date.getDate(),
     date.getHours() * 3600 + date.getMinutes() * 60 + date.getSeconds() + date.getMilliseconds() / 1000];
@@ -1576,6 +1581,7 @@ function render(now) {
         gl.bindTexture(gl.TEXTURE_2D, proceduralTex);
       } else if (['BufferA', 'BufferB', 'BufferC', 'BufferD', 'Image'].includes(ch)) {
         const srcPass = findPass(ch);
+        if (frame < 2) console.log('  ', pass.name, 'ch'+i, '=', ch, srcPass ? 'found' : 'NOT FOUND');
         gl.bindTexture(gl.TEXTURE_2D, srcPass ? srcPass.previous.texture : blackTex);
       } else {
         gl.bindTexture(gl.TEXTURE_2D, blackTex);
