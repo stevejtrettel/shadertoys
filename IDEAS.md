@@ -11,20 +11,23 @@ A collection of planned features and enhancement ideas for the shader-sandbox np
 - [ ] **Resolution toggle** - Switch between 1x, 0.5x pixel density
 
 ## Uniform Controls UI
-- [ ] **Slider controls** - Interactive sliders for float uniforms
-- [ ] **Color pickers** - For vec3/vec4 color uniforms
-- [ ] **Vector editors** - 2D/3D input for vec2/vec3
+- [x] **Slider controls** - Interactive sliders for float uniforms
+- [x] **Color pickers** - For vec3/vec4 color uniforms
+- [x] **Vector editors** - 2D/3D input for vec2/vec3 (XY pad + sliders)
+- [x] **JSON-based uniform definitions** - Define uniforms in config.json, auto-injected into shaders
 - [ ] **Preset system** - Save/load uniform configurations
-- [ ] Design considerations:
-  - Integration with controls menu vs separate panel
-  - Tab in split/tabbed layouts
-  - Auto-detection of uniforms from shader code
-  - JSON-based uniform definitions in config
+
+## Keyboard Input
+- [x] **Config-based key bindings** - Define keys in config.json with semantic names
+- [x] **Multiple keys per action** - e.g., `"left": ["A", "ArrowLeft"]`
+- [x] **Toggle mode** - e.g., `"debug": { "key": "G", "mode": "toggle" }`
+- [x] **Press/release events** - `key_jump_pressed`, `key_jump_released` uniforms
+- [x] **Shadertoy compatibility** - Legacy keyboard texture channel still supported
 
 ## Recording & Export
-- [ ] **Video recording** - Capture animation as WebM/MP4
+- [x] **Video recording** - Capture animation as WebM
 - [ ] **GIF export** - Animated GIF generation
-- [ ] **Export standalone HTML** - Package shader as single file
+- [x] **Export standalone HTML** - Package shader as single file
 - [ ] **Share URL** - Encode shader code in URL
 
 ## Editor Enhancements
@@ -55,9 +58,15 @@ A collection of planned features and enhancement ideas for the shader-sandbox np
 
 ## Design Notes
 
-### Uniform Controls UI (In Progress)
+### Uniform Controls UI (Implemented)
 
-Considering several approaches:
+The uniform controls system uses a collapsible panel integrated with the controls menu. Uniforms defined in config.json are automatically injected into shaders - no manual `uniform` declarations needed.
+
+### Keyboard Input (Implemented)
+
+Config-based keyboard bindings provide a cleaner alternative to Shadertoy's texture-based system while maintaining backward compatibility.
+
+### Layout Options Considered:
 
 **Option A: Integrated with + menu**
 - Pros: Consistent with existing UI, minimal footprint
@@ -81,4 +90,4 @@ Considering several approaches:
 
 ---
 
-*Last updated: 2026-01-10*
+*Last updated: 2026-01-19*
