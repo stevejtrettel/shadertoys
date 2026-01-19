@@ -46,3 +46,38 @@ export interface AppOptions {
  * - clickX, clickY: position of last click (or -1, -1 if no click)
  */
 export type MouseState = [number, number, number, number];
+
+/**
+ * Single touch point state.
+ * Format: [x, y, startX, startY]
+ * - x, y: current touch position in pixels
+ * - startX, startY: position where touch started
+ */
+export type TouchPoint = [number, number, number, number];
+
+/**
+ * Touch state for touch uniforms.
+ */
+export interface TouchState {
+  /** Number of active touches (0-10) */
+  count: number;
+  /** Up to 3 tracked touches for shader uniforms */
+  touches: [TouchPoint, TouchPoint, TouchPoint];
+  /** Pinch scale factor (1.0 = no pinch, >1 = zoom in, <1 = zoom out) */
+  pinch: number;
+  /** Pinch change since last frame */
+  pinchDelta: number;
+  /** Center point of pinch gesture [x, y] */
+  pinchCenter: [number, number];
+}
+
+/**
+ * Internal pointer tracking for gesture recognition.
+ */
+export interface PointerData {
+  id: number;
+  x: number;
+  y: number;
+  startX: number;
+  startY: number;
+}

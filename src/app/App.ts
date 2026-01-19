@@ -14,7 +14,7 @@ import './app.css';
 import { ShadertoyEngine } from '../engine/ShadertoyEngine';
 import { ShadertoyProject } from '../project/types';
 import { UniformsPanel } from '../uniforms/UniformsPanel';
-import { AppOptions, MouseState } from './types';
+import { AppOptions, MouseState, TouchState, PointerData } from './types';
 
 export class App {
   private container: HTMLElement;
@@ -29,6 +29,18 @@ export class App {
 
   // Mouse state for iMouse uniform
   private mouse: MouseState = [0, 0, -1, -1];
+
+  // Touch state for touch uniforms
+  private touchState: TouchState = {
+    count: 0,
+    touches: [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]],
+    pinch: 1.0,
+    pinchDelta: 0.0,
+    pinchCenter: [0, 0],
+  };
+
+  // Pointer tracking for gesture recognition
+  private activePointers: Map<number, PointerData> = new Map();
 
   // FPS tracking
   private fpsDisplay: HTMLElement;
@@ -50,7 +62,7 @@ export class App {
   private controlsGrid: HTMLElement | null = null;
   private menuButton: HTMLElement | null = null;
   private playPauseButton: HTMLElement | null = null;
-  private isPaused: boolean = false;
+  private isPaused: boolean = false; // Will be set from project.startPaused in constructor
   private isMenuOpen: boolean = false;
 
   // Error overlay
@@ -70,10 +82,18 @@ export class App {
   // Floating uniforms panel
   private uniformsPanel: UniformsPanel | null = null;
 
+  // Recording state
+  private isRecording: boolean = false;
+  private mediaRecorder: MediaRecorder | null = null;
+  private recordedChunks: Blob[] = [];
+  private recordButton: HTMLElement | null = null;
+  private recordingIndicator: HTMLElement | null = null;
+
   constructor(opts: AppOptions) {
     this.container = opts.container;
     this.project = opts.project;
-    this.pixelRatio = opts.pixelRatio ?? window.devicePixelRatio;
+    // Priority: opts.pixelRatio > project.pixelRatio > window.devicePixelRatio
+    this.pixelRatio = opts.pixelRatio ?? opts.project.pixelRatio ?? window.devicePixelRatio;
 
     // Create canvas
     this.canvas = document.createElement('canvas');
@@ -122,6 +142,13 @@ export class App {
     // Create playback controls if enabled (skip for 'ui' layout which has its own)
     if (opts.project.controls && !opts.skipPlaybackControls) {
       this.createControls();
+    }
+
+    // Handle startPaused option
+    if (opts.project.startPaused) {
+      this.isPaused = true;
+      // Update button if controls exist (will be created above)
+      this.updatePlayPauseButton();
     }
 
     // Get WebGL2 context
@@ -191,6 +218,9 @@ export class App {
     // Set up mouse tracking
     this.setupMouseTracking();
 
+    // Set up touch/pointer tracking
+    this.setupTouchTracking();
+
     // Set up keyboard tracking for shader keyboard texture
     this.setupKeyboardTracking();
 
@@ -250,6 +280,10 @@ export class App {
    */
   dispose(): void {
     this.stop();
+    // Stop recording if active
+    if (this.isRecording) {
+      this.stopRecording();
+    }
     this.resizeObserver.disconnect();
     this.intersectionObserver.disconnect();
     this.uniformsPanel?.destroy();
@@ -260,6 +294,7 @@ export class App {
     }
     this.hideContextLostOverlay();
     this.hideErrorOverlay();
+    this.hideRecordingIndicator();
   }
 
   // ===========================================================================
@@ -284,8 +319,17 @@ export class App {
     // Update keyboard texture with current key states
     this.engine.updateKeyboardTexture();
 
-    // Run engine step
-    this.engine.step(elapsedTime, this.mouse);
+    // Run engine step with mouse and touch data
+    this.engine.step(elapsedTime, this.mouse, {
+      count: this.touchState.count,
+      touches: this.touchState.touches,
+      pinch: this.touchState.pinch,
+      pinchDelta: this.touchState.pinchDelta,
+      pinchCenter: this.touchState.pinchCenter,
+    });
+
+    // Reset pinchDelta after frame (it's a per-frame delta)
+    this.touchState.pinchDelta = 0;
 
     // Present Image pass output to screen
     this.presentToScreen();
@@ -470,6 +514,154 @@ export class App {
   }
 
   // ===========================================================================
+  // Touch/Pointer Tracking
+  // ===========================================================================
+
+  /**
+   * Set up pointer event tracking for touch support.
+   * Uses Pointer Events API for unified mouse/touch/pen handling.
+   */
+  private setupTouchTracking(): void {
+    // Prevent default touch actions (scroll, zoom) on canvas
+    this.canvas.style.touchAction = 'none';
+
+    const getCanvasCoords = (clientX: number, clientY: number): [number, number] => {
+      const rect = this.canvas.getBoundingClientRect();
+      const x = (clientX - rect.left) * this.pixelRatio;
+      const y = (rect.height - (clientY - rect.top)) * this.pixelRatio; // Flip Y
+      return [x, y];
+    };
+
+    const handlePointerDown = (e: PointerEvent) => {
+      // Only track touch and pen (mouse is handled separately)
+      if (e.pointerType === 'mouse') return;
+
+      const [x, y] = getCanvasCoords(e.clientX, e.clientY);
+
+      this.activePointers.set(e.pointerId, {
+        id: e.pointerId,
+        x, y,
+        startX: x,
+        startY: y,
+      });
+
+      // Capture pointer to receive events even outside canvas
+      this.canvas.setPointerCapture(e.pointerId);
+
+      this.updateTouchState();
+
+      // Single touch also updates iMouse for compatibility
+      if (this.activePointers.size === 1) {
+        this.mouse[0] = x;
+        this.mouse[1] = y;
+        this.mouse[2] = x; // Click position
+        this.mouse[3] = y;
+      }
+
+      e.preventDefault();
+    };
+
+    const handlePointerMove = (e: PointerEvent) => {
+      if (e.pointerType === 'mouse') return;
+
+      const pointer = this.activePointers.get(e.pointerId);
+      if (!pointer) return;
+
+      const [x, y] = getCanvasCoords(e.clientX, e.clientY);
+      pointer.x = x;
+      pointer.y = y;
+
+      this.updateTouchState();
+
+      // Single touch also updates iMouse
+      if (this.activePointers.size === 1) {
+        this.mouse[0] = x;
+        this.mouse[1] = y;
+      }
+
+      e.preventDefault();
+    };
+
+    const handlePointerUp = (e: PointerEvent) => {
+      if (e.pointerType === 'mouse') return;
+
+      this.activePointers.delete(e.pointerId);
+      this.canvas.releasePointerCapture(e.pointerId);
+
+      this.updateTouchState();
+      e.preventDefault();
+    };
+
+    const handlePointerCancel = (e: PointerEvent) => {
+      // Same as pointer up - finger lifted or system interrupted
+      handlePointerUp(e);
+    };
+
+    this.canvas.addEventListener('pointerdown', handlePointerDown);
+    this.canvas.addEventListener('pointermove', handlePointerMove);
+    this.canvas.addEventListener('pointerup', handlePointerUp);
+    this.canvas.addEventListener('pointercancel', handlePointerCancel);
+  }
+
+  /**
+   * Update touch state from active pointers.
+   * Calculates pinch gesture when 2+ fingers are active.
+   */
+  private updateTouchState(): void {
+    const pointers = Array.from(this.activePointers.values());
+    const count = pointers.length;
+
+    this.touchState.count = count;
+
+    // Update individual touch points (up to 3)
+    for (let i = 0; i < 3; i++) {
+      if (i < pointers.length) {
+        const p = pointers[i];
+        this.touchState.touches[i] = [p.x, p.y, p.startX, p.startY];
+      } else {
+        this.touchState.touches[i] = [0, 0, 0, 0];
+      }
+    }
+
+    // Calculate pinch gesture (requires 2 fingers)
+    if (count >= 2) {
+      const p1 = pointers[0];
+      const p2 = pointers[1];
+
+      // Current distance
+      const dx = p2.x - p1.x;
+      const dy = p2.y - p1.y;
+      const currentDistance = Math.sqrt(dx * dx + dy * dy);
+
+      // Initial distance (from start positions)
+      const sdx = p2.startX - p1.startX;
+      const sdy = p2.startY - p1.startY;
+      const startDistance = Math.sqrt(sdx * sdx + sdy * sdy);
+
+      // Pinch scale relative to start
+      if (startDistance > 0) {
+        const newPinch = currentDistance / startDistance;
+        this.touchState.pinchDelta = newPinch - this.touchState.pinch;
+        this.touchState.pinch = newPinch;
+      }
+
+      // Pinch center
+      this.touchState.pinchCenter = [
+        (p1.x + p2.x) / 2,
+        (p1.y + p2.y) / 2,
+      ];
+    } else {
+      // Reset pinch when less than 2 fingers
+      this.touchState.pinchDelta = 0;
+      // Keep pinch at current value (don't reset to 1.0 until all fingers lift)
+      if (count === 0) {
+        this.touchState.pinch = 1.0;
+        this.touchState.pinchCenter = [0, 0];
+      }
+    }
+  }
+
+  // ===========================================================================
   // Playback Controls
   // ===========================================================================
 
@@ -527,14 +719,49 @@ export class App {
     `;
     screenshotButton.addEventListener('click', () => this.screenshot());
 
-    // Add buttons to grid (positioned in 2x2 layout)
-    // Top-left: Play/Pause, Top-right: Reset
-    // Bottom-left: Screenshot, Bottom-right: (empty for menu button overlay)
+    // Record button
+    this.recordButton = document.createElement('button');
+    this.recordButton.className = 'control-button';
+    this.recordButton.title = 'Record Video';
+    this.recordButton.innerHTML = `
+      <svg viewBox="0 0 16 16">
+        <circle cx="8" cy="8" r="5"/>
+      </svg>
+    `;
+    this.recordButton.addEventListener('click', () => this.toggleRecording());
+
+    // Export button
+    const exportButton = document.createElement('button');
+    exportButton.className = 'control-button';
+    exportButton.title = 'Export HTML';
+    exportButton.innerHTML = `
+      <svg viewBox="0 0 16 16">
+        <path d="M8 1a.5.5 0 0 1 .5.5v11.793l3.146-3.147a.5.5 0 0 1 .708.708l-4 4a.5.5 0 0 1-.708 0l-4-4a.5.5 0 0 1 .708-.708L7.5 13.293V1.5A.5.5 0 0 1 8 1z"/>
+        <path d="M2 14.5a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5z"/>
+      </svg>
+    `;
+    exportButton.addEventListener('click', () => this.exportHTML());
+
+    // Menu button clone for inside grid (6th cell)
+    const menuButtonInGrid = document.createElement('button');
+    menuButtonInGrid.className = 'control-button';
+    menuButtonInGrid.title = 'Close';
+    menuButtonInGrid.textContent = '−';
+    menuButtonInGrid.style.fontSize = '20px';
+    menuButtonInGrid.style.fontWeight = '300';
+    menuButtonInGrid.addEventListener('click', () => this.toggleControlsMenu());
+
+    // Add buttons to grid (positioned in 2x3 layout)
+    // Row 1: Play/Pause, Reset, Export
+    // Row 2: Screenshot, Record, Menu (close)
     this.controlsGrid.appendChild(this.playPauseButton);
     this.controlsGrid.appendChild(resetButton);
+    this.controlsGrid.appendChild(exportButton);
     this.controlsGrid.appendChild(screenshotButton);
+    this.controlsGrid.appendChild(this.recordButton);
+    this.controlsGrid.appendChild(menuButtonInGrid);
 
-    // Add grid and menu button to container
+    // Add grid and standalone menu button to container
     this.controlsContainer.appendChild(this.controlsGrid);
     this.controlsContainer.appendChild(this.menuButton);
     this.container.appendChild(this.controlsContainer);
@@ -798,6 +1025,612 @@ export class App {
 
       console.log(`Screenshot saved: ${filename}`);
     }, 'image/png');
+  }
+
+  // ===========================================================================
+  // Video Recording
+  // ===========================================================================
+
+  /**
+   * Toggle video recording on/off.
+   * Public for UILayout to call.
+   */
+  toggleRecording(): void {
+    if (this.isRecording) {
+      this.stopRecording();
+    } else {
+      this.startRecording();
+    }
+  }
+
+  /**
+   * Start recording the canvas as WebM video.
+   */
+  private startRecording(): void {
+    // Check if MediaRecorder is supported
+    if (!MediaRecorder.isTypeSupported('video/webm')) {
+      console.error('WebM recording not supported in this browser');
+      return;
+    }
+
+    // Unpause if paused (can't record a paused shader)
+    if (this.isPaused) {
+      this.togglePlayPause();
+    }
+
+    // Get canvas stream at 60fps
+    const stream = this.canvas.captureStream(60);
+
+    // Create MediaRecorder with WebM format
+    this.mediaRecorder = new MediaRecorder(stream, {
+      mimeType: 'video/webm;codecs=vp9',
+      videoBitsPerSecond: 8000000, // 8 Mbps for high quality
+    });
+
+    this.recordedChunks = [];
+
+    // Collect recorded chunks
+    this.mediaRecorder.ondataavailable = (event) => {
+      if (event.data.size > 0) {
+        this.recordedChunks.push(event.data);
+      }
+    };
+
+    // Handle recording stop - download the video
+    this.mediaRecorder.onstop = () => {
+      const blob = new Blob(this.recordedChunks, { type: 'video/webm' });
+
+      // Generate filename
+      const folderName = this.project.root.split('/').pop() || 'shader';
+      const now = new Date();
+      const timestamp = now.getFullYear().toString() +
+        (now.getMonth() + 1).toString().padStart(2, '0') +
+        now.getDate().toString().padStart(2, '0') + '-' +
+        now.getHours().toString().padStart(2, '0') +
+        now.getMinutes().toString().padStart(2, '0') +
+        now.getSeconds().toString().padStart(2, '0');
+      const filename = `shadertoy-${folderName}-${timestamp}.webm`;
+
+      // Download
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      link.click();
+      URL.revokeObjectURL(url);
+
+      console.log(`Recording saved: ${filename}`);
+    };
+
+    // Start recording
+    this.mediaRecorder.start();
+    this.isRecording = true;
+    this.updateRecordButton();
+    this.showRecordingIndicator();
+    console.log('Recording started');
+  }
+
+  /**
+   * Stop recording and trigger download.
+   */
+  private stopRecording(): void {
+    if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+      this.mediaRecorder.stop();
+    }
+    this.isRecording = false;
+    this.mediaRecorder = null;
+    this.updateRecordButton();
+    this.hideRecordingIndicator();
+    console.log('Recording stopped');
+  }
+
+  /**
+   * Update record button appearance based on recording state.
+   */
+  private updateRecordButton(): void {
+    if (!this.recordButton) return;
+
+    if (this.isRecording) {
+      // Show stop icon (square)
+      this.recordButton.innerHTML = `
+        <svg viewBox="0 0 16 16">
+          <rect x="4" y="4" width="8" height="8"/>
+        </svg>
+      `;
+      this.recordButton.title = 'Stop Recording';
+      this.recordButton.classList.add('recording');
+    } else {
+      // Show record icon (circle)
+      this.recordButton.innerHTML = `
+        <svg viewBox="0 0 16 16">
+          <circle cx="8" cy="8" r="5"/>
+        </svg>
+      `;
+      this.recordButton.title = 'Record Video';
+      this.recordButton.classList.remove('recording');
+    }
+  }
+
+  /**
+   * Show the recording indicator (pulsing red dot in corner).
+   */
+  private showRecordingIndicator(): void {
+    if (this.recordingIndicator) return;
+
+    this.recordingIndicator = document.createElement('div');
+    this.recordingIndicator.className = 'recording-indicator';
+    this.recordingIndicator.innerHTML = `
+      <span class="recording-dot"></span>
+      <span class="recording-text">REC</span>
+    `;
+    this.container.appendChild(this.recordingIndicator);
+  }
+
+  /**
+   * Hide the recording indicator.
+   */
+  private hideRecordingIndicator(): void {
+    if (this.recordingIndicator) {
+      this.recordingIndicator.remove();
+      this.recordingIndicator = null;
+    }
+  }
+
+  // ===========================================================================
+  // HTML Export
+  // ===========================================================================
+
+  /**
+   * Export the current shader as a standalone HTML file.
+   * Bakes in current uniform values and replaces textures with procedural grid.
+   */
+  exportHTML(): void {
+    const project = this.project;
+    const uniformValues = this.engine.getUniformValues();
+
+    // Collect pass info
+    const passOrder = ['BufferA', 'BufferB', 'BufferC', 'BufferD', 'Image'] as const;
+    const passes: Array<{ name: string; source: string; channels: string[] }> = [];
+
+    for (const passName of passOrder) {
+      const pass = project.passes[passName];
+      if (!pass) continue;
+
+      // Map channels to their source type for the export
+      const channels = pass.channels.map((ch) => {
+        if (ch.kind === 'buffer') return ch.buffer;
+        if (ch.kind === 'texture') return 'procedural'; // Will use grid texture
+        if (ch.kind === 'keyboard') return 'keyboard';
+        return 'none';
+      });
+
+      passes.push({
+        name: passName,
+        source: pass.glslSource,
+        channels,
+      });
+    }
+
+    // Build the HTML
+    const html = this.generateStandaloneHTML({
+      title: project.meta.title,
+      commonSource: project.commonSource,
+      passes,
+      uniforms: project.uniforms,
+      uniformValues,
+    });
+
+    // Download
+    const blob = new Blob([html], { type: 'text/html' });
+    const folderName = project.root.split('/').pop() || 'shader';
+    const filename = `${folderName}.html`;
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(url);
+
+    console.log(`Exported: ${filename}`);
+  }
+
+  /**
+   * Generate standalone HTML with embedded shaders.
+   */
+  private generateStandaloneHTML(opts: {
+    title: string;
+    commonSource: string | null;
+    passes: Array<{ name: string; source: string; channels: string[] }>;
+    uniforms: Record<string, { type: string; value: unknown }>;
+    uniformValues: Record<string, unknown>;
+  }): string {
+    const { title, commonSource, passes, uniforms, uniformValues } = opts;
+
+    // Escape shader sources for embedding in JS template literals
+    const escapeForJS = (s: string) => s.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$/g, '\\$');
+
+    // Build shader source objects
+    const shaderSources = passes.map(p => ({
+      name: p.name,
+      source: escapeForJS(p.source),
+      channels: p.channels,
+    }));
+
+    // Build uniform initialization code
+    const uniformInits = Object.entries(uniforms).map(([name, def]) => {
+      const value = uniformValues[name] ?? def.value;
+      if (def.type === 'float' || def.type === 'int') {
+        return `  '${name}': ${value},`;
+      } else if (def.type === 'bool') {
+        return `  '${name}': ${value ? 1 : 0},`;
+      } else if (def.type === 'vec2') {
+        const v = value as number[];
+        return `  '${name}': [${v[0]}, ${v[1]}],`;
+      } else if (def.type === 'vec3') {
+        const v = value as number[];
+        return `  '${name}': [${v[0]}, ${v[1]}, ${v[2]}],`;
+      } else if (def.type === 'vec4') {
+        const v = value as number[];
+        return `  '${name}': [${v[0]}, ${v[1]}, ${v[2]}, ${v[3]}],`;
+      }
+      return '';
+    }).filter(Boolean).join('\n');
+
+    // Build uniform declarations for shaders
+    const uniformDeclarations = Object.entries(uniforms).map(([name, def]) => {
+      if (def.type === 'float') return `uniform float ${name};`;
+      if (def.type === 'int') return `uniform int ${name};`;
+      if (def.type === 'bool') return `uniform int ${name};`; // GLSL ES doesn't have bool uniforms
+      if (def.type === 'vec2') return `uniform vec2 ${name};`;
+      if (def.type === 'vec3') return `uniform vec3 ${name};`;
+      if (def.type === 'vec4') return `uniform vec4 ${name};`;
+      return '';
+    }).filter(Boolean).join('\n');
+
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${title}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; background: #fff; }
+    body { display: flex; align-items: center; justify-content: center; }
+    .container {
+      width: 90vw;
+      max-width: 1200px;
+      aspect-ratio: 16 / 9;
+      background: #000;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.1);
+    }
+    canvas { display: block; width: 100%; height: 100%; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <canvas id="canvas"></canvas>
+  </div>
+  <script>
+// Shader Sandbox Export - ${title}
+// Generated ${new Date().toISOString()}
+
+const VERTEX_SHADER = \`#version 300 es
+precision highp float;
+layout(location = 0) in vec2 position;
+void main() { gl_Position = vec4(position, 0.0, 1.0); }
+\`;
+
+const FRAGMENT_PREAMBLE = \`#version 300 es
+precision highp float;
+
+// Procedural texture for missing channels
+vec4 proceduralGrid(vec2 uv) {
+  vec2 grid = step(fract(uv * 8.0), vec2(0.5));
+  float checker = abs(grid.x - grid.y);
+  return mix(vec4(0.2, 0.2, 0.2, 1.0), vec4(0.8, 0.1, 0.8, 1.0), checker);
+}
+
+uniform vec3  iResolution;
+uniform float iTime;
+uniform float iTimeDelta;
+uniform int   iFrame;
+uniform vec4  iMouse;
+uniform vec4  iDate;
+uniform float iFrameRate;
+uniform vec3  iChannelResolution[4];
+uniform sampler2D iChannel0;
+uniform sampler2D iChannel1;
+uniform sampler2D iChannel2;
+uniform sampler2D iChannel3;
+${uniformDeclarations}
+\`;
+
+const FRAGMENT_SUFFIX = \`
+out vec4 fragColor;
+void main() { mainImage(fragColor, gl_FragCoord.xy); }
+\`;
+
+const COMMON_SOURCE = \`${commonSource ? escapeForJS(commonSource) : ''}\`;
+
+const PASSES = [
+${shaderSources.map(p => `  { name: '${p.name}', source: \`${p.source}\`, channels: ${JSON.stringify(p.channels)} }`).join(',\n')}
+];
+
+const UNIFORM_VALUES = {
+${uniformInits}
+};
+
+// WebGL setup
+const canvas = document.getElementById('canvas');
+const gl = canvas.getContext('webgl2', { alpha: false, antialias: false, preserveDrawingBuffer: true });
+if (!gl) { alert('WebGL2 not supported'); throw new Error('WebGL2 not supported'); }
+
+// Fullscreen triangle
+const vao = gl.createVertexArray();
+gl.bindVertexArray(vao);
+const vbo = gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 3,-1, -1,3]), gl.STATIC_DRAW);
+gl.enableVertexAttribArray(0);
+gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+
+// Procedural texture (8x8 checkerboard)
+function createProceduralTexture() {
+  const tex = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, tex);
+  const data = new Uint8Array(8 * 8 * 4);
+  for (let y = 0; y < 8; y++) {
+    for (let x = 0; x < 8; x++) {
+      const i = (y * 8 + x) * 4;
+      const checker = (x + y) % 2;
+      data[i] = checker ? 204 : 51;
+      data[i+1] = checker ? 26 : 51;
+      data[i+2] = checker ? 204 : 51;
+      data[i+3] = 255;
+    }
+  }
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 8, 8, 0, gl.RGBA, gl.UNSIGNED_BYTE, data);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+  return tex;
+}
+
+// Black texture for unused channels
+function createBlackTexture() {
+  const tex = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0,0,0,255]));
+  return tex;
+}
+
+const proceduralTex = createProceduralTexture();
+const blackTex = createBlackTexture();
+
+// Compile shader
+function compileShader(type, source) {
+  const shader = gl.createShader(type);
+  gl.shaderSource(shader, source);
+  gl.compileShader(shader);
+  if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+    console.error(gl.getShaderInfoLog(shader));
+    console.error(source.split('\\n').map((l,i) => (i+1) + ': ' + l).join('\\n'));
+    throw new Error('Shader compile failed');
+  }
+  return shader;
+}
+
+// Create program
+function createProgram(fragSource) {
+  const vs = compileShader(gl.VERTEX_SHADER, VERTEX_SHADER);
+  const fs = compileShader(gl.FRAGMENT_SHADER, fragSource);
+  const program = gl.createProgram();
+  gl.attachShader(program, vs);
+  gl.attachShader(program, fs);
+  gl.linkProgram(program);
+  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+    throw new Error('Program link failed: ' + gl.getProgramInfoLog(program));
+  }
+  return program;
+}
+
+// Create texture for render target
+function createRenderTexture(w, h) {
+  const tex = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, w, h, 0, gl.RGBA, gl.FLOAT, null);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  return tex;
+}
+
+// Create framebuffer attached to a texture
+function createFramebuffer(tex) {
+  const fb = gl.createFramebuffer();
+  gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+  const status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+  if (status !== gl.FRAMEBUFFER_COMPLETE) {
+    console.error('Framebuffer not complete:', status);
+  }
+  return fb;
+}
+
+// Initialize passes
+const container = canvas.parentElement;
+let width = canvas.width = container.clientWidth * devicePixelRatio;
+let height = canvas.height = container.clientHeight * devicePixelRatio;
+
+// Enable float textures (required for multi-buffer feedback)
+const floatExt = gl.getExtension('EXT_color_buffer_float');
+if (!floatExt) console.warn('EXT_color_buffer_float not supported');
+
+const runtimePasses = PASSES.map(pass => {
+  const fragSource = FRAGMENT_PREAMBLE + (COMMON_SOURCE ? '\\n// Common\\n' + COMMON_SOURCE + '\\n' : '') + '\\n// User code\\n' + pass.source + FRAGMENT_SUFFIX;
+  const program = createProgram(fragSource);
+  const currentTexture = createRenderTexture(width, height);
+  const previousTexture = createRenderTexture(width, height);
+  const framebuffer = createFramebuffer(currentTexture);
+  return {
+    name: pass.name,
+    channels: pass.channels,
+    program,
+    framebuffer,
+    currentTexture,
+    previousTexture,
+    uniforms: {
+      iResolution: gl.getUniformLocation(program, 'iResolution'),
+      iTime: gl.getUniformLocation(program, 'iTime'),
+      iTimeDelta: gl.getUniformLocation(program, 'iTimeDelta'),
+      iFrame: gl.getUniformLocation(program, 'iFrame'),
+      iMouse: gl.getUniformLocation(program, 'iMouse'),
+      iDate: gl.getUniformLocation(program, 'iDate'),
+      iFrameRate: gl.getUniformLocation(program, 'iFrameRate'),
+      iChannel: [0,1,2,3].map(i => gl.getUniformLocation(program, 'iChannel' + i)),
+      custom: Object.keys(UNIFORM_VALUES).reduce((acc, name) => {
+        acc[name] = gl.getUniformLocation(program, name);
+        return acc;
+      }, {})
+    }
+  };
+});
+
+// Find pass by name
+const findPass = name => runtimePasses.find(p => p.name === name);
+
+// Mouse state
+let mouse = [0, 0, 0, 0];
+canvas.addEventListener('mousemove', e => {
+  mouse[0] = e.clientX * devicePixelRatio;
+  mouse[1] = (canvas.clientHeight - e.clientY) * devicePixelRatio;
+});
+canvas.addEventListener('click', e => {
+  mouse[2] = e.clientX * devicePixelRatio;
+  mouse[3] = (canvas.clientHeight - e.clientY) * devicePixelRatio;
+});
+
+// Resize handler - only resize if dimensions actually changed
+let lastWidth = width, lastHeight = height;
+new ResizeObserver(() => {
+  const newWidth = container.clientWidth * devicePixelRatio;
+  const newHeight = container.clientHeight * devicePixelRatio;
+  if (newWidth === lastWidth && newHeight === lastHeight) return;
+  lastWidth = width = canvas.width = newWidth;
+  lastHeight = height = canvas.height = newHeight;
+  runtimePasses.forEach(p => {
+    [p.currentTexture, p.previousTexture].forEach(tex => {
+      gl.bindTexture(gl.TEXTURE_2D, tex);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, width, height, 0, gl.RGBA, gl.FLOAT, null);
+    });
+    gl.bindFramebuffer(gl.FRAMEBUFFER, p.framebuffer);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, p.currentTexture, 0);
+  });
+  frame = 0;
+  startTime = performance.now() / 1000;
+  lastTime = 0;
+}).observe(container);
+
+// Animation
+let frame = 0;
+let startTime = performance.now() / 1000;
+let lastTime = 0;
+
+function render(now) {
+  requestAnimationFrame(render);
+
+  const time = now / 1000 - startTime;
+  const deltaTime = Math.max(0, time - lastTime);
+  lastTime = time;
+
+  const date = new Date();
+  const iDate = [date.getFullYear(), date.getMonth(), date.getDate(),
+    date.getHours() * 3600 + date.getMinutes() * 60 + date.getSeconds() + date.getMilliseconds() / 1000];
+
+  gl.bindVertexArray(vao);
+
+  runtimePasses.forEach(pass => {
+    gl.useProgram(pass.program);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, pass.framebuffer);
+    gl.viewport(0, 0, width, height);
+
+    // Bind uniforms
+    gl.uniform3f(pass.uniforms.iResolution, width, height, 1);
+    gl.uniform1f(pass.uniforms.iTime, time);
+    gl.uniform1f(pass.uniforms.iTimeDelta, deltaTime);
+    gl.uniform1i(pass.uniforms.iFrame, frame);
+    gl.uniform4fv(pass.uniforms.iMouse, mouse);
+    gl.uniform4fv(pass.uniforms.iDate, iDate);
+    gl.uniform1f(pass.uniforms.iFrameRate, 1 / deltaTime);
+
+    // Bind custom uniforms
+    Object.entries(UNIFORM_VALUES).forEach(([name, value]) => {
+      const loc = pass.uniforms.custom[name];
+      if (!loc) return;
+      if (Array.isArray(value)) {
+        if (value.length === 2) gl.uniform2fv(loc, value);
+        else if (value.length === 3) gl.uniform3fv(loc, value);
+        else if (value.length === 4) gl.uniform4fv(loc, value);
+      } else {
+        gl.uniform1f(loc, value);
+      }
+    });
+
+    // Bind channels
+    pass.channels.forEach((ch, i) => {
+      gl.activeTexture(gl.TEXTURE0 + i);
+      if (ch === 'none') {
+        gl.bindTexture(gl.TEXTURE_2D, blackTex);
+      } else if (ch === 'procedural') {
+        gl.bindTexture(gl.TEXTURE_2D, proceduralTex);
+      } else if (['BufferA', 'BufferB', 'BufferC', 'BufferD', 'Image'].includes(ch)) {
+        const srcPass = findPass(ch);
+        gl.bindTexture(gl.TEXTURE_2D, srcPass ? srcPass.previousTexture : blackTex);
+      } else {
+        gl.bindTexture(gl.TEXTURE_2D, blackTex);
+      }
+      gl.uniform1i(pass.uniforms.iChannel[i], i);
+    });
+
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+    // Swap textures and re-attach framebuffer
+    const temp = pass.currentTexture;
+    pass.currentTexture = pass.previousTexture;
+    pass.previousTexture = temp;
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, pass.currentTexture, 0);
+  });
+
+  // Blit Image pass to screen
+  const imagePass = findPass('Image');
+  if (imagePass) {
+    // Attach previousTexture (just rendered) for reading
+    gl.bindFramebuffer(gl.FRAMEBUFFER, imagePass.framebuffer);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, imagePass.previousTexture, 0);
+
+    // Blit to screen
+    gl.bindFramebuffer(gl.READ_FRAMEBUFFER, imagePass.framebuffer);
+    gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null);
+    gl.blitFramebuffer(0, 0, width, height, 0, 0, width, height, gl.COLOR_BUFFER_BIT, gl.NEAREST);
+
+    // Restore framebuffer to currentTexture for next frame
+    gl.bindFramebuffer(gl.FRAMEBUFFER, imagePass.framebuffer);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, imagePass.currentTexture, 0);
+  }
+
+  frame++;
+}
+
+requestAnimationFrame(render);
+  </script>
+</body>
+</html>`;
   }
 
   /**

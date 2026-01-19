@@ -112,6 +112,9 @@ async function main() {
           engine.setUniformValue(name, value);
         }
       });
+
+      // Sync initial paused state (from project.startPaused)
+      layout.setPaused(app.getPaused());
     }
 
     // Only start animation loop if there are no compilation errors

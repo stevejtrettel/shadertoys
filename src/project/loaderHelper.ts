@@ -115,6 +115,8 @@ async function loadSinglePass(
     layout,
     theme,
     controls,
+    startPaused: configOverrides?.startPaused ?? false,
+    pixelRatio: configOverrides?.pixelRatio ?? null,
     commonSource: null,
     passes: {
       Image: {
@@ -270,6 +272,8 @@ async function loadWithConfig(
     layout,
     theme,
     controls,
+    startPaused: config.startPaused ?? false,
+    pixelRatio: config.pixelRatio ?? null,
     commonSource,
     passes,
     textures,

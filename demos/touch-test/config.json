@@ -1,0 +1,6 @@
+{
+  "title": "Touch Test",
+  "description": "Tests touch uniforms: iTouchCount, iTouch0-2, iPinch, iPinchCenter",
+  "controls": true,
+  "Image": {}
+}
