@@ -1,0 +1,11 @@
+{
+  "title": "Texture Sampling",
+  "layout": "split",
+  "Image": {
+    "iChannel0": {
+      "texture": "texture.png",
+      "filter": "linear",
+      "wrap": "repeat"
+    }
+  }
+}

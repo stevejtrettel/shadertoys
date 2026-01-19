@@ -1,0 +1,10 @@
+{
+  "title": "Feedback Buffer",
+  "layout": "split",
+  "BufferA": {
+    "iChannel0": "BufferA"
+  },
+  "Image": {
+    "iChannel0": "BufferA"
+  }
+}
