@@ -98,6 +98,12 @@ export class ShadertoyEngine {
   // Keyboard state tracking (Maps keycodes to state)
   private _keyStates: Map<number, boolean> = new Map(); // true = down, false = up
   private _toggleStates: Map<number, number> = new Map(); // 0.0 or 1.0
+  private _keyPressedThisFrame: Set<number> = new Set(); // keys that went down this frame
+  private _keyReleasedThisFrame: Set<number> = new Set(); // keys that went up this frame
+
+  // Computed key binding states (updated each frame)
+  // For each binding: { hold, pressed, released } values
+  private _keyBindingStates: Map<string, { hold: number; pressed: number; released: number }> = new Map();
 
   // Compilation errors (if any occurred during initialization)
   private _compilationErrors: Array<{
@@ -398,11 +404,69 @@ export class ShadertoyEngine {
     // Update current state
     this._keyStates.set(keycode, isDown);
 
-    // Toggle on press (down transition)
+    // Track press/release transitions for single-frame events
     if (isDown && !wasDown) {
+      this._keyPressedThisFrame.add(keycode);
+      // Toggle on press (down transition)
       const currentToggle = this._toggleStates.get(keycode) || 0.0;
       this._toggleStates.set(keycode, currentToggle === 0.0 ? 1.0 : 0.0);
+    } else if (!isDown && wasDown) {
+      this._keyReleasedThisFrame.add(keycode);
     }
+  }
+
+  /**
+   * Clear single-frame key events. Called at the end of each frame.
+   */
+  clearKeyTransitions(): void {
+    this._keyPressedThisFrame.clear();
+    this._keyReleasedThisFrame.clear();
+  }
+
+  /**
+   * Compute key binding states for all configured key bindings.
+   * Should be called once per frame before rendering.
+   */
+  updateKeyBindingStates(): void {
+    for (const binding of this.project.keys) {
+      let hold = 0;
+      let pressed = 0;
+      let released = 0;
+
+      // Check if any of the bound keys are active (OR logic)
+      for (const keyCode of binding.keyCodes) {
+        if (this._keyStates.get(keyCode)) {
+          hold = 1;
+        }
+        if (this._keyPressedThisFrame.has(keyCode)) {
+          pressed = 1;
+        }
+        if (this._keyReleasedThisFrame.has(keyCode)) {
+          released = 1;
+        }
+      }
+
+      // For toggle mode, use toggle state instead of hold state
+      if (binding.mode === 'toggle') {
+        // Get toggle state from any of the bound keys
+        for (const keyCode of binding.keyCodes) {
+          const toggleValue = this._toggleStates.get(keyCode);
+          if (toggleValue !== undefined) {
+            hold = toggleValue;
+            break;
+          }
+        }
+      }
+
+      this._keyBindingStates.set(binding.name, { hold, pressed, released });
+    }
+  }
+
+  /**
+   * Get computed key binding states for shader uniform binding.
+   */
+  getKeyBindingStates(): Map<string, { hold: number; pressed: number; released: number }> {
+    return this._keyBindingStates;
   }
 
   /**
@@ -591,6 +655,21 @@ export class ShadertoyEngine {
       customLocations.set(name, gl.getUniformLocation(program, name));
     }
 
+    // Cache key uniform locations
+    const keyLocations = new Map<string, {
+      hold: WebGLUniformLocation | null;
+      pressed: WebGLUniformLocation | null;
+      released: WebGLUniformLocation | null;
+    }>();
+    for (const binding of this.project.keys) {
+      const name = binding.name;
+      keyLocations.set(name, {
+        hold: gl.getUniformLocation(program, `key_${name}`),
+        pressed: gl.getUniformLocation(program, `key_${name}_pressed`),
+        released: gl.getUniformLocation(program, `key_${name}_released`),
+      });
+    }
+
     return {
       program,
       iResolution: gl.getUniformLocation(program, 'iResolution'),
@@ -623,6 +702,7 @@ export class ShadertoyEngine {
       iPinchDelta: gl.getUniformLocation(program, 'iPinchDelta'),
       iPinchCenter: gl.getUniformLocation(program, 'iPinchCenter'),
       custom: customLocations,
+      keys: keyLocations,
     };
   }
 
@@ -829,6 +909,22 @@ uniform float iPinchDelta;          // Pinch change since last frame
 uniform vec2  iPinchCenter;         // Center point of pinch gesture
 `);
 
+    // Auto-inject config uniforms
+    const configUniformDeclarations = this.generateConfigUniformDeclarations();
+    if (configUniformDeclarations) {
+      parts.push('// Config uniforms (auto-generated)');
+      parts.push(configUniformDeclarations);
+      parts.push('');
+    }
+
+    // Auto-inject key uniforms
+    const keyUniformDeclarations = this.generateKeyUniformDeclarations();
+    if (keyUniformDeclarations) {
+      parts.push('// Keyboard uniforms (auto-generated)');
+      parts.push(keyUniformDeclarations);
+      parts.push('');
+    }
+
     // Preprocess user shader code to handle cubemap-style texture sampling
     const processedSource = this.preprocessCubemapTextures(userSource, channels);
 
@@ -885,6 +981,59 @@ void main() {
     });
   }
 
+  /**
+   * Generate GLSL uniform declarations for config-defined uniforms.
+   */
+  private generateConfigUniformDeclarations(): string | null {
+    const uniforms = this.project.uniforms;
+    const entries = Object.entries(uniforms);
+    if (entries.length === 0) return null;
+
+    const declarations: string[] = [];
+    for (const [name, def] of entries) {
+      switch (def.type) {
+        case 'float':
+          declarations.push(`uniform float ${name};`);
+          break;
+        case 'int':
+          declarations.push(`uniform int ${name};`);
+          break;
+        case 'bool':
+          // GLSL ES 3.0 supports bool uniforms
+          declarations.push(`uniform bool ${name};`);
+          break;
+        case 'vec2':
+          declarations.push(`uniform vec2 ${name};`);
+          break;
+        case 'vec3':
+          declarations.push(`uniform vec3 ${name};`);
+          break;
+        case 'vec4':
+          declarations.push(`uniform vec4 ${name};`);
+          break;
+      }
+    }
+    return declarations.join('\n');
+  }
+
+  /**
+   * Generate GLSL uniform declarations for keyboard key bindings.
+   * For each key binding, generates: key_name, key_name_pressed, key_name_released
+   */
+  private generateKeyUniformDeclarations(): string | null {
+    const keys = this.project.keys;
+    if (keys.length === 0) return null;
+
+    const declarations: string[] = [];
+    for (const binding of keys) {
+      const name = binding.name;
+      declarations.push(`uniform float key_${name};           // 1.0 when held (or toggled on)`);
+      declarations.push(`uniform float key_${name}_pressed;   // 1.0 on frame pressed`);
+      declarations.push(`uniform float key_${name}_released;  // 1.0 on frame released`);
+    }
+    return declarations.join('\n');
+  }
+
   // ===========================================================================
   // Pass Execution
   // ===========================================================================
@@ -922,6 +1071,9 @@ void main() {
 
     // Bind custom uniforms
     this.bindCustomUniforms(runtimePass.uniforms);
+
+    // Bind key uniforms
+    this.bindKeyUniforms(runtimePass.uniforms);
 
     // Bind iChannel textures and their resolutions
     this.bindChannelTextures(runtimePass);
@@ -1044,6 +1196,29 @@ void main() {
           gl.uniform4f(location, v[0], v[1], v[2], v[3]);
           break;
         }
+      }
+    }
+  }
+
+  /**
+   * Bind key uniform values to the current program.
+   * Uses the computed key binding states from updateKeyBindingStates().
+   */
+  private bindKeyUniforms(uniforms: PassUniformLocations): void {
+    const gl = this.gl;
+
+    for (const [name, locations] of uniforms.keys) {
+      const state = this._keyBindingStates.get(name);
+      if (!state) continue;
+
+      if (locations.hold) {
+        gl.uniform1f(locations.hold, state.hold);
+      }
+      if (locations.pressed) {
+        gl.uniform1f(locations.pressed, state.pressed);
+      }
+      if (locations.released) {
+        gl.uniform1f(locations.released, state.released);
       }
     }
   }

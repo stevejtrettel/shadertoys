@@ -63,6 +63,14 @@ export interface PassUniformLocations {
 
   // Custom uniforms (from project config)
   custom: Map<string, WebGLUniformLocation | null>;
+
+  // Key uniforms (from project.keys config)
+  // Maps key binding name -> { hold, pressed, released } locations
+  keys: Map<string, {
+    hold: WebGLUniformLocation | null;
+    pressed: WebGLUniformLocation | null;
+    released: WebGLUniformLocation | null;
+  }>;
 }
 
 // =============================================================================

@@ -319,6 +319,9 @@ export class App {
     // Update keyboard texture with current key states
     this.engine.updateKeyboardTexture();
 
+    // Compute key binding states for this frame
+    this.engine.updateKeyBindingStates();
+
     // Run engine step with mouse and touch data
     this.engine.step(elapsedTime, this.mouse, {
       count: this.touchState.count,
@@ -327,6 +330,9 @@ export class App {
       pinchDelta: this.touchState.pinchDelta,
       pinchCenter: this.touchState.pinchCenter,
     });
+
+    // Clear single-frame key events (pressed/released)
+    this.engine.clearKeyTransitions();
 
     // Reset pinchDelta after frame (it's a per-frame delta)
     this.touchState.pinchDelta = 0;

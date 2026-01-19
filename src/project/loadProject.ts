@@ -20,6 +20,10 @@ import {
   ShadertoyProject,
   ShadertoyTexture2D,
   PassConfigSimplified,
+  KeyConfig,
+  KeyDefinition,
+  NormalizedKeyBinding,
+  KeyMode,
 } from './types';
 
 // =============================================================================
@@ -81,6 +85,135 @@ function defaultSourceForPass(name: PassName): string {
     case 'BufferD':
       return 'bufferD.glsl';
   }
+}
+
+// =============================================================================
+// Key Code Mapping
+// =============================================================================
+
+/**
+ * Map of key names to their key codes.
+ * Follows KeyboardEvent.code naming convention.
+ */
+const KEY_CODE_MAP: Record<string, number> = {
+  // Letters (A-Z)
+  A: 65, B: 66, C: 67, D: 68, E: 69, F: 70, G: 71, H: 72, I: 73, J: 74,
+  K: 75, L: 76, M: 77, N: 78, O: 79, P: 80, Q: 81, R: 82, S: 83, T: 84,
+  U: 85, V: 86, W: 87, X: 88, Y: 89, Z: 90,
+
+  // Numbers (0-9)
+  '0': 48, '1': 49, '2': 50, '3': 51, '4': 52,
+  '5': 53, '6': 54, '7': 55, '8': 56, '9': 57,
+
+  // Arrow keys
+  ArrowUp: 38, ArrowDown: 40, ArrowLeft: 37, ArrowRight: 39,
+  Up: 38, Down: 40, Left: 37, Right: 39,  // Aliases
+
+  // Modifiers
+  Shift: 16, ShiftLeft: 16, ShiftRight: 16,
+  Ctrl: 17, Control: 17, ControlLeft: 17, ControlRight: 17,
+  Alt: 18, AltLeft: 18, AltRight: 18,
+  Meta: 91, MetaLeft: 91, MetaRight: 92,
+
+  // Special keys
+  Space: 32, ' ': 32,
+  Enter: 13, Return: 13,
+  Escape: 27, Esc: 27,
+  Tab: 9,
+  Backspace: 8,
+  Delete: 46,
+  Insert: 45,
+  Home: 36,
+  End: 35,
+  PageUp: 33,
+  PageDown: 34,
+
+  // Function keys
+  F1: 112, F2: 113, F3: 114, F4: 115, F5: 116, F6: 117,
+  F7: 118, F8: 119, F9: 120, F10: 121, F11: 122, F12: 123,
+
+  // Punctuation (common ones)
+  Comma: 188, ',': 188,
+  Period: 190, '.': 190,
+  Slash: 191, '/': 191,
+  Semicolon: 186, ';': 186,
+  Quote: 222, "'": 222,
+  BracketLeft: 219, '[': 219,
+  BracketRight: 221, ']': 221,
+  Backslash: 220, '\\': 220,
+  Minus: 189, '-': 189,
+  Equal: 187, '=': 187,
+  Backquote: 192, '`': 192,
+};
+
+/**
+ * Convert a key name to its key code.
+ * Returns undefined if key name is not recognized.
+ */
+function keyNameToCode(keyName: string): number | undefined {
+  // Check direct mapping
+  if (KEY_CODE_MAP[keyName] !== undefined) {
+    return KEY_CODE_MAP[keyName];
+  }
+
+  // Try uppercase for single letters
+  if (keyName.length === 1) {
+    const upper = keyName.toUpperCase();
+    if (KEY_CODE_MAP[upper] !== undefined) {
+      return KEY_CODE_MAP[upper];
+    }
+  }
+
+  return undefined;
+}
+
+/**
+ * Normalize a key definition from config into a NormalizedKeyBinding.
+ */
+function normalizeKeyDefinition(name: string, def: KeyDefinition): NormalizedKeyBinding {
+  let keys: string[];
+  let mode: KeyMode = 'hold';
+
+  if (typeof def === 'string') {
+    // Simple string: "Space"
+    keys = [def];
+  } else if (Array.isArray(def)) {
+    // Array of keys: ["A", "ArrowLeft"]
+    keys = def;
+  } else {
+    // Object: { key: "G", mode: "toggle" }
+    keys = Array.isArray(def.key) ? def.key : [def.key];
+    mode = def.mode ?? 'hold';
+  }
+
+  // Convert key names to codes
+  const keyCodes: number[] = [];
+  for (const keyName of keys) {
+    const code = keyNameToCode(keyName);
+    if (code === undefined) {
+      console.warn(`Unknown key name '${keyName}' in key binding '${name}'. Skipping.`);
+      continue;
+    }
+    keyCodes.push(code);
+  }
+
+  return { name, keyCodes, mode };
+}
+
+/**
+ * Normalize all key definitions from config.
+ */
+function normalizeKeyConfig(config: KeyConfig | undefined): NormalizedKeyBinding[] {
+  if (!config) return [];
+
+  const bindings: NormalizedKeyBinding[] = [];
+  for (const [name, def] of Object.entries(config)) {
+    const binding = normalizeKeyDefinition(name, def);
+    if (binding.keyCodes.length > 0) {
+      bindings.push(binding);
+    }
+  }
+  return bindings;
 }
 
 // =============================================================================
@@ -191,6 +324,7 @@ async function loadSinglePassProject(root: string): Promise<ShadertoyProject> {
     },
     textures: [],
     uniforms: {},
+    keys: [],
   };
 
   return project;
@@ -423,6 +557,7 @@ async function loadProjectWithConfig(root: string, config: ShadertoyConfig): Pro
     },
     textures: Array.from(textureMap.values()),
     uniforms: config.uniforms ?? {},
+    keys: normalizeKeyConfig(config.keys),
   };
 
   return project;
