@@ -793,12 +793,41 @@ export class App {
   }
 
   /**
+   * Check if keyboard events should be ignored (user is typing in an input).
+   */
+  private isTypingInInput(e: KeyboardEvent): boolean {
+    const target = e.target as HTMLElement;
+    if (!target) return false;
+
+    // Check for input, textarea, or contenteditable elements
+    const tagName = target.tagName.toLowerCase();
+    if (tagName === 'input' || tagName === 'textarea') {
+      return true;
+    }
+
+    // Check for contenteditable (used by code editors like Prism)
+    if (target.isContentEditable) {
+      return true;
+    }
+
+    // Check for elements with role="textbox"
+    if (target.getAttribute('role') === 'textbox') {
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
    * Set up keyboard tracking for shader keyboard texture.
    * Tracks all key presses/releases and forwards to engine.
    */
   private setupKeyboardTracking(): void {
     // Track keydown events
     document.addEventListener('keydown', (e: KeyboardEvent) => {
+      // Skip if user is typing in an input
+      if (this.isTypingInInput(e)) return;
+
       // Get keycode - use e.keyCode which is the ASCII code
       const keycode = e.keyCode;
       if (keycode >= 0 && keycode < 256) {
@@ -808,6 +837,9 @@ export class App {
 
     // Track keyup events
     document.addEventListener('keyup', (e: KeyboardEvent) => {
+      // Skip if user is typing in an input
+      if (this.isTypingInInput(e)) return;
+
       const keycode = e.keyCode;
       if (keycode >= 0 && keycode < 256) {
         this.engine.updateKeyState(keycode, false);
@@ -820,6 +852,9 @@ export class App {
    */
   private setupGlobalShortcuts(): void {
     document.addEventListener('keydown', (e: KeyboardEvent) => {
+      // Skip if user is typing in an input
+      if (this.isTypingInInput(e)) return;
+
       // S - Screenshot
       if (e.code === 'KeyS' && !e.repeat) {
         e.preventDefault();
@@ -833,6 +868,9 @@ export class App {
    */
   private setupKeyboardShortcuts(): void {
     document.addEventListener('keydown', (e: KeyboardEvent) => {
+      // Skip if user is typing in an input
+      if (this.isTypingInInput(e)) return;
+
       // Space - Play/Pause
       if (e.code === 'Space' && !e.repeat) {
         e.preventDefault();
