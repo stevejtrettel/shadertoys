@@ -8,10 +8,13 @@ A lightweight, Shadertoy-compatible GLSL shader development environment. Copy sh
 - **Full Shadertoy Uniforms** - `iTime`, `iResolution`, `iFrame`, `iMouse`, `iTimeDelta`, `iChannel0-3`
 - **Multi-Buffer Rendering** - BufferA-D passes with correct ping-pong semantics
 - **Texture Support** - Load images with configurable filtering and wrapping
-- **Keyboard Input** - Full keyboard state via Shadertoy-compatible texture
+- **Keyboard Input** - Config-based key bindings with hold/toggle modes, plus Shadertoy-compatible texture
+- **Custom Uniforms** - Define uniforms in config with auto-generated UI controls
 - **Live Code Editing** - Edit shaders in the browser with instant recompilation
 - **Multiple Layouts** - Fullscreen, split-view, or tabbed code display
-- **Playback Controls** - Play/pause, reset, and screenshot capture
+- **Playback Controls** - Play/pause, reset, screenshot, and video recording
+- **Export** - Export shaders as standalone HTML files
+- **Touch Support** - Multi-touch with pinch gestures for mobile
 
 ## Quick Start
 
@@ -165,6 +168,85 @@ Texture options:
 - `filter`: `"linear"` (smooth) or `"nearest"` (pixelated)
 - `wrap`: `"repeat"` (tile) or `"clamp"` (stretch edges)
 
+### Keyboard Input
+
+Define semantic key bindings in config - uniforms are auto-injected:
+
+**shaders/my-game/config.json:**
+```json
+{
+  "keys": {
+    "jump": "Space",
+    "left": ["A", "ArrowLeft"],
+    "right": ["D", "ArrowRight"],
+    "debug": { "key": "G", "mode": "toggle" }
+  },
+  "Image": {}
+}
+```
+
+**shaders/my-game/image.glsl:**
+```glsl
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+    vec2 uv = fragCoord / iResolution.xy;
+
+    // Use key uniforms directly - no declarations needed!
+    float dx = key_right - key_left;
+
+    // Single-frame events
+    if (key_jump_pressed > 0.5) {
+        // Jump was just pressed this frame
+    }
+
+    // Toggle state
+    if (key_debug > 0.5) {
+        // Debug mode is on
+    }
+
+    fragColor = vec4(uv, 0.5, 1.0);
+}
+```
+
+For each key binding, three uniforms are generated:
+- `key_<name>` - 1.0 while held (or toggled on)
+- `key_<name>_pressed` - 1.0 only on frame pressed
+- `key_<name>_released` - 1.0 only on frame released
+
+Shadertoy's keyboard texture is also supported for copy-paste compatibility.
+
+### Custom Uniforms
+
+Define interactive uniforms with auto-generated UI controls:
+
+**shaders/my-shader/config.json:**
+```json
+{
+  "uniforms": {
+    "speed": { "type": "float", "value": 1.0, "min": 0, "max": 5 },
+    "rings": { "type": "int", "value": 5, "min": 1, "max": 20 },
+    "animate": { "type": "bool", "value": true },
+    "color": { "type": "vec3", "value": [1, 0.5, 0.2], "color": true },
+    "offset": { "type": "vec2", "value": [0.5, 0.5] }
+  },
+  "Image": {}
+}
+```
+
+**shaders/my-shader/image.glsl:**
+```glsl
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+    vec2 uv = fragCoord / iResolution.xy;
+
+    // Uniforms are auto-injected - just use them!
+    float t = animate ? iTime * speed : 0.0;
+    vec3 col = color * sin(length(uv - offset) * float(rings) - t);
+
+    fragColor = vec4(col, 1.0);
+}
+```
+
+Supported types: `float`, `int`, `bool`, `vec2`, `vec3`, `vec4`
+
 ## Layouts
 
 Control how the shader is displayed in `config.json`:
@@ -190,6 +272,18 @@ Control how the shader is displayed in `config.json`:
 | **Space** | Play/Pause |
 | **R** | Reset to frame 0 |
 
+Note: Shortcuts are disabled while typing in the code editor.
+
+## Controls Menu
+
+Click the **+** button to access:
+- **Play/Pause** - Toggle animation
+- **Reset** - Return to frame 0
+- **Screenshot** - Download PNG
+- **Record Video** - Capture WebM video
+- **Export HTML** - Download standalone HTML file
+- **Uniform Controls** - Sliders, color pickers, and XY pads for custom uniforms
+
 ## Shadertoy Uniforms
 
 All standard Shadertoy uniforms are supported:
@@ -204,6 +298,16 @@ All standard Shadertoy uniforms are supported:
 | `iChannel0-3` | `sampler2D` | Input textures/buffers |
 | `iChannelResolution[4]` | `vec3[]` | Resolution of each channel |
 | `iDate` | `vec4` | Year, month, day, time in seconds |
+
+### Touch Extensions (Shader Sandbox only)
+
+| Uniform | Type | Description |
+|---------|------|-------------|
+| `iTouchCount` | `int` | Number of active touches (0-10) |
+| `iTouch0-2` | `vec4` | Touch position (x, y, startX, startY) |
+| `iPinch` | `float` | Pinch scale factor (1.0 = no pinch) |
+| `iPinchDelta` | `float` | Pinch change since last frame |
+| `iPinchCenter` | `vec2` | Center point of pinch gesture |
 
 ## Building for Production
 
