@@ -1468,30 +1468,16 @@ const container = canvas.parentElement;
 let width = canvas.width = container.clientWidth * devicePixelRatio;
 let height = canvas.height = container.clientHeight * devicePixelRatio;
 
-console.log('Canvas initialized:', width, 'x', height);
-if (width === 0 || height === 0) {
-  console.error('Canvas has zero dimensions!');
-}
-
 // Enable float textures (required for multi-buffer feedback)
 const floatExt = gl.getExtension('EXT_color_buffer_float');
-if (!floatExt) {
-  console.error('EXT_color_buffer_float not supported - multi-buffer will NOT work!');
-} else {
-  console.log('EXT_color_buffer_float enabled');
-}
+if (!floatExt) console.warn('EXT_color_buffer_float not supported');
 
 const runtimePasses = PASSES.map(pass => {
-  console.log('Creating pass:', pass.name, 'channels:', JSON.stringify(pass.channels));
   const fragSource = FRAGMENT_PREAMBLE + (COMMON_SOURCE ? '\\n// Common\\n' + COMMON_SOURCE + '\\n' : '') + '\\n// User code\\n' + pass.source + FRAGMENT_SUFFIX;
   const program = createProgram(fragSource);
-  console.log('  Program created for', pass.name);
-  // Create two textures for ping-pong
   const currentTexture = createRenderTexture(width, height);
   const previousTexture = createRenderTexture(width, height);
-  // Create ONE framebuffer (attached to currentTexture initially)
   const framebuffer = createFramebuffer(currentTexture);
-  console.log('  Pass created, FB status:', gl.checkFramebufferStatus(gl.FRAMEBUFFER));
   return {
     name: pass.name,
     channels: pass.channels,
@@ -1515,7 +1501,6 @@ const runtimePasses = PASSES.map(pass => {
     }
   };
 });
-console.log('All passes created:', runtimePasses.map(p => p.name));
 
 // Find pass by name
 const findPass = name => runtimePasses.find(p => p.name === name);
@@ -1536,31 +1521,20 @@ let lastWidth = width, lastHeight = height;
 new ResizeObserver(() => {
   const newWidth = container.clientWidth * devicePixelRatio;
   const newHeight = container.clientHeight * devicePixelRatio;
-  if (newWidth === lastWidth && newHeight === lastHeight) {
-    console.log('ResizeObserver: skipped (no change)');
-    return;
-  }
-  console.log('ResizeObserver: resizing from', lastWidth, 'x', lastHeight, 'to', newWidth, 'x', newHeight);
+  if (newWidth === lastWidth && newHeight === lastHeight) return;
   lastWidth = width = canvas.width = newWidth;
   lastHeight = height = canvas.height = newHeight;
   runtimePasses.forEach(p => {
-    // Resize both textures
     [p.currentTexture, p.previousTexture].forEach(tex => {
       gl.bindTexture(gl.TEXTURE_2D, tex);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, width, height, 0, gl.RGBA, gl.FLOAT, null);
     });
-    // Re-attach framebuffer to currentTexture
     gl.bindFramebuffer(gl.FRAMEBUFFER, p.framebuffer);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, p.currentTexture, 0);
-    const status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
-    if (status !== gl.FRAMEBUFFER_COMPLETE) {
-      console.error('Framebuffer incomplete after resize:', status);
-    }
   });
   frame = 0;
-  startTime = performance.now() / 1000;  // Reset time too
+  startTime = performance.now() / 1000;
   lastTime = 0;
-  console.log('ResizeObserver: reset frame to 0, time reset');
 }).observe(container);
 
 // Animation
@@ -1572,13 +1546,8 @@ function render(now) {
   requestAnimationFrame(render);
 
   const time = now / 1000 - startTime;
-  const deltaTime = Math.max(0, time - lastTime);  // Ensure non-negative
+  const deltaTime = Math.max(0, time - lastTime);
   lastTime = time;
-
-  // Log first 3 frames
-  if (frame < 3) {
-    console.log('Frame', frame, '- time:', time.toFixed(3), 'delta:', deltaTime.toFixed(3));
-  }
 
   const date = new Date();
   const iDate = [date.getFullYear(), date.getMonth(), date.getDate(),
@@ -1623,9 +1592,6 @@ function render(now) {
       } else if (['BufferA', 'BufferB', 'BufferC', 'BufferD', 'Image'].includes(ch)) {
         const srcPass = findPass(ch);
         gl.bindTexture(gl.TEXTURE_2D, srcPass ? srcPass.previousTexture : blackTex);
-        if (frame < 2) {
-          console.log('  ', pass.name, 'ch'+i, '=', ch, 'uniformLoc:', pass.uniforms.iChannel[i]);
-        }
       } else {
         gl.bindTexture(gl.TEXTURE_2D, blackTex);
       }
@@ -1634,43 +1600,21 @@ function render(now) {
 
     gl.drawArrays(gl.TRIANGLES, 0, 3);
 
-    // Debug: read center pixel after rendering each pass
-    if (frame < 3) {
-      const pixels = new Float32Array(4);
-      gl.readPixels(Math.floor(width/2), Math.floor(height/2), 1, 1, gl.RGBA, gl.FLOAT, pixels);
-      console.log('  After', pass.name, 'render - center pixel:', pixels[0].toFixed(3), pixels[1].toFixed(3), pixels[2].toFixed(3), pixels[3].toFixed(3));
-    }
-
-    // Swap textures (like the working engine does)
+    // Swap textures and re-attach framebuffer
     const temp = pass.currentTexture;
     pass.currentTexture = pass.previousTexture;
     pass.previousTexture = temp;
-
-    // Re-attach framebuffer to new currentTexture
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, pass.currentTexture, 0);
   });
 
   // Blit Image pass to screen
   const imagePass = findPass('Image');
   if (imagePass) {
-    // After swap, previousTexture contains what we just rendered
-    // We need to temporarily attach it to read from it
+    // Attach previousTexture (just rendered) for reading
     gl.bindFramebuffer(gl.FRAMEBUFFER, imagePass.framebuffer);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, imagePass.previousTexture, 0);
 
-    // Debug: read pixels from Image render target to verify content
-    if (frame < 3) {
-      const pixels = new Float32Array(4);
-      gl.readPixels(Math.floor(width/2), Math.floor(height/2), 1, 1, gl.RGBA, gl.FLOAT, pixels);
-      console.log('Frame', frame, 'Image center pixel:', pixels[0].toFixed(3), pixels[1].toFixed(3), pixels[2].toFixed(3), pixels[3].toFixed(3));
-    }
-
-    // Clear default framebuffer first
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    gl.viewport(0, 0, width, height);
-    gl.clearColor(0, 0, 0, 1);
-    gl.clear(gl.COLOR_BUFFER_BIT);
-
+    // Blit to screen
     gl.bindFramebuffer(gl.READ_FRAMEBUFFER, imagePass.framebuffer);
     gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null);
     gl.blitFramebuffer(0, 0, width, height, 0, 0, width, height, gl.COLOR_BUFFER_BIT, gl.NEAREST);
@@ -1678,12 +1622,6 @@ function render(now) {
     // Restore framebuffer to currentTexture for next frame
     gl.bindFramebuffer(gl.FRAMEBUFFER, imagePass.framebuffer);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, imagePass.currentTexture, 0);
-
-    // Check for GL errors on first few frames
-    if (frame < 3) {
-      const err = gl.getError();
-      if (err !== gl.NO_ERROR) console.error('GL Error after blit:', err);
-    }
   }
 
   frame++;
