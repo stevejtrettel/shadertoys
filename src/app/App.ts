@@ -1439,15 +1439,20 @@ function createProgram(fragSource) {
   return program;
 }
 
-// Create render target
-function createRenderTarget(w, h) {
+// Create texture for render target
+function createRenderTexture(w, h) {
   const tex = gl.createTexture();
   gl.bindTexture(gl.TEXTURE_2D, tex);
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, w, h, 0, gl.RGBA, gl.FLOAT, null);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  return tex;
+}
+
+// Create framebuffer attached to a texture
+function createFramebuffer(tex) {
   const fb = gl.createFramebuffer();
   gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
   gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
@@ -1455,7 +1460,7 @@ function createRenderTarget(w, h) {
   if (status !== gl.FRAMEBUFFER_COMPLETE) {
     console.error('Framebuffer not complete:', status);
   }
-  return { texture: tex, framebuffer: fb };
+  return fb;
 }
 
 // Initialize passes
@@ -1481,16 +1486,19 @@ const runtimePasses = PASSES.map(pass => {
   const fragSource = FRAGMENT_PREAMBLE + (COMMON_SOURCE ? '\\n// Common\\n' + COMMON_SOURCE + '\\n' : '') + '\\n// User code\\n' + pass.source + FRAGMENT_SUFFIX;
   const program = createProgram(fragSource);
   console.log('  Program created for', pass.name);
-  const current = createRenderTarget(width, height);
-  console.log('  Current RT created, FB status:', gl.checkFramebufferStatus(gl.FRAMEBUFFER));
-  const previous = createRenderTarget(width, height);
-  console.log('  Previous RT created, FB status:', gl.checkFramebufferStatus(gl.FRAMEBUFFER));
+  // Create two textures for ping-pong
+  const currentTexture = createRenderTexture(width, height);
+  const previousTexture = createRenderTexture(width, height);
+  // Create ONE framebuffer (attached to currentTexture initially)
+  const framebuffer = createFramebuffer(currentTexture);
+  console.log('  Pass created, FB status:', gl.checkFramebufferStatus(gl.FRAMEBUFFER));
   return {
     name: pass.name,
     channels: pass.channels,
     program,
-    current,
-    previous,
+    framebuffer,
+    currentTexture,
+    previousTexture,
     uniforms: {
       iResolution: gl.getUniformLocation(program, 'iResolution'),
       iTime: gl.getUniformLocation(program, 'iTime'),
@@ -1536,16 +1544,18 @@ new ResizeObserver(() => {
   lastWidth = width = canvas.width = newWidth;
   lastHeight = height = canvas.height = newHeight;
   runtimePasses.forEach(p => {
-    [p.current, p.previous].forEach(rt => {
-      gl.bindTexture(gl.TEXTURE_2D, rt.texture);
+    // Resize both textures
+    [p.currentTexture, p.previousTexture].forEach(tex => {
+      gl.bindTexture(gl.TEXTURE_2D, tex);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, width, height, 0, gl.RGBA, gl.FLOAT, null);
-      // Validate framebuffer after resize
-      gl.bindFramebuffer(gl.FRAMEBUFFER, rt.framebuffer);
-      const status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
-      if (status !== gl.FRAMEBUFFER_COMPLETE) {
-        console.error('Framebuffer incomplete after resize:', status);
-      }
     });
+    // Re-attach framebuffer to currentTexture
+    gl.bindFramebuffer(gl.FRAMEBUFFER, p.framebuffer);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, p.currentTexture, 0);
+    const status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+    if (status !== gl.FRAMEBUFFER_COMPLETE) {
+      console.error('Framebuffer incomplete after resize:', status);
+    }
   });
   frame = 0;
   startTime = performance.now() / 1000;  // Reset time too
@@ -1578,7 +1588,7 @@ function render(now) {
 
   runtimePasses.forEach(pass => {
     gl.useProgram(pass.program);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, pass.current.framebuffer);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, pass.framebuffer);
     gl.viewport(0, 0, width, height);
 
     // Bind uniforms
@@ -1612,18 +1622,10 @@ function render(now) {
         gl.bindTexture(gl.TEXTURE_2D, proceduralTex);
       } else if (['BufferA', 'BufferB', 'BufferC', 'BufferD', 'Image'].includes(ch)) {
         const srcPass = findPass(ch);
+        gl.bindTexture(gl.TEXTURE_2D, srcPass ? srcPass.previousTexture : blackTex);
         if (frame < 2) {
-          console.log('  ', pass.name, 'ch'+i, '=', ch, srcPass ? 'FOUND' : 'NOT FOUND');
-          // Debug: verify we're binding the right texture by reading from it
-          if (srcPass) {
-            gl.bindFramebuffer(gl.FRAMEBUFFER, srcPass.previous.framebuffer);
-            const testPixels = new Float32Array(4);
-            gl.readPixels(Math.floor(width/2), Math.floor(height/2), 1, 1, gl.RGBA, gl.FLOAT, testPixels);
-            console.log('    Binding', ch, 'previous texture, center pixel:', testPixels[0].toFixed(3), testPixels[1].toFixed(3), testPixels[2].toFixed(3), testPixels[3].toFixed(3));
-            gl.bindFramebuffer(gl.FRAMEBUFFER, pass.current.framebuffer);  // Restore
-          }
+          console.log('  ', pass.name, 'ch'+i, '=', ch, 'uniformLoc:', pass.uniforms.iChannel[i]);
         }
-        gl.bindTexture(gl.TEXTURE_2D, srcPass ? srcPass.previous.texture : blackTex);
       } else {
         gl.bindTexture(gl.TEXTURE_2D, blackTex);
       }
@@ -1631,7 +1633,6 @@ function render(now) {
     });
 
     gl.drawArrays(gl.TRIANGLES, 0, 3);
-    gl.finish();  // Force GPU sync before reading/using this texture
 
     // Debug: read center pixel after rendering each pass
     if (frame < 3) {
@@ -1640,16 +1641,25 @@ function render(now) {
       console.log('  After', pass.name, 'render - center pixel:', pixels[0].toFixed(3), pixels[1].toFixed(3), pixels[2].toFixed(3), pixels[3].toFixed(3));
     }
 
-    // Swap buffers
-    [pass.current, pass.previous] = [pass.previous, pass.current];
+    // Swap textures (like the working engine does)
+    const temp = pass.currentTexture;
+    pass.currentTexture = pass.previousTexture;
+    pass.previousTexture = temp;
+
+    // Re-attach framebuffer to new currentTexture
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, pass.currentTexture, 0);
   });
 
   // Blit Image pass to screen
   const imagePass = findPass('Image');
   if (imagePass) {
+    // After swap, previousTexture contains what we just rendered
+    // We need to temporarily attach it to read from it
+    gl.bindFramebuffer(gl.FRAMEBUFFER, imagePass.framebuffer);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, imagePass.previousTexture, 0);
+
     // Debug: read pixels from Image render target to verify content
     if (frame < 3) {
-      gl.bindFramebuffer(gl.FRAMEBUFFER, imagePass.previous.framebuffer);
       const pixels = new Float32Array(4);
       gl.readPixels(Math.floor(width/2), Math.floor(height/2), 1, 1, gl.RGBA, gl.FLOAT, pixels);
       console.log('Frame', frame, 'Image center pixel:', pixels[0].toFixed(3), pixels[1].toFixed(3), pixels[2].toFixed(3), pixels[3].toFixed(3));
@@ -1661,9 +1671,13 @@ function render(now) {
     gl.clearColor(0, 0, 0, 1);
     gl.clear(gl.COLOR_BUFFER_BIT);
 
-    gl.bindFramebuffer(gl.READ_FRAMEBUFFER, imagePass.previous.framebuffer);
+    gl.bindFramebuffer(gl.READ_FRAMEBUFFER, imagePass.framebuffer);
     gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null);
     gl.blitFramebuffer(0, 0, width, height, 0, 0, width, height, gl.COLOR_BUFFER_BIT, gl.NEAREST);
+
+    // Restore framebuffer to currentTexture for next frame
+    gl.bindFramebuffer(gl.FRAMEBUFFER, imagePass.framebuffer);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, imagePass.currentTexture, 0);
 
     // Check for GL errors on first few frames
     if (frame < 3) {
