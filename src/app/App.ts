@@ -1612,7 +1612,17 @@ function render(now) {
         gl.bindTexture(gl.TEXTURE_2D, proceduralTex);
       } else if (['BufferA', 'BufferB', 'BufferC', 'BufferD', 'Image'].includes(ch)) {
         const srcPass = findPass(ch);
-        if (frame < 2) console.log('  ', pass.name, 'ch'+i, '=', ch, srcPass ? 'FOUND' : 'NOT FOUND');
+        if (frame < 2) {
+          console.log('  ', pass.name, 'ch'+i, '=', ch, srcPass ? 'FOUND' : 'NOT FOUND');
+          // Debug: verify we're binding the right texture by reading from it
+          if (srcPass) {
+            gl.bindFramebuffer(gl.FRAMEBUFFER, srcPass.previous.framebuffer);
+            const testPixels = new Float32Array(4);
+            gl.readPixels(Math.floor(width/2), Math.floor(height/2), 1, 1, gl.RGBA, gl.FLOAT, testPixels);
+            console.log('    Binding', ch, 'previous texture, center pixel:', testPixels[0].toFixed(3), testPixels[1].toFixed(3), testPixels[2].toFixed(3), testPixels[3].toFixed(3));
+            gl.bindFramebuffer(gl.FRAMEBUFFER, pass.current.framebuffer);  // Restore
+          }
+        }
         gl.bindTexture(gl.TEXTURE_2D, srcPass ? srcPass.previous.texture : blackTex);
       } else {
         gl.bindTexture(gl.TEXTURE_2D, blackTex);
@@ -1621,6 +1631,7 @@ function render(now) {
     });
 
     gl.drawArrays(gl.TRIANGLES, 0, 3);
+    gl.finish();  // Force GPU sync before reading/using this texture
 
     // Debug: read center pixel after rendering each pass
     if (frame < 3) {
