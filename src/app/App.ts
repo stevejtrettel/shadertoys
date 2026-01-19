@@ -1622,6 +1622,13 @@ function render(now) {
 
     gl.drawArrays(gl.TRIANGLES, 0, 3);
 
+    // Debug: read center pixel after rendering each pass
+    if (frame < 3) {
+      const pixels = new Float32Array(4);
+      gl.readPixels(Math.floor(width/2), Math.floor(height/2), 1, 1, gl.RGBA, gl.FLOAT, pixels);
+      console.log('  After', pass.name, 'render - center pixel:', pixels[0].toFixed(3), pixels[1].toFixed(3), pixels[2].toFixed(3), pixels[3].toFixed(3));
+    }
+
     // Swap buffers
     [pass.current, pass.previous] = [pass.previous, pass.current];
   });
@@ -1629,6 +1636,14 @@ function render(now) {
   // Blit Image pass to screen
   const imagePass = findPass('Image');
   if (imagePass) {
+    // Debug: read pixels from Image render target to verify content
+    if (frame < 3) {
+      gl.bindFramebuffer(gl.FRAMEBUFFER, imagePass.previous.framebuffer);
+      const pixels = new Float32Array(4);
+      gl.readPixels(Math.floor(width/2), Math.floor(height/2), 1, 1, gl.RGBA, gl.FLOAT, pixels);
+      console.log('Frame', frame, 'Image center pixel:', pixels[0].toFixed(3), pixels[1].toFixed(3), pixels[2].toFixed(3), pixels[3].toFixed(3));
+    }
+
     // Clear default framebuffer first
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.viewport(0, 0, width, height);
