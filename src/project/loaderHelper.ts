@@ -166,7 +166,7 @@ function normalizeKeyConfig(config: KeyConfig | undefined): NormalizedKeyBinding
   return bindings;
 }
 
-export async function loadDemo(
+export async function loadProject(
   demoPath: string,
   glslFiles: Record<string, () => Promise<string>>,
   jsonFiles: Record<string, () => Promise<ShadertoyConfig>>,
@@ -428,3 +428,6 @@ function normalizeChannel(channelValue: ChannelValue | undefined, texturePathToN
 
   return { kind: 'none' };
 }
+
+/** @deprecated Use loadProject instead */
+export const loadDemo = loadProject;

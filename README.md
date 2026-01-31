@@ -36,10 +36,12 @@ Open http://localhost:3000 to see your shader running.
 ```bash
 shader create <name>     # Create a new shader project
 shader dev <name>        # Run shader with live reload
-shader build <name>      # Build shader for production
+shader build <name>      # Build for production (multi-file)
+shader export <name>     # Export as standalone HTML (single file)
 shader new <name>        # Create a new shader
 shader list              # List all shaders
 shader init              # Initialize shaders in current directory
+shader --version         # Show version
 ```
 
 ## Project Structure
@@ -247,6 +249,23 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
 Supported types: `float`, `int`, `bool`, `vec2`, `vec3`, `vec4`
 
+### Common Code
+
+If multiple passes share helper functions, create a `common.glsl` file in your shader folder. It will be automatically injected into every pass:
+
+**shaders/my-shader/common.glsl:**
+```glsl
+vec3 palette(float t) {
+    return 0.5 + 0.5 * cos(6.28318 * (t + vec3(0.0, 0.33, 0.67)));
+}
+
+float sdCircle(vec2 p, float r) {
+    return length(p) - r;
+}
+```
+
+These functions are then available in `image.glsl`, `bufferA.glsl`, etc. without any imports.
+
 ## Layouts
 
 Control how the shader is displayed in `config.json`:
@@ -263,6 +282,22 @@ Control how the shader is displayed in `config.json`:
 | `default` | Centered canvas with controls |
 | `tabbed` | Tabs to switch between shader and code |
 | `split` | Side-by-side shader and code editor |
+
+## Themes
+
+Set the color theme in `config.json`:
+
+```json
+{
+  "theme": "dark"
+}
+```
+
+| Theme | Description |
+|-------|-------------|
+| `dark` | Dark background (default) |
+| `light` | Light background |
+| `system` | Follow OS preference |
 
 ## Keyboard Shortcuts
 
@@ -309,13 +344,35 @@ All standard Shadertoy uniforms are supported:
 | `iPinchDelta` | `float` | Pinch change since last frame |
 | `iPinchCenter` | `vec2` | Center point of pinch gesture |
 
-## Building for Production
+## Building & Exporting
+
+### Build for hosting
 
 ```bash
 shader build my-shader
 ```
 
-Output is in `dist/` - a single HTML file with embedded JavaScript that can be hosted anywhere.
+Outputs to `dist/<name>/` with separate files for hosting:
+```
+dist/my-shader/
+├── index.html
+├── assets/
+│   └── main.js
+```
+
+Textures and images are included in the assets folder. Suitable for deploying to any static host.
+
+### Export as standalone HTML
+
+```bash
+shader export my-shader
+```
+
+Generates a single self-contained HTML file at `dist/<name>.html` with all JavaScript and CSS inlined. No external dependencies — just open the file in a browser.
+
+You can also export from the browser: click the **+** menu and select **Export HTML** to download the current shader as a standalone file with baked-in uniform values.
+
+Note: The standalone HTML export replaces textures with a procedural grid pattern since images can't be reliably inlined. Use `shader build` if your shader relies on texture inputs.
 
 ## License
 
