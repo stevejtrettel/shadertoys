@@ -1,0 +1,14 @@
+{
+  "title": "Keyboard Input",
+  "layout": "split",
+  "controls": true,
+  "keys": {
+    "up": ["W", "ArrowUp"],
+    "down": ["S", "ArrowDown"],
+    "left": ["A", "ArrowLeft"],
+    "right": ["D", "ArrowRight"],
+    "action": "Space",
+    "debug": { "key": "G", "mode": "toggle" }
+  },
+  "Image": {}
+}

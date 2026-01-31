@@ -5,7 +5,7 @@
  * or URL parameter (?shader=name)
  */
 
-import { App, createLayout, loadDemo } from '@stevejtrettel/shader-sandbox';
+import { App, createLayout, loadProject } from '@stevejtrettel/shader-sandbox';
 import type { ShadertoyConfig, PassName } from '@stevejtrettel/shader-sandbox';
 import type { RecompileResult } from '@stevejtrettel/shader-sandbox';
 
@@ -42,7 +42,7 @@ async function main() {
     });
 
     // Load the specific shader project
-    const project = await loadDemo(`shaders/${shaderName}`, glslFiles, jsonFiles, imageFiles);
+    const project = await loadProject(`shaders/${shaderName}`, glslFiles, jsonFiles, imageFiles);
 
     console.log(`Loaded project: ${project.meta.title}`);
 

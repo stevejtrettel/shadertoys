@@ -125,6 +125,60 @@ export type UniformValue = number | boolean | number[];
 export type UniformValues = Record<string, UniformValue>;
 
 // =============================================================================
+// Keyboard Key Definitions
+// =============================================================================
+
+/**
+ * Key mode for keyboard inputs.
+ * - 'hold': 1.0 while key is held, 0.0 when released (default)
+ * - 'toggle': Flips between 0.0 and 1.0 on each press
+ */
+export type KeyMode = 'hold' | 'toggle';
+
+/**
+ * Full key definition with options.
+ */
+export interface KeyDefinitionObject {
+  /** Key or array of keys (e.g., "Space", ["A", "ArrowLeft"]) */
+  key: string | string[];
+  /** Key mode: 'hold' (default) or 'toggle' */
+  mode?: KeyMode;
+}
+
+/**
+ * Key definition in config.
+ * Can be:
+ * - A string: "Space" (single key, hold mode)
+ * - An array: ["A", "ArrowLeft"] (multiple keys OR'd, hold mode)
+ * - An object: { key: "G", mode: "toggle" } (with options)
+ */
+export type KeyDefinition = string | string[] | KeyDefinitionObject;
+
+/**
+ * Map of action names to key definitions.
+ * Example:
+ * {
+ *   "jump": "Space",
+ *   "left": ["A", "ArrowLeft"],
+ *   "debug": { "key": "G", "mode": "toggle" }
+ * }
+ */
+export type KeyConfig = Record<string, KeyDefinition>;
+
+/**
+ * Normalized key binding for engine consumption.
+ * All key definitions are normalized to this format.
+ */
+export interface NormalizedKeyBinding {
+  /** Action name (e.g., "jump", "left") */
+  name: string;
+  /** Array of key codes (e.g., [32] for Space, [65, 37] for A+ArrowLeft) */
+  keyCodes: number[];
+  /** Key mode */
+  mode: KeyMode;
+}
+
+// =============================================================================
 // Channel Definitions (JSON Config Format)
 // =============================================================================
 
@@ -238,6 +292,9 @@ export interface ShadertoyConfig {
 
   // Custom uniforms (user-defined controls)
   uniforms?: UniformDefinitions;
+
+  // Keyboard key bindings
+  keys?: KeyConfig;
 
   // Passes (at top level)
   Image?: PassConfigSimplified;
@@ -387,7 +444,13 @@ export interface ShadertoyProject {
 
   /**
    * Custom uniform definitions from config.
-   * Users must declare these uniforms in their shader code.
+   * Uniforms are auto-injected into shaders - no manual declaration needed.
    */
   uniforms: UniformDefinitions;
+
+  /**
+   * Normalized keyboard key bindings.
+   * Key uniforms are auto-injected into shaders.
+   */
+  keys: NormalizedKeyBinding[];
 }

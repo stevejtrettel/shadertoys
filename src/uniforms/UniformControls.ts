@@ -369,8 +369,8 @@ export class UniformControls {
     document.addEventListener('mouseup', onMouseUp);
 
     // Track document listeners for cleanup
-    this.documentListeners.push({ type: 'mousemove', handler: onMouseMove });
-    this.documentListeners.push({ type: 'mouseup', handler: onMouseUp });
+    this.documentListeners.push({ type: 'mousemove', handler: onMouseMove as EventListener });
+    this.documentListeners.push({ type: 'mouseup', handler: onMouseUp as EventListener });
 
     // Touch support
     const onTouchStart = (e: TouchEvent) => {
@@ -388,7 +388,7 @@ export class UniformControls {
 
     // Track document listeners for cleanup
     this.documentListeners.push({ type: 'touchmove', handler: onTouchMove as EventListener });
-    this.documentListeners.push({ type: 'touchend', handler: onMouseUp });
+    this.documentListeners.push({ type: 'touchend', handler: onMouseUp as EventListener });
 
     wrapper.appendChild(labelRow);
     wrapper.appendChild(padContainer);

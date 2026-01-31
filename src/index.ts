@@ -8,6 +8,6 @@ import './styles/base.css';
 
 export { App } from './app/App';
 export { createLayout, applyTheme } from './layouts';
-export { loadDemo } from './project/loaderHelper';
+export { loadProject, loadDemo } from './project/loaderHelper';
 export type { ShadertoyProject, ShadertoyConfig, PassName, ThemeMode } from './project/types';
 export type { RecompileResult, BaseLayout, LayoutMode, LayoutOptions, RecompileHandler, UniformChangeHandler } from './layouts/types';
