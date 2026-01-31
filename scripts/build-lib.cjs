@@ -50,40 +50,30 @@ try {
     stdio: 'inherit'
   });
 
-  // Copy CSS files
+  // Copy all CSS files from src/ to dist-lib/, preserving directory structure
   console.log('Copying CSS files...');
-  const cssFiles = [
-    'src/app/app.css',
-    'src/styles/base.css',
-    'src/styles/embed.css',
-    'src/layouts/default.css',
-    'src/layouts/fullscreen.css',
-    'src/layouts/split.css',
-    'src/layouts/tabbed.css',
-    'src/controls/controls.css',
-    'src/editor/editor-panel.css',
-    'src/editor/prism-editor.css'
-  ];
+  const srcDir = path.join(ROOT, 'src');
 
-  const appDir = path.join(DIST_LIB, 'app');
-  const stylesDir = path.join(DIST_LIB, 'styles');
-  const layoutsDir = path.join(DIST_LIB, 'layouts');
-  const controlsDir = path.join(DIST_LIB, 'controls');
-  const editorDir = path.join(DIST_LIB, 'editor');
-
-  fs.mkdirSync(appDir, { recursive: true });
-  fs.mkdirSync(stylesDir, { recursive: true });
-  fs.mkdirSync(layoutsDir, { recursive: true });
-  fs.mkdirSync(controlsDir, { recursive: true });
-  fs.mkdirSync(editorDir, { recursive: true });
-
-  for (const cssFile of cssFiles) {
-    const src = path.join(ROOT, cssFile);
-    if (fs.existsSync(src)) {
-      const destDir = path.dirname(path.join(DIST_LIB, cssFile.replace('src/', '')));
-      fs.mkdirSync(destDir, { recursive: true });
-      fs.copyFileSync(src, path.join(DIST_LIB, cssFile.replace('src/', '')));
+  function findCssFiles(dir) {
+    const results = [];
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      const fullPath = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        results.push(...findCssFiles(fullPath));
+      } else if (entry.name.endsWith('.css')) {
+        results.push(fullPath);
+      }
     }
+    return results;
+  }
+
+  const cssFiles = findCssFiles(srcDir);
+  for (const cssFile of cssFiles) {
+    const relativePath = path.relative(srcDir, cssFile);
+    const destPath = path.join(DIST_LIB, relativePath);
+    fs.mkdirSync(path.dirname(destPath), { recursive: true });
+    fs.copyFileSync(cssFile, destPath);
   }
 
   // Clean up temporary tsconfig
