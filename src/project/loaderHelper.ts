@@ -155,7 +155,7 @@ async function loadSinglePass(
       },
     },
     textures: [],
-    uniforms: {},
+    uniforms: configOverrides?.uniforms ?? {},
     script: await loadScript(demoPath, scriptFiles),
   };
 }

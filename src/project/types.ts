@@ -85,6 +85,12 @@ export interface Vec3UniformDefinition extends UniformDefinitionBase {
   value: [number, number, number];
   /** If true, use color picker UI. Otherwise use 3 sliders. */
   color?: boolean;
+  /** Per-component min (default: [0, 0, 0]) */
+  min?: [number, number, number];
+  /** Per-component max (default: [1, 1, 1]) */
+  max?: [number, number, number];
+  /** Per-component step (default: [0.01, 0.01, 0.01]) */
+  step?: [number, number, number];
 }
 
 /**
@@ -95,6 +101,12 @@ export interface Vec4UniformDefinition extends UniformDefinitionBase {
   value: [number, number, number, number];
   /** If true, use color picker with alpha. Otherwise use 4 sliders. */
   color?: boolean;
+  /** Per-component min (default: [0, 0, 0, 0]) */
+  min?: [number, number, number, number];
+  /** Per-component max (default: [1, 1, 1, 1]) */
+  max?: [number, number, number, number];
+  /** Per-component step (default: [0.01, 0.01, 0.01, 0.01]) */
+  step?: [number, number, number, number];
 }
 
 /**

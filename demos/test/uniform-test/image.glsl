@@ -1,13 +1,6 @@
 // Uniform Controls Test Shader
 // Demonstrates all uniform types: float, int, bool, vec2, vec3
-
-// Custom uniforms - declare all types
-uniform float uSpeed;
-uniform float uScale;
-uniform int uRings;
-uniform bool uAnimate;
-uniform vec3 uColor;
-uniform vec2 uOffset;
+// Custom uniforms are auto-declared from config.json
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // Normalized pixel coordinates (from 0 to 1)

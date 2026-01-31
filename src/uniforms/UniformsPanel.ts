@@ -7,7 +7,7 @@
 
 import './uniforms-panel.css';
 
-import { UniformDefinitions, UniformValue, UniformValues, isArrayUniform } from '../project/types';
+import { UniformDefinitions, UniformValue, UniformValues } from '../project/types';
 import { UniformControls } from './UniformControls';
 
 export interface UniformsPanelOptions {
@@ -28,21 +28,10 @@ export class UniformsPanel {
   private panel: HTMLElement;
   private toggleButton: HTMLElement;
   private controls: UniformControls | null = null;
-  private uniforms: UniformDefinitions;
-  private onChange: (name: string, value: UniformValue) => void;
-  private values: UniformValues = {};
   private isOpen: boolean;
 
   constructor(opts: UniformsPanelOptions) {
-    this.uniforms = opts.uniforms;
-    this.onChange = opts.onChange;
     this.isOpen = opts.startOpen ?? false;
-
-    // Initialize values
-    for (const [name, def] of Object.entries(this.uniforms)) {
-      if (isArrayUniform(def)) continue;
-      this.values[name] = opts.initialValues?.[name] ?? def.value;
-    }
 
     // Create wrapper for both toggle button and panel
     this.wrapper = document.createElement('div');
@@ -73,7 +62,7 @@ export class UniformsPanel {
     this.panel.className = 'uniforms-panel';
 
     // Only create content if there are uniforms
-    if (Object.keys(this.uniforms).length === 0) {
+    if (Object.keys(opts.uniforms).length === 0) {
       this.wrapper.style.display = 'none';
       opts.container.appendChild(this.wrapper);
       return;
@@ -104,12 +93,9 @@ export class UniformsPanel {
     // Create uniform controls
     this.controls = new UniformControls({
       container: content,
-      uniforms: this.uniforms,
-      initialValues: this.values,
-      onChange: (name: string, value: UniformValue) => {
-        this.values[name] = value;
-        this.onChange(name, value);
-      },
+      uniforms: opts.uniforms,
+      initialValues: opts.initialValues,
+      onChange: opts.onChange,
     });
 
     this.wrapper.appendChild(this.panel);
@@ -127,26 +113,16 @@ export class UniformsPanel {
    * Update a uniform value from external source.
    */
   setValue(name: string, value: UniformValue): void {
-    this.values[name] = value;
     this.controls?.setValue(name, value);
-  }
-
-  /**
-   * Get current uniform values.
-   */
-  getValues(): UniformValues {
-    return { ...this.values };
   }
 
   /**
    * Show the panel.
    */
   show(): void {
-    if (Object.keys(this.uniforms).length > 0) {
-      this.isOpen = true;
-      this.toggleButton.classList.add('hidden');
-      this.panel.classList.remove('closed');
-    }
+    this.isOpen = true;
+    this.toggleButton.classList.add('hidden');
+    this.panel.classList.remove('closed');
   }
 
   /**

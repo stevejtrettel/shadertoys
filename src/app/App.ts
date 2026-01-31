@@ -1332,8 +1332,19 @@ export class App {
       channels: p.channels,
     }));
 
-    // Build uniform initialization code
-    const uniformInits = Object.entries(uniforms).map(([name, def]) => {
+    // Warn about array uniforms (not supported in export)
+    const isArray = (def: { type: string; value?: unknown }) => 'count' in def;
+    const arrayUniformNames = Object.entries(uniforms)
+      .filter(([, def]) => isArray(def))
+      .map(([name]) => name);
+    if (arrayUniformNames.length > 0) {
+      console.warn(
+        `HTML export: array uniforms not supported, skipping: ${arrayUniformNames.join(', ')}`
+      );
+    }
+
+    // Build uniform initialization code (scalar only)
+    const uniformInits = Object.entries(uniforms).filter(([, def]) => !isArray(def)).map(([name, def]) => {
       const value = uniformValues[name] ?? def.value;
       if (def.type === 'float' || def.type === 'int') {
         return `  '${name}': ${value},`;
@@ -1352,8 +1363,8 @@ export class App {
       return '';
     }).filter(Boolean).join('\n');
 
-    // Build uniform declarations for shaders
-    const uniformDeclarations = Object.entries(uniforms).map(([name, def]) => {
+    // Build uniform declarations for shaders (scalar only)
+    const uniformDeclarations = Object.entries(uniforms).filter(([, def]) => !isArray(def)).map(([name, def]) => {
       if (def.type === 'float') return `uniform float ${name};`;
       if (def.type === 'int') return `uniform int ${name};`;
       if (def.type === 'bool') return `uniform int ${name};`; // GLSL ES doesn't have bool uniforms

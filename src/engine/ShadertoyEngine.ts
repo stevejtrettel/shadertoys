@@ -21,7 +21,7 @@ import {
 } from '../project/types';
 
 import { UniformStore } from '../uniforms/UniformStore';
-import { std140ByteSize, packStd140, glslTypeName } from './std140';
+import { std140ByteSize, tightFloatCount, packStd140, glslTypeName } from './std140';
 
 import {
   EngineOptions,
@@ -177,6 +177,7 @@ export class ShadertoyEngine {
   private initUBOs(): void {
     const gl = this.gl;
     const maxSize = gl.getParameter(gl.MAX_UNIFORM_BLOCK_SIZE) as number;
+    const maxBindings = gl.getParameter(gl.MAX_UNIFORM_BUFFER_BINDINGS) as number;
     let bindingPoint = 0;
 
     for (const [name, def] of Object.entries(this.project.uniforms)) {
@@ -196,6 +197,13 @@ export class ShadertoyEngine {
       gl.bindBuffer(gl.UNIFORM_BUFFER, buffer);
       gl.bufferData(gl.UNIFORM_BUFFER, byteSize, gl.DYNAMIC_DRAW);
       gl.bindBuffer(gl.UNIFORM_BUFFER, null);
+
+      // Check binding point limit
+      if (bindingPoint >= maxBindings) {
+        throw new Error(
+          `Too many array uniforms: binding point ${bindingPoint} exceeds GL MAX_UNIFORM_BUFFER_BINDINGS (${maxBindings})`
+        );
+      }
 
       // Bind to a binding point
       gl.bindBufferBase(gl.UNIFORM_BUFFER, bindingPoint, buffer);
@@ -288,13 +296,43 @@ export class ShadertoyEngine {
    * For array uniforms (UBOs), the data is packed to std140 and uploaded on next bind.
    */
   setUniformValue(name: string, value: UniformValue): void {
+    const def = this.project.uniforms[name];
+    if (!def) {
+      console.warn(`setUniformValue('${name}'): uniform not defined in config`);
+      return;
+    }
+
+    // Validate scalar uniform types
+    if (!isArrayUniform(def)) {
+      const t = def.type;
+      if ((t === 'float' || t === 'int') && typeof value !== 'number') {
+        console.warn(`setUniformValue('${name}'): expected number for ${t}, got ${typeof value}`);
+        return;
+      }
+      if (t === 'bool' && typeof value !== 'boolean') {
+        console.warn(`setUniformValue('${name}'): expected boolean, got ${typeof value}`);
+        return;
+      }
+      if ((t === 'vec2' || t === 'vec3' || t === 'vec4') && !Array.isArray(value)) {
+        console.warn(`setUniformValue('${name}'): expected array for ${t}, got ${typeof value}`);
+        return;
+      }
+    }
+
     this._uniforms.set(name, value);
 
     // If this is an array uniform, pack and mark dirty
-    const def = this.project.uniforms[name];
-    if (def && isArrayUniform(def)) {
+    if (isArrayUniform(def)) {
       const ubo = this._ubos.find(u => u.name === name);
       if (ubo && value instanceof Float32Array) {
+        const expectedLength = tightFloatCount(def.type, def.count);
+        if (value.length !== expectedLength) {
+          console.warn(
+            `setUniformValue('${name}'): expected Float32Array of length ${expectedLength} ` +
+            `(${def.count} × ${def.type}), got ${value.length}`
+          );
+          return;
+        }
         const packed = packStd140(def.type, def.count, value, ubo.paddedData);
         // Fast-path types (vec4, mat4) return input directly; copy into paddedData
         if (packed !== ubo.paddedData) {
@@ -309,7 +347,11 @@ export class ShadertoyEngine {
    * Set multiple custom uniform values at once.
    */
   setUniformValues(values: Partial<UniformValues>): void {
-    this._uniforms.setAll(values);
+    for (const [name, value] of Object.entries(values)) {
+      if (value !== undefined) {
+        this.setUniformValue(name, value);
+      }
+    }
   }
 
   /**
@@ -973,6 +1015,18 @@ uniform vec2  iPinchCenter;         // Center point of pinch gesture
       parts.push(`layout(std140) uniform _ub_${ubo.name} {`);
       parts.push(`  ${glslTypeName(ubo.def.type)} ${ubo.name}[${ubo.def.count}];`);
       parts.push(`};`);
+      parts.push('');
+    }
+
+    // Scalar custom uniforms - auto-injected so user doesn't need to declare them
+    const scalarUniforms = Object.entries(this.project.uniforms)
+      .filter(([, def]) => !isArrayUniform(def));
+    if (scalarUniforms.length > 0) {
+      parts.push('// Custom uniforms');
+      for (const [name, def] of scalarUniforms) {
+        const glslType = def.type === 'bool' ? 'bool' : def.type;
+        parts.push(`uniform ${glslType} ${name};`);
+      }
       parts.push('');
     }
 
