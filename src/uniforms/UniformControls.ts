@@ -17,6 +17,8 @@ import {
   BoolUniformDefinition,
   Vec2UniformDefinition,
   Vec3UniformDefinition,
+  Vec4UniformDefinition,
+  isArrayUniform,
 } from '../project/types';
 
 export interface UniformControlsOptions {
@@ -47,6 +49,7 @@ export class UniformControls {
 
     // Initialize values
     for (const [name, def] of Object.entries(this.uniforms)) {
+      if (isArrayUniform(def)) continue;
       this.values[name] = opts.initialValues?.[name] ?? def.value;
     }
 
@@ -88,6 +91,7 @@ export class UniformControls {
     controlList.className = 'uniform-controls-list';
 
     for (const [name, def] of uniformEntries) {
+      if (isArrayUniform(def)) continue; // No UI for array uniforms (UBOs)
       const control = this.createControl(name, def);
       if (control) {
         this.controlElements.set(name, control);
@@ -102,6 +106,7 @@ export class UniformControls {
    * Create a control element for a uniform.
    */
   private createControl(name: string, def: UniformDefinition): HTMLElement | null {
+    if (isArrayUniform(def)) return null;
     switch (def.type) {
       case 'float':
         return this.createFloatSlider(name, def);
@@ -114,9 +119,7 @@ export class UniformControls {
       case 'vec3':
         return def.color ? this.createColorPicker(name, def) : this.createVec3Sliders(name, def);
       case 'vec4':
-        // vec4 color picker would need alpha - for now fall through to null
-        console.warn(`Uniform '${name}': vec4 type not yet supported`);
-        return null;
+        return this.createVec4Sliders(name, def);
       default:
         console.warn(`Uniform '${name}': unknown type '${(def as any).type}'`);
         return null;
@@ -512,6 +515,61 @@ export class UniformControls {
   }
 
   // ===========================================================================
+  // Vec4 Sliders
+  // ===========================================================================
+
+  private createVec4Sliders(name: string, def: Vec4UniformDefinition): HTMLElement {
+    const value = this.values[name] as number[];
+    const label = def.label ?? name;
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'uniform-control uniform-control-vec4';
+
+    // Label
+    const labelEl = document.createElement('div');
+    labelEl.className = 'uniform-control-label';
+    labelEl.textContent = label;
+    wrapper.appendChild(labelEl);
+
+    // Four sliders for X, Y, Z, W
+    const components = ['X', 'Y', 'Z', 'W'];
+    components.forEach((comp, i) => {
+      const sliderRow = document.createElement('div');
+      sliderRow.className = 'uniform-control-vec-slider-row';
+
+      const compLabel = document.createElement('span');
+      compLabel.className = 'uniform-control-vec-component';
+      compLabel.textContent = comp;
+
+      const slider = document.createElement('input');
+      slider.type = 'range';
+      slider.className = 'uniform-control-slider uniform-control-vec-slider';
+      slider.min = '0';
+      slider.max = '1';
+      slider.step = '0.01';
+      slider.value = String(value[i]);
+
+      const valueDisplay = document.createElement('span');
+      valueDisplay.className = 'uniform-control-value uniform-control-vec-value';
+      valueDisplay.textContent = value[i].toFixed(2);
+
+      slider.addEventListener('input', () => {
+        const currentValue = this.values[name] as number[];
+        currentValue[i] = parseFloat(slider.value);
+        valueDisplay.textContent = currentValue[i].toFixed(2);
+        this.onChange(name, [...currentValue]);
+      });
+
+      sliderRow.appendChild(compLabel);
+      sliderRow.appendChild(slider);
+      sliderRow.appendChild(valueDisplay);
+      wrapper.appendChild(sliderRow);
+    });
+
+    return wrapper;
+  }
+
+  // ===========================================================================
   // Utility Methods
   // ===========================================================================
 
@@ -559,6 +617,7 @@ export class UniformControls {
     if (!control) return;
 
     const def = this.uniforms[name];
+    if (isArrayUniform(def)) return;
 
     switch (def.type) {
       case 'float': {
@@ -625,6 +684,18 @@ export class UniformControls {
         }
         break;
       }
+      case 'vec4': {
+        const sliders = control.querySelectorAll('.uniform-control-vec-slider') as NodeListOf<HTMLInputElement>;
+        const valueDisplays = control.querySelectorAll('.uniform-control-vec-value') as NodeListOf<HTMLSpanElement>;
+        const v = value as number[];
+        sliders.forEach((slider, i) => {
+          slider.value = String(v[i]);
+          if (valueDisplays[i]) {
+            valueDisplays[i].textContent = v[i].toFixed(2);
+          }
+        });
+        break;
+      }
     }
   }
 
@@ -633,6 +704,7 @@ export class UniformControls {
    */
   resetToDefaults(): void {
     for (const [name, def] of Object.entries(this.uniforms)) {
+      if (isArrayUniform(def)) continue;
       this.setValue(name, def.value);
       this.onChange(name, def.value);
     }

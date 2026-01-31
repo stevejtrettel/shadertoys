@@ -9,6 +9,7 @@ import {
   PassName,
   ChannelValue,
   ChannelJSONObject,
+  DemoScriptHooks,
 } from './types';
 
 /**
@@ -59,7 +60,8 @@ export async function loadDemo(
   demoPath: string,
   glslFiles: Record<string, () => Promise<string>>,
   jsonFiles: Record<string, () => Promise<ShadertoyConfig>>,
-  imageFiles: Record<string, () => Promise<string>>
+  imageFiles: Record<string, () => Promise<string>>,
+  scriptFiles?: Record<string, () => Promise<any>>
 ): Promise<ShadertoyProject> {
   // Normalize path - handle both "./path" and "path" formats
   const normalizedPath = demoPath.startsWith('./') ? demoPath : `./${demoPath}`;
@@ -72,20 +74,42 @@ export async function loadDemo(
                            config.BufferC || config.BufferD;
 
     if (hasPassConfigs) {
-      return loadWithConfig(normalizedPath, config, glslFiles, imageFiles);
+      return loadWithConfig(normalizedPath, config, glslFiles, imageFiles, scriptFiles);
     } else {
       // Config with only settings (layout, controls, etc.) but no passes
-      return loadSinglePass(normalizedPath, glslFiles, config);
+      return loadSinglePass(normalizedPath, glslFiles, config, scriptFiles);
     }
   } else {
-    return loadSinglePass(normalizedPath, glslFiles);
+    return loadSinglePass(normalizedPath, glslFiles, undefined, scriptFiles);
   }
+}
+
+/**
+ * Load script.js from a demo folder if present.
+ */
+async function loadScript(
+  demoPath: string,
+  scriptFiles?: Record<string, () => Promise<any>>
+): Promise<DemoScriptHooks | null> {
+  if (!scriptFiles) return null;
+
+  const scriptPath = `${demoPath}/script.js`;
+  const actualPath = findFileCaseInsensitive(scriptFiles, scriptPath);
+  if (!actualPath) return null;
+
+  const mod = await scriptFiles[actualPath]();
+  const hooks: DemoScriptHooks = {};
+  if (typeof mod.setup === 'function') hooks.setup = mod.setup;
+  if (typeof mod.onFrame === 'function') hooks.onFrame = mod.onFrame;
+
+  return (hooks.setup || hooks.onFrame) ? hooks : null;
 }
 
 async function loadSinglePass(
   demoPath: string,
   glslFiles: Record<string, () => Promise<string>>,
-  configOverrides?: Partial<ShadertoyConfig>
+  configOverrides?: Partial<ShadertoyConfig>,
+  scriptFiles?: Record<string, () => Promise<any>>
 ): Promise<ShadertoyProject> {
   const imagePath = `${demoPath}/image.glsl`;
   const actualImagePath = findFileCaseInsensitive(glslFiles, imagePath);
@@ -132,6 +156,7 @@ async function loadSinglePass(
     },
     textures: [],
     uniforms: {},
+    script: await loadScript(demoPath, scriptFiles),
   };
 }
 
@@ -139,7 +164,8 @@ async function loadWithConfig(
   demoPath: string,
   config: ShadertoyConfig,
   glslFiles: Record<string, () => Promise<string>>,
-  imageFiles: Record<string, () => Promise<string>>
+  imageFiles: Record<string, () => Promise<string>>,
+  scriptFiles?: Record<string, () => Promise<any>>
 ): Promise<ShadertoyProject> {
 
   // Extract pass configs from top level
@@ -167,8 +193,13 @@ async function loadWithConfig(
     }
   }
 
-  // Collect all texture paths
-  const texturePathsSet = new Set<string>();
+  // Collect all texture references with their config options
+  interface TextureRef {
+    path: string;
+    filter: 'nearest' | 'linear';
+    wrap: 'clamp' | 'repeat';
+  }
+  const textureRefs = new Map<string, TextureRef>();
   const passOrder = ['Image', 'BufferA', 'BufferB', 'BufferC', 'BufferD'] as const;
 
   for (const passName of passOrder) {
@@ -181,7 +212,14 @@ async function loadWithConfig(
 
       const parsed = parseChannelValue(channelValue);
       if (parsed && 'texture' in parsed) {
-        texturePathsSet.add(parsed.texture);
+        // Only store the first reference's options (deduplicated by path)
+        if (!textureRefs.has(parsed.texture)) {
+          textureRefs.set(parsed.texture, {
+            path: parsed.texture,
+            filter: parsed.filter ?? 'linear',
+            wrap: parsed.wrap ?? 'repeat',
+          });
+        }
       }
     }
   }
@@ -190,7 +228,7 @@ async function loadWithConfig(
   const textures: any[] = [];
   const texturePathToName = new Map<string, string>();
 
-  for (const texturePath of texturePathsSet) {
+  for (const [texturePath, ref] of textureRefs) {
     const fullPath = `${demoPath}/${texturePath.replace(/^\.\//, '')}`;
     const actualPath = findFileCaseInsensitive(imageFiles, fullPath);
 
@@ -204,10 +242,10 @@ async function loadWithConfig(
 
     textures.push({
       name: textureName,
-      filename: textureFilename,  // Preserve original filename for display
+      filename: textureFilename,
       source: imageUrl,
-      filter: 'linear' as const,
-      wrap: 'repeat' as const,
+      filter: ref.filter,
+      wrap: ref.wrap,
     });
 
     texturePathToName.set(texturePath, textureName);
@@ -278,6 +316,7 @@ async function loadWithConfig(
     passes,
     textures,
     uniforms: config.uniforms ?? {},
+    script: await loadScript(demoPath, scriptFiles),
   };
 }
 

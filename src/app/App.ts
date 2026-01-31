@@ -12,9 +12,50 @@
 import './app.css';
 
 import { ShadertoyEngine } from '../engine/ShadertoyEngine';
-import { ShadertoyProject } from '../project/types';
+import { ShadertoyProject, ScriptEngineAPI } from '../project/types';
 import { UniformsPanel } from '../uniforms/UniformsPanel';
 import { AppOptions, MouseState, TouchState, PointerData } from './types';
+
+// Map from KeyboardEvent.code to Shadertoy-compatible ASCII keycodes (0-255).
+// This replaces the deprecated e.keyCode property.
+const CODE_TO_ASCII: Record<string, number> = {};
+// Letters: KeyA-KeyZ -> 65-90
+for (let i = 0; i < 26; i++) {
+  CODE_TO_ASCII[`Key${String.fromCharCode(65 + i)}`] = 65 + i;
+}
+// Digits: Digit0-Digit9 -> 48-57
+for (let i = 0; i < 10; i++) {
+  CODE_TO_ASCII[`Digit${i}`] = 48 + i;
+}
+// Function keys: F1-F12 -> 112-123
+for (let i = 1; i <= 12; i++) {
+  CODE_TO_ASCII[`F${i}`] = 111 + i;
+}
+// Common keys
+Object.assign(CODE_TO_ASCII, {
+  Backspace: 8, Tab: 9, Enter: 13, ShiftLeft: 16, ShiftRight: 16,
+  ControlLeft: 17, ControlRight: 17, AltLeft: 18, AltRight: 18,
+  Pause: 19, CapsLock: 20, Escape: 27, Space: 32,
+  PageUp: 33, PageDown: 34, End: 35, Home: 36,
+  ArrowLeft: 37, ArrowUp: 38, ArrowRight: 39, ArrowDown: 40,
+  Insert: 45, Delete: 46,
+  NumLock: 144, ScrollLock: 145,
+  Semicolon: 186, Equal: 187, Comma: 188, Minus: 189,
+  Period: 190, Slash: 191, Backquote: 192,
+  BracketLeft: 219, Backslash: 220, BracketRight: 221, Quote: 222,
+});
+
+/**
+ * Convert a KeyboardEvent to a Shadertoy-compatible ASCII keycode (0-255).
+ * Returns null if the key doesn't map to a valid code.
+ */
+function keyEventToAscii(e: KeyboardEvent): number | null {
+  const code = CODE_TO_ASCII[e.code];
+  if (code !== undefined && code >= 0 && code < 256) {
+    return code;
+  }
+  return null;
+}
 
 export class App {
   private container: HTMLElement;
@@ -81,6 +122,12 @@ export class App {
 
   // Floating uniforms panel
   private uniformsPanel: UniformsPanel | null = null;
+
+  // Script hooks API
+  private scriptAPI: ScriptEngineAPI | null = null;
+  private scriptErrorCount: number = 0;
+  private _lastOnFrameTime: number | null = null;
+  private static readonly MAX_SCRIPT_ERRORS = 10;
 
   // Recording state
   private isRecording: boolean = false;
@@ -182,6 +229,26 @@ export class App {
     // Check for compilation errors and show overlay if needed
     if (this.engine.hasErrors()) {
       this.showErrorOverlay(this.engine.getCompilationErrors());
+    }
+
+    // Initialize script API and run setup hook
+    if (this.project.script) {
+      // eslint-disable-next-line @typescript-eslint/no-this-alias
+      const self = this;
+      this.scriptAPI = {
+        setUniformValue: (name, value) => self.engine.setUniformValue(name, value),
+        getUniformValue: (name) => self.engine.getUniformValue(name),
+        get width() { return self.engine.width; },
+        get height() { return self.engine.height; },
+      };
+
+      if (this.project.script.setup) {
+        try {
+          this.project.script.setup(this.scriptAPI);
+        } catch (e) {
+          console.error('script.js setup() threw:', e);
+        }
+      }
     }
 
     // Create floating uniforms panel (skip for 'ui' layout which has its own)
@@ -319,6 +386,22 @@ export class App {
     // Update keyboard texture with current key states
     this.engine.updateKeyboardTexture();
 
+    // Run script onFrame hook (JS computation before shader execution)
+    if (this.scriptAPI && this.project.script?.onFrame && this.scriptErrorCount < App.MAX_SCRIPT_ERRORS) {
+      const deltaTime = this._lastOnFrameTime !== null ? elapsedTime - this._lastOnFrameTime : 0;
+      try {
+        this.project.script.onFrame(this.scriptAPI, elapsedTime, deltaTime, this.totalFrameCount);
+        this.scriptErrorCount = 0; // Reset on success
+      } catch (e) {
+        this.scriptErrorCount++;
+        console.error(`script.js onFrame() threw (${this.scriptErrorCount}/${App.MAX_SCRIPT_ERRORS}):`, e);
+        if (this.scriptErrorCount >= App.MAX_SCRIPT_ERRORS) {
+          console.warn('script.js onFrame() disabled after too many errors');
+        }
+      }
+      this._lastOnFrameTime = elapsedTime;
+    }
+
     // Run engine step with mouse and touch data
     this.engine.step(elapsedTime, this.mouse, {
       count: this.touchState.count,
@@ -444,21 +527,13 @@ export class App {
   private presentToScreen(): void {
     const gl = this.gl;
 
-    const imageFramebuffer = this.engine.getImageFramebuffer();
-    if (!imageFramebuffer) {
+    // Bind the Image pass's previousTexture as read source.
+    // After the ping-pong swap, the rendered output is in previousTexture.
+    if (!this.engine.bindImageForRead()) {
       console.warn('No Image pass found');
       return;
     }
 
-    // Bind default framebuffer (screen)
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-
-    // Clear screen
-    gl.clearColor(0, 0, 0, 1);
-    gl.clear(gl.COLOR_BUFFER_BIT);
-
-    // Blit Image pass FBO to screen
-    gl.bindFramebuffer(gl.READ_FRAMEBUFFER, imageFramebuffer);
     gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null);
 
     gl.blitFramebuffer(
@@ -468,7 +543,8 @@ export class App {
       gl.NEAREST
     );
 
-    gl.bindFramebuffer(gl.READ_FRAMEBUFFER, null);
+    // Restore FBO to normal state for next frame
+    this.engine.unbindImageForRead();
   }
 
   // ===========================================================================
@@ -793,17 +869,16 @@ export class App {
   private setupKeyboardTracking(): void {
     // Track keydown events
     document.addEventListener('keydown', (e: KeyboardEvent) => {
-      // Get keycode - use e.keyCode which is the ASCII code
-      const keycode = e.keyCode;
-      if (keycode >= 0 && keycode < 256) {
+      const keycode = keyEventToAscii(e);
+      if (keycode !== null) {
         this.engine.updateKeyState(keycode, true);
       }
     });
 
     // Track keyup events
     document.addEventListener('keyup', (e: KeyboardEvent) => {
-      const keycode = e.keyCode;
-      if (keycode >= 0 && keycode < 256) {
+      const keycode = keyEventToAscii(e);
+      if (keycode !== null) {
         this.engine.updateKeyState(keycode, false);
       }
     });
@@ -1242,7 +1317,7 @@ export class App {
     title: string;
     commonSource: string | null;
     passes: Array<{ name: string; source: string; channels: string[] }>;
-    uniforms: Record<string, { type: string; value: unknown }>;
+    uniforms: Record<string, { type: string; value?: unknown }>;
     uniformValues: Record<string, unknown>;
   }): string {
     const { title, commonSource, passes, uniforms, uniformValues } = opts;

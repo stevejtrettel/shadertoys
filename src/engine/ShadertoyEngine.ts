@@ -16,9 +16,12 @@ import {
   PassName,
   UniformValue,
   UniformValues,
+  ArrayUniformDefinition,
+  isArrayUniform,
 } from '../project/types';
 
 import { UniformStore } from '../uniforms/UniformStore';
+import { std140ByteSize, packStd140, glslTypeName } from './std140';
 
 import {
   EngineOptions,
@@ -78,6 +81,18 @@ const PREAMBLE_LINE_COUNT = (FRAGMENT_PREAMBLE.match(/\n/g) || []).length;
 // ShadertoyEngine Implementation
 // =============================================================================
 
+/** Runtime state for a single UBO-backed array uniform */
+interface UBOEntry {
+  name: string;
+  def: ArrayUniformDefinition;
+  buffer: WebGLBuffer;
+  bindingPoint: number;
+  byteSize: number;
+  dirty: boolean;
+  /** Pre-allocated std140-padded buffer, reused across frames */
+  paddedData: Float32Array;
+}
+
 export class ShadertoyEngine {
   readonly project: ShadertoyProject;
   readonly gl: WebGL2RenderingContext;
@@ -111,6 +126,9 @@ export class ShadertoyEngine {
   // Custom uniform state manager (initialized in initCustomUniforms called by constructor)
   private _uniforms!: UniformStore;
 
+  // UBO-backed array uniforms
+  private _ubos: UBOEntry[] = [];
+
   constructor(opts: EngineOptions) {
     this.gl = opts.gl;
     this.project = opts.project;
@@ -138,18 +156,65 @@ export class ShadertoyEngine {
     //    Real implementation would load images here.
     this.initProjectTextures();
 
-    // 5. Compile shaders + create runtime passes
-    this.initRuntimePasses();
-
-    // 6. Initialize custom uniform values from project config
+    // 5. Initialize custom uniform values and UBOs (must happen before shader compilation)
     this.initCustomUniforms();
+
+    // 6. Compile shaders + create runtime passes
+    this.initRuntimePasses();
   }
 
   /**
-   * Initialize custom uniform store from project config.
+   * Initialize custom uniform store and UBOs from project config.
    */
   private initCustomUniforms(): void {
     this._uniforms = new UniformStore(this.project.uniforms);
+    this.initUBOs();
+  }
+
+  /**
+   * Create WebGL UBO buffers for all array uniforms.
+   */
+  private initUBOs(): void {
+    const gl = this.gl;
+    const maxSize = gl.getParameter(gl.MAX_UNIFORM_BLOCK_SIZE) as number;
+    let bindingPoint = 0;
+
+    for (const [name, def] of Object.entries(this.project.uniforms)) {
+      if (!isArrayUniform(def)) continue;
+
+      const byteSize = std140ByteSize(def.type, def.count);
+      if (byteSize > maxSize) {
+        throw new Error(
+          `Array uniform '${name}' requires ${byteSize} bytes but GL MAX_UNIFORM_BLOCK_SIZE is ${maxSize}`
+        );
+      }
+
+      const buffer = gl.createBuffer();
+      if (!buffer) throw new Error(`Failed to create UBO buffer for '${name}'`);
+
+      // Allocate GPU buffer
+      gl.bindBuffer(gl.UNIFORM_BUFFER, buffer);
+      gl.bufferData(gl.UNIFORM_BUFFER, byteSize, gl.DYNAMIC_DRAW);
+      gl.bindBuffer(gl.UNIFORM_BUFFER, null);
+
+      // Bind to a binding point
+      gl.bindBufferBase(gl.UNIFORM_BUFFER, bindingPoint, buffer);
+
+      // Pre-allocate the padded data buffer
+      const paddedData = new Float32Array(byteSize / 4);
+
+      this._ubos.push({
+        name,
+        def,
+        buffer,
+        bindingPoint,
+        byteSize,
+        dirty: false,
+        paddedData,
+      });
+
+      bindingPoint++;
+    }
   }
 
   // ===========================================================================
@@ -219,10 +284,25 @@ export class ShadertoyEngine {
 
   /**
    * Set the value of a custom uniform.
-   * The value will be applied on the next render frame.
+   * For scalar uniforms, the value will be applied on the next render frame.
+   * For array uniforms (UBOs), the data is packed to std140 and uploaded on next bind.
    */
   setUniformValue(name: string, value: UniformValue): void {
     this._uniforms.set(name, value);
+
+    // If this is an array uniform, pack and mark dirty
+    const def = this.project.uniforms[name];
+    if (def && isArrayUniform(def)) {
+      const ubo = this._ubos.find(u => u.name === name);
+      if (ubo && value instanceof Float32Array) {
+        const packed = packStd140(def.type, def.count, value, ubo.paddedData);
+        // Fast-path types (vec4, mat4) return input directly; copy into paddedData
+        if (packed !== ubo.paddedData) {
+          ubo.paddedData.set(packed);
+        }
+        ubo.dirty = true;
+      }
+    }
   }
 
   /**
@@ -238,6 +318,49 @@ export class ShadertoyEngine {
   getImageFramebuffer(): WebGLFramebuffer | null {
     const imagePass = this._passes.find((p) => p.name === 'Image');
     return imagePass?.framebuffer ?? null;
+  }
+
+  /**
+   * Bind the Image pass output as the READ_FRAMEBUFFER for blitting to screen.
+   *
+   * After the ping-pong swap, the rendered output is in previousTexture,
+   * but the framebuffer is attached to currentTexture. This method temporarily
+   * attaches previousTexture so blitFramebuffer reads the correct data.
+   */
+  bindImageForRead(): boolean {
+    const gl = this.gl;
+    const imagePass = this._passes.find((p) => p.name === 'Image');
+    if (!imagePass) return false;
+
+    gl.bindFramebuffer(gl.READ_FRAMEBUFFER, imagePass.framebuffer);
+    gl.framebufferTexture2D(
+      gl.READ_FRAMEBUFFER,
+      gl.COLOR_ATTACHMENT0,
+      gl.TEXTURE_2D,
+      imagePass.previousTexture,
+      0
+    );
+    return true;
+  }
+
+  /**
+   * Restore the Image pass framebuffer to its normal state (attached to currentTexture).
+   * Call after blitting to screen.
+   */
+  unbindImageForRead(): void {
+    const gl = this.gl;
+    const imagePass = this._passes.find((p) => p.name === 'Image');
+    if (!imagePass) return;
+
+    // Restore FBO attachment to currentTexture for next frame's render
+    gl.framebufferTexture2D(
+      gl.READ_FRAMEBUFFER,
+      gl.COLOR_ATTACHMENT0,
+      gl.TEXTURE_2D,
+      imagePass.currentTexture,
+      0
+    );
+    gl.bindFramebuffer(gl.READ_FRAMEBUFFER, null);
   }
 
   /**
@@ -551,9 +674,15 @@ export class ShadertoyEngine {
       gl.deleteTexture(this._blackTexture);
     }
 
+    // Delete UBO buffers
+    for (const ubo of this._ubos) {
+      gl.deleteBuffer(ubo.buffer);
+    }
+
     // Clear arrays
     this._passes = [];
     this._textures = [];
+    this._ubos = [];
     this._keyboardTexture = null;
     this._blackTexture = null;
   }
@@ -585,10 +714,19 @@ export class ShadertoyEngine {
   private cacheUniformLocations(program: WebGLProgram): PassUniformLocations {
     const gl = this.gl;
 
-    // Cache custom uniform locations
+    // Cache custom uniform locations (skip array uniforms — they use UBOs)
     const customLocations = new Map<string, WebGLUniformLocation | null>();
-    for (const name of Object.keys(this.project.uniforms)) {
+    for (const [name, def] of Object.entries(this.project.uniforms)) {
+      if (isArrayUniform(def)) continue;
       customLocations.set(name, gl.getUniformLocation(program, name));
+    }
+
+    // Bind UBO block indices for this program
+    for (const ubo of this._ubos) {
+      const blockIndex = gl.getUniformBlockIndex(program, `_ub_${ubo.name}`);
+      if (blockIndex !== gl.INVALID_INDEX) {
+        gl.uniformBlockBinding(program, blockIndex, ubo.bindingPoint);
+      }
     }
 
     return {
@@ -829,6 +967,15 @@ uniform float iPinchDelta;          // Pinch change since last frame
 uniform vec2  iPinchCenter;         // Center point of pinch gesture
 `);
 
+    // Array uniform blocks (UBOs) - auto-injected so user doesn't need to declare them
+    for (const ubo of this._ubos) {
+      parts.push(`// Array uniform: ${ubo.name}`);
+      parts.push(`layout(std140) uniform _ub_${ubo.name} {`);
+      parts.push(`  ${glslTypeName(ubo.def.type)} ${ubo.name}[${ubo.def.count}];`);
+      parts.push(`};`);
+      parts.push('');
+    }
+
     // Preprocess user shader code to handle cubemap-style texture sampling
     const processedSource = this.preprocessCubemapTextures(userSource, channels);
 
@@ -1015,7 +1162,18 @@ void main() {
   private bindCustomUniforms(uniforms: PassUniformLocations): void {
     const gl = this.gl;
 
+    // Upload dirty UBOs
+    for (const ubo of this._ubos) {
+      if (!ubo.dirty) continue;
+      gl.bindBuffer(gl.UNIFORM_BUFFER, ubo.buffer);
+      gl.bufferSubData(gl.UNIFORM_BUFFER, 0, ubo.paddedData);
+      ubo.dirty = false;
+    }
+
     for (const [name, def, value] of this._uniforms.entries()) {
+      // Skip array uniforms — they're handled via UBOs above
+      if (isArrayUniform(def)) continue;
+
       const location = uniforms.custom.get(name);
       if (!location) continue;
 

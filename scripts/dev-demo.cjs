@@ -57,12 +57,16 @@ export async function loadDemoProject() {
     import: 'default',
   });
 
+  // Script files (setup.js / script.js hooks for JS-driven computation)
+  const scriptFilesRaw = import.meta.glob<any>('/demos/${demo}/**/script.js');
+
   // Transform keys to ./ format that loadDemo expects
   const glslFiles = transformKeys(glslFilesRaw);
   const jsonFiles = transformKeys(jsonFilesRaw);
   const imageFiles = transformKeys(imageFilesRaw);
+  const scriptFiles = transformKeys(scriptFilesRaw);
 
-  return loadDemo(DEMO_NAME, glslFiles, jsonFiles, imageFiles);
+  return loadDemo(DEMO_NAME, glslFiles, jsonFiles, imageFiles, scriptFiles);
 }
 `;
 

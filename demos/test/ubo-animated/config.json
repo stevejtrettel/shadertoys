@@ -1,0 +1,12 @@
+{
+  "title": "UBO Animated Test",
+  "layout": "default",
+  "controls": false,
+  "uniforms": {
+    "positions": {
+      "type": "vec4",
+      "count": 32
+    }
+  },
+  "Image": {}
+}

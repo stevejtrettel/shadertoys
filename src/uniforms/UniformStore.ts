@@ -10,7 +10,10 @@ import {
   UniformDefinition,
   UniformValue,
   UniformValues,
+  isArrayUniform,
 } from '../project/types';
+
+import { tightFloatCount } from '../engine/std140';
 
 export class UniformStore {
   private definitions: UniformDefinitions;
@@ -26,7 +29,12 @@ export class UniformStore {
    */
   private initializeDefaults(): void {
     for (const [name, def] of Object.entries(this.definitions)) {
-      this.values[name] = this.cloneValue(def.value);
+      if (isArrayUniform(def)) {
+        // Array uniforms initialize to zeroed Float32Array
+        this.values[name] = new Float32Array(tightFloatCount(def.type, def.count));
+      } else {
+        this.values[name] = this.cloneValue((def as { value: UniformValue }).value);
+      }
     }
   }
 
@@ -34,6 +42,7 @@ export class UniformStore {
    * Clone a value to avoid mutation of arrays.
    */
   private cloneValue(value: UniformValue): UniformValue {
+    if (value instanceof Float32Array) return value.slice();
     return Array.isArray(value) ? [...value] : value;
   }
 
@@ -107,7 +116,11 @@ export class UniformStore {
     if (!def) {
       return false;
     }
-    this.values[name] = this.cloneValue(def.value);
+    if (isArrayUniform(def)) {
+      this.values[name] = new Float32Array(tightFloatCount(def.type, def.count));
+    } else {
+      this.values[name] = this.cloneValue(def.value);
+    }
     return true;
   }
 
@@ -123,7 +136,9 @@ export class UniformStore {
    */
   getDefault(name: string): UniformValue | undefined {
     const def = this.definitions[name];
-    return def ? this.cloneValue(def.value) : undefined;
+    if (!def) return undefined;
+    if (isArrayUniform(def)) return new Float32Array(tightFloatCount(def.type, def.count));
+    return this.cloneValue(def.value);
   }
 
   /**

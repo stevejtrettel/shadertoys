@@ -47,7 +47,7 @@ export async function embed(options: EmbedOptions): Promise<EmbedResult> {
   return {
     app,
     destroy: () => {
-      app.stop?.();
+      app.dispose();
     },
   };
 }

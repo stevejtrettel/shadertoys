@@ -7,7 +7,7 @@
 
 import './uniforms-panel.css';
 
-import { UniformDefinitions, UniformValue, UniformValues } from '../project/types';
+import { UniformDefinitions, UniformValue, UniformValues, isArrayUniform } from '../project/types';
 import { UniformControls } from './UniformControls';
 
 export interface UniformsPanelOptions {
@@ -40,6 +40,7 @@ export class UniformsPanel {
 
     // Initialize values
     for (const [name, def] of Object.entries(this.uniforms)) {
+      if (isArrayUniform(def)) continue;
       this.values[name] = opts.initialValues?.[name] ?? def.value;
     }
 

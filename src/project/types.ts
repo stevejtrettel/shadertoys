@@ -98,6 +98,29 @@ export interface Vec4UniformDefinition extends UniformDefinitionBase {
 }
 
 /**
+ * Array uniform types supported in UBOs.
+ */
+export type ArrayUniformType = 'float' | 'vec2' | 'vec3' | 'vec4' | 'mat3' | 'mat4';
+
+/**
+ * Array uniform backed by a Uniform Buffer Object (UBO).
+ * Data is provided from JavaScript via setUniformValue().
+ * The engine auto-injects the layout(std140) uniform block into the shader.
+ */
+export interface ArrayUniformDefinition extends UniformDefinitionBase {
+  type: ArrayUniformType;
+  /** Number of elements in the array */
+  count: number;
+}
+
+/**
+ * Type guard: returns true if a uniform definition is an array uniform (has count).
+ */
+export function isArrayUniform(def: UniformDefinition): def is ArrayUniformDefinition {
+  return 'count' in def && typeof (def as any).count === 'number';
+}
+
+/**
  * Union of all uniform definition types.
  */
 export type UniformDefinition =
@@ -106,7 +129,8 @@ export type UniformDefinition =
   | BoolUniformDefinition
   | Vec2UniformDefinition
   | Vec3UniformDefinition
-  | Vec4UniformDefinition;
+  | Vec4UniformDefinition
+  | ArrayUniformDefinition;
 
 /**
  * Map of uniform names to their definitions.
@@ -116,7 +140,7 @@ export type UniformDefinitions = Record<string, UniformDefinition>;
 /**
  * A single uniform value at runtime.
  */
-export type UniformValue = number | boolean | number[];
+export type UniformValue = number | boolean | number[] | Float32Array;
 
 /**
  * Runtime uniform values (current state).
@@ -388,6 +412,39 @@ export interface ShadertoyProject {
   /**
    * Custom uniform definitions from config.
    * Users must declare these uniforms in their shader code.
+   * Array uniforms (with count) are auto-declared by the engine.
    */
   uniforms: UniformDefinitions;
+
+  /**
+   * Demo script hooks (from script.js in demo folder).
+   * Provides setup() and onFrame() callbacks for JS-driven computation.
+   */
+  script: DemoScriptHooks | null;
+}
+
+// =============================================================================
+// Demo Script Hooks
+// =============================================================================
+
+/**
+ * The API surface exposed to script.js hooks.
+ * A restricted view of the engine for safety and clarity.
+ */
+export interface ScriptEngineAPI {
+  setUniformValue(name: string, value: UniformValue): void;
+  getUniformValue(name: string): UniformValue | undefined;
+  readonly width: number;
+  readonly height: number;
+}
+
+/**
+ * Hooks exported by a demo's script.js file.
+ * Both are optional — a script can export just setup, just onFrame, or both.
+ */
+export interface DemoScriptHooks {
+  /** Called once after engine init, before the first frame */
+  setup?: (engine: ScriptEngineAPI) => void;
+  /** Called every frame before shader execution */
+  onFrame?: (engine: ScriptEngineAPI, time: number, deltaTime: number, frame: number) => void;
 }
