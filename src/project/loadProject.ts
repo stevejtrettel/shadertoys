@@ -218,6 +218,14 @@ function parseChannelValue(value: ChannelValue): ChannelJSONObject | null {
     if (value === 'keyboard') {
       return { keyboard: true };
     }
+    // Check for audio
+    if (value === 'audio') {
+      return { audio: true };
+    }
+    // Check for webcam
+    if (value === 'webcam') {
+      return { webcam: true };
+    }
     // Assume texture (file path)
     return { texture: value };
   }
@@ -328,6 +336,26 @@ async function loadProjectWithConfig(root: string, config: ShadertoyConfig): Pro
     // Keyboard channel
     if ('keyboard' in value) {
       return { kind: 'keyboard' };
+    }
+
+    // Audio channel
+    if ('audio' in value) {
+      return { kind: 'audio' };
+    }
+
+    // Webcam channel
+    if ('webcam' in value) {
+      return { kind: 'webcam' };
+    }
+
+    // Video channel
+    if ('video' in value) {
+      return { kind: 'video', src: value.video };
+    }
+
+    // Script-uploaded texture channel
+    if ('script' in value) {
+      return { kind: 'script', name: value.script };
     }
 
     throw new Error(

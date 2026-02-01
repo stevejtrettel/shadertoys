@@ -192,21 +192,59 @@ export interface ChannelJSONKeyboard {
 }
 
 /**
+ * Reference to audio input (microphone).
+ * Provides a 512x2 texture: row 0 = FFT spectrum, row 1 = waveform.
+ */
+export interface ChannelJSONAudio {
+  audio: true;
+}
+
+/**
+ * Reference to webcam input.
+ */
+export interface ChannelJSONWebcam {
+  webcam: true;
+}
+
+/**
+ * Reference to a video file.
+ */
+export interface ChannelJSONVideo {
+  video: string;  // Path to video file
+}
+
+/**
+ * Reference to a script-uploaded texture.
+ * The texture is created/updated at runtime via engine.updateTexture().
+ */
+export interface ChannelJSONScript {
+  script: string;  // Texture name (matched by script's updateTexture calls)
+}
+
+/**
  * Union type for channel sources in JSON config (object form).
  */
 export type ChannelJSONObject =
   | ChannelJSONBuffer
   | ChannelJSONTexture
-  | ChannelJSONKeyboard;
+  | ChannelJSONKeyboard
+  | ChannelJSONAudio
+  | ChannelJSONWebcam
+  | ChannelJSONVideo
+  | ChannelJSONScript;
 
 /**
  * Channel value in simplified config format.
  * Can be a string shorthand or full object:
  * - "BufferA", "BufferB", etc. → buffer reference
  * - "keyboard" → keyboard input
+ * - "audio" → microphone audio input
+ * - "webcam" → webcam video input
  * - "photo.jpg" (with extension) → texture file
  * - { buffer: "BufferA" } → explicit buffer with options
  * - { texture: "photo.jpg", filter: "nearest" } → texture with options
+ * - { video: "clip.mp4" } → video file
+ * - { script: "myData" } → script-uploaded texture
  */
 export type ChannelValue = string | ChannelJSONObject;
 
@@ -295,7 +333,11 @@ export type ChannelSource =
   | { kind: 'none' }
   | { kind: 'buffer'; buffer: PassName; current: boolean }
   | { kind: 'texture'; name: string; cubemap: boolean }  // Internal texture ID (e.g., "tex0")
-  | { kind: 'keyboard' };
+  | { kind: 'keyboard' }
+  | { kind: 'audio' }
+  | { kind: 'webcam' }
+  | { kind: 'video'; src: string }
+  | { kind: 'script'; name: string };
 
 /**
  * Exactly 4 channels (iChannel0-3), matching Shadertoy's fixed channel count.
@@ -446,6 +488,10 @@ export interface ShadertoyProject {
 export interface ScriptEngineAPI {
   setUniformValue(name: string, value: UniformValue): void;
   getUniformValue(name: string): UniformValue | undefined;
+  /** Upload or update a named texture for use as a script channel. */
+  updateTexture(name: string, width: number, height: number, data: Uint8Array | Float32Array): void;
+  /** Read pixels from a buffer pass (previous frame). Returns RGBA Uint8Array. */
+  readPixels(passName: string, x: number, y: number, width: number, height: number): Uint8Array;
   readonly width: number;
   readonly height: number;
 }

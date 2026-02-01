@@ -28,6 +28,9 @@ import {
   RuntimePass,
   RuntimeTexture2D,
   RuntimeKeyboardTexture,
+  RuntimeAudioTexture,
+  RuntimeVideoTexture,
+  RuntimeScriptTexture,
   EngineStats,
   PassUniformLocations,
 } from './types';
@@ -40,6 +43,11 @@ import {
   createBlackTexture,
   createKeyboardTexture,
   updateKeyboardTexture,
+  createAudioTexture,
+  updateAudioTextureData,
+  createVideoPlaceholderTexture,
+  updateVideoTexture as glUpdateVideoTexture,
+  createOrUpdateScriptTexture,
 } from './glHelpers';
 
 // =============================================================================
@@ -129,6 +137,16 @@ export class ShadertoyEngine {
   // UBO-backed array uniforms
   private _ubos: UBOEntry[] = [];
 
+  // Audio texture (microphone FFT + waveform)
+  private _audioTexture: RuntimeAudioTexture | null = null;
+  private _needsAudio: boolean = false;
+
+  // Video/webcam textures
+  private _videoTextures: RuntimeVideoTexture[] = [];
+
+  // Script-uploaded textures
+  private _scriptTextures: Map<string, RuntimeScriptTexture> = new Map();
+
   constructor(opts: EngineOptions) {
     this.gl = opts.gl;
     this.project = opts.project;
@@ -156,7 +174,10 @@ export class ShadertoyEngine {
     //    Real implementation would load images here.
     this.initProjectTextures();
 
-    // 5. Initialize custom uniform values and UBOs (must happen before shader compilation)
+    // 5. Initialize audio/video textures if any channel needs them
+    this.initMediaTextures();
+
+    // 6. Initialize custom uniform values and UBOs (must happen before shader compilation)
     this.initCustomUniforms();
 
     // 6. Compile shaders + create runtime passes
@@ -223,6 +244,264 @@ export class ShadertoyEngine {
 
       bindingPoint++;
     }
+  }
+
+  /**
+   * Scan all passes for audio/video/webcam channels and create placeholder textures.
+   */
+  private initMediaTextures(): void {
+    const allChannels = this.getAllChannelSources();
+
+    // Audio: create texture if any channel uses audio
+    if (allChannels.some(ch => ch.kind === 'audio')) {
+      this._needsAudio = true;
+      this._audioTexture = {
+        texture: createAudioTexture(this.gl),
+        audioContext: null,
+        analyser: null,
+        stream: null,
+        frequencyData: new Uint8Array(512),
+        waveformData: new Uint8Array(512),
+        width: 512,
+        height: 2,
+        initialized: false,
+      };
+    }
+
+    // Video/Webcam: create placeholder textures
+    for (const ch of allChannels) {
+      if (ch.kind === 'webcam') {
+        const existing = this._videoTextures.find(v => v.kind === 'webcam');
+        if (!existing) {
+          this._videoTextures.push({
+            texture: createVideoPlaceholderTexture(this.gl),
+            video: null,
+            stream: null,
+            width: 1,
+            height: 1,
+            ready: false,
+            kind: 'webcam',
+          });
+        }
+      } else if (ch.kind === 'video') {
+        const existing = this._videoTextures.find(v => v.kind === 'video' && v.src === ch.src);
+        if (!existing) {
+          this._videoTextures.push({
+            texture: createVideoPlaceholderTexture(this.gl),
+            video: null,
+            stream: null,
+            width: 1,
+            height: 1,
+            ready: false,
+            kind: 'video',
+            src: ch.src,
+          });
+        }
+      }
+    }
+  }
+
+  /**
+   * Collect all channel sources from all passes.
+   */
+  private getAllChannelSources(): ChannelSource[] {
+    const sources: ChannelSource[] = [];
+    const passes = this.project.passes;
+    for (const pass of [passes.Image, passes.BufferA, passes.BufferB, passes.BufferC, passes.BufferD]) {
+      if (pass) {
+        sources.push(...pass.channels);
+      }
+    }
+    return sources;
+  }
+
+  /**
+   * Initialize audio input (microphone). Must be called from a user gesture.
+   */
+  async initAudio(): Promise<void> {
+    if (!this._audioTexture || this._audioTexture.initialized) return;
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const audioContext = new AudioContext();
+      const source = audioContext.createMediaStreamSource(stream);
+      const analyser = audioContext.createAnalyser();
+      analyser.fftSize = 1024; // 512 frequency bins
+      analyser.smoothingTimeConstant = 0.8;
+      source.connect(analyser);
+
+      this._audioTexture.audioContext = audioContext;
+      this._audioTexture.analyser = analyser;
+      this._audioTexture.stream = stream;
+      this._audioTexture.initialized = true;
+    } catch (e) {
+      console.warn('Failed to initialize audio input:', e);
+    }
+  }
+
+  /**
+   * Update audio texture with latest FFT/waveform data. Call per-frame.
+   */
+  updateAudioTexture(): void {
+    if (!this._audioTexture?.analyser) return;
+
+    this._audioTexture.analyser.getByteFrequencyData(this._audioTexture.frequencyData);
+    this._audioTexture.analyser.getByteTimeDomainData(this._audioTexture.waveformData);
+    updateAudioTextureData(
+      this.gl,
+      this._audioTexture.texture,
+      this._audioTexture.frequencyData,
+      this._audioTexture.waveformData,
+    );
+  }
+
+  /**
+   * Initialize webcam. Must be called from a user gesture.
+   */
+  async initWebcam(): Promise<void> {
+    const entry = this._videoTextures.find(v => v.kind === 'webcam' && !v.ready);
+    if (!entry) return;
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      const video = document.createElement('video');
+      video.srcObject = stream;
+      video.muted = true;
+      video.playsInline = true;
+      await video.play();
+
+      entry.video = video;
+      entry.stream = stream;
+      entry.width = video.videoWidth;
+      entry.height = video.videoHeight;
+
+      // Update dimensions when metadata loads (may not be available immediately)
+      video.addEventListener('loadedmetadata', () => {
+        entry.width = video.videoWidth;
+        entry.height = video.videoHeight;
+      });
+
+      entry.ready = true;
+    } catch (e) {
+      console.warn('Failed to initialize webcam:', e);
+    }
+  }
+
+  /**
+   * Initialize video file playback.
+   */
+  async initVideo(src: string): Promise<void> {
+    const entry = this._videoTextures.find(v => v.kind === 'video' && v.src === src && !v.ready);
+    if (!entry) return;
+
+    const video = document.createElement('video');
+    video.src = src;
+    video.muted = true;
+    video.loop = true;
+    video.playsInline = true;
+    video.crossOrigin = 'anonymous';
+
+    video.addEventListener('loadedmetadata', () => {
+      entry.width = video.videoWidth;
+      entry.height = video.videoHeight;
+    });
+
+    try {
+      await video.play();
+      entry.video = video;
+      entry.ready = true;
+    } catch (e) {
+      console.warn(`Failed to play video '${src}':`, e);
+    }
+  }
+
+  /**
+   * Update all video/webcam textures with latest frame. Call per-frame.
+   */
+  updateVideoTextures(): void {
+    for (const entry of this._videoTextures) {
+      if (!entry.ready || !entry.video) continue;
+      if (entry.video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) continue;
+
+      glUpdateVideoTexture(this.gl, entry.texture, entry.video);
+      // Update dimensions in case they weren't available at init
+      if (entry.video.videoWidth > 0) {
+        entry.width = entry.video.videoWidth;
+        entry.height = entry.video.videoHeight;
+      }
+    }
+  }
+
+  /**
+   * Upload or update a named texture from JavaScript (for script channel).
+   */
+  updateTexture(name: string, width: number, height: number, data: Uint8Array | Float32Array): void {
+    const existing = this._scriptTextures.get(name);
+    const isFloat = data instanceof Float32Array;
+
+    if (existing && existing.width === width && existing.height === height && existing.isFloat === isFloat) {
+      // Same size and format — just update data
+      const gl = this.gl;
+      gl.bindTexture(gl.TEXTURE_2D, existing.texture);
+      if (isFloat) {
+        gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, width, height, gl.RGBA, gl.FLOAT, data);
+      } else {
+        gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, data);
+      }
+      gl.bindTexture(gl.TEXTURE_2D, null);
+    } else {
+      // Create or recreate
+      const texture = createOrUpdateScriptTexture(
+        this.gl,
+        existing?.texture ?? null,
+        width,
+        height,
+        data,
+      );
+      this._scriptTextures.set(name, { texture, width, height, isFloat });
+    }
+  }
+
+  /**
+   * Read pixels from a buffer pass (reads previous frame's data).
+   */
+  readPixels(passName: PassName, x: number, y: number, w: number, h: number): Uint8Array {
+    const pass = this._passes.find(p => p.name === passName);
+    if (!pass) {
+      console.warn(`readPixels: pass '${passName}' not found`);
+      return new Uint8Array(w * h * 4);
+    }
+
+    const gl = this.gl;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, pass.framebuffer);
+    // Attach previousTexture (has last completed frame)
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, pass.previousTexture, 0);
+
+    const pixels = new Uint8Array(w * h * 4);
+    gl.readPixels(x, y, w, h, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+
+    // Restore currentTexture
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, pass.currentTexture, 0);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+    return pixels;
+  }
+
+  /** Whether this project uses audio channels. */
+  get needsAudio(): boolean {
+    return this._needsAudio;
+  }
+
+  /** Whether this project uses webcam channels. */
+  get needsWebcam(): boolean {
+    return this._videoTextures.some(v => v.kind === 'webcam');
+  }
+
+  /** Get video sources that need initialization. */
+  get videoSources(): string[] {
+    return this._videoTextures
+      .filter(v => v.kind === 'video' && !v.ready && v.src)
+      .map(v => v.src!);
   }
 
   // ===========================================================================
@@ -1320,16 +1599,31 @@ void main() {
       }
 
       case 'keyboard':
-        // Keyboard texture (always available)
         if (!this._keyboardTexture) {
           throw new Error('Internal error: keyboard texture not initialized');
         }
         return this._keyboardTexture.texture;
 
-      default:
-        // Exhaustive check
-        const _exhaustive: never = source;
-        throw new Error(`Unknown channel source: ${JSON.stringify(_exhaustive)}`);
+      case 'audio':
+        if (!this._audioTexture) {
+          return this._blackTexture!;
+        }
+        return this._audioTexture.texture;
+
+      case 'webcam': {
+        const webcam = this._videoTextures.find(v => v.kind === 'webcam');
+        return webcam?.texture ?? this._blackTexture!;
+      }
+
+      case 'video': {
+        const video = this._videoTextures.find(v => v.kind === 'video' && v.src === source.src);
+        return video?.texture ?? this._blackTexture!;
+      }
+
+      case 'script': {
+        const scriptTex = this._scriptTextures.get(source.name);
+        return scriptTex?.texture ?? this._blackTexture!;
+      }
     }
   }
 
@@ -1342,28 +1636,35 @@ void main() {
       case 'none':
         return [0, 0];
 
-      case 'buffer': {
-        // Buffer passes use the engine's current resolution
+      case 'buffer':
         return [this._width, this._height];
-      }
 
       case 'texture': {
-        // External texture - find its dimensions
         const tex = this._textures.find((t) => t.name === source.name);
-        if (!tex) {
-          return [0, 0];
-        }
+        if (!tex) return [0, 0];
         return [tex.width, tex.height];
       }
 
       case 'keyboard':
-        // Keyboard texture is always 256x3
         return [256, 3];
 
-      default:
-        // Exhaustive check
-        const _exhaustive: never = source;
-        throw new Error(`Unknown channel source: ${JSON.stringify(_exhaustive)}`);
+      case 'audio':
+        return this._audioTexture ? [this._audioTexture.width, this._audioTexture.height] : [0, 0];
+
+      case 'webcam': {
+        const webcam = this._videoTextures.find(v => v.kind === 'webcam');
+        return webcam ? [webcam.width, webcam.height] : [0, 0];
+      }
+
+      case 'video': {
+        const video = this._videoTextures.find(v => v.kind === 'video' && v.src === source.src);
+        return video ? [video.width, video.height] : [0, 0];
+      }
+
+      case 'script': {
+        const scriptTex = this._scriptTextures.get(source.name);
+        return scriptTex ? [scriptTex.width, scriptTex.height] : [0, 0];
+      }
     }
   }
 

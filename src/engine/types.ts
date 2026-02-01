@@ -116,6 +116,46 @@ export interface RuntimeKeyboardTexture {
   height: number;
 }
 
+/**
+ * Runtime audio texture (microphone FFT + waveform).
+ * 512x2, R8 format: row 0 = frequency, row 1 = waveform.
+ */
+export interface RuntimeAudioTexture {
+  texture: WebGLTexture;
+  audioContext: AudioContext | null;
+  analyser: AnalyserNode | null;
+  stream: MediaStream | null;
+  frequencyData: Uint8Array<ArrayBuffer>;   // 512 bytes
+  waveformData: Uint8Array<ArrayBuffer>;    // 512 bytes
+  width: number;  // 512
+  height: number; // 2
+  initialized: boolean;
+}
+
+/**
+ * Runtime video texture (webcam or video file).
+ */
+export interface RuntimeVideoTexture {
+  texture: WebGLTexture;
+  video: HTMLVideoElement | null;
+  stream: MediaStream | null;  // Only for webcam
+  width: number;
+  height: number;
+  ready: boolean;
+  kind: 'webcam' | 'video';
+  src?: string;  // Only for video files
+}
+
+/**
+ * Runtime script-uploaded texture.
+ */
+export interface RuntimeScriptTexture {
+  texture: WebGLTexture;
+  width: number;
+  height: number;
+  isFloat: boolean;  // Float32Array → RGBA32F, Uint8Array → RGBA8
+}
+
 // =============================================================================
 // Engine Stats
 // =============================================================================

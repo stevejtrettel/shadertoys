@@ -51,6 +51,12 @@ function parseChannelValue(value: ChannelValue): ChannelJSONObject | null {
     if (value === 'keyboard') {
       return { keyboard: true };
     }
+    if (value === 'audio') {
+      return { audio: true };
+    }
+    if (value === 'webcam') {
+      return { webcam: true };
+    }
     return { texture: value };
   }
   return value;
@@ -350,6 +356,22 @@ function normalizeChannel(channelValue: ChannelValue | undefined, texturePathToN
 
   if ('keyboard' in parsed) {
     return { kind: 'keyboard' };
+  }
+
+  if ('audio' in parsed) {
+    return { kind: 'audio' };
+  }
+
+  if ('webcam' in parsed) {
+    return { kind: 'webcam' };
+  }
+
+  if ('video' in parsed) {
+    return { kind: 'video', src: (parsed as any).video };
+  }
+
+  if ('script' in parsed) {
+    return { kind: 'script', name: (parsed as any).script };
   }
 
   return { kind: 'none' };

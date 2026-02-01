@@ -129,6 +129,9 @@ export class App {
   private _lastOnFrameTime: number | null = null;
   private static readonly MAX_SCRIPT_ERRORS = 10;
 
+  // Media initialization flag (audio/webcam need user gesture)
+  private mediaInitialized: boolean = false;
+
   // Recording state
   private isRecording: boolean = false;
   private mediaRecorder: MediaRecorder | null = null;
@@ -238,6 +241,8 @@ export class App {
       this.scriptAPI = {
         setUniformValue: (name, value) => self.engine.setUniformValue(name, value),
         getUniformValue: (name) => self.engine.getUniformValue(name),
+        updateTexture: (name, w, h, data) => self.engine.updateTexture(name, w, h, data),
+        readPixels: (passName, x, y, w, h) => self.engine.readPixels(passName as any, x, y, w, h),
         get width() { return self.engine.width; },
         get height() { return self.engine.height; },
       };
@@ -285,6 +290,9 @@ export class App {
     // Set up mouse tracking
     this.setupMouseTracking();
 
+    // Initialize video files (muted, no gesture needed)
+    this.initVideoFiles();
+
     // Set up touch/pointer tracking
     this.setupTouchTracking();
 
@@ -297,6 +305,35 @@ export class App {
     // Set up keyboard shortcuts if controls are enabled
     if (opts.project.controls) {
       this.setupKeyboardShortcuts();
+    }
+  }
+
+  // ===========================================================================
+  // Media Initialization
+  // ===========================================================================
+
+  /**
+   * Initialize audio/webcam on first user gesture (required by browser policy).
+   * Video files are auto-started in the constructor since muted videos don't need gestures.
+   */
+  private initMediaOnGesture(): void {
+    if (this.mediaInitialized) return;
+    this.mediaInitialized = true;
+
+    if (this.engine.needsAudio) {
+      this.engine.initAudio();
+    }
+    if (this.engine.needsWebcam) {
+      this.engine.initWebcam();
+    }
+  }
+
+  /**
+   * Start video file playback (muted, doesn't require user gesture).
+   */
+  private initVideoFiles(): void {
+    for (const src of this.engine.videoSources) {
+      this.engine.initVideo(src);
     }
   }
 
@@ -385,6 +422,10 @@ export class App {
 
     // Update keyboard texture with current key states
     this.engine.updateKeyboardTexture();
+
+    // Update media textures (audio FFT/waveform, video/webcam frames)
+    this.engine.updateAudioTexture();
+    this.engine.updateVideoTextures();
 
     // Run script onFrame hook (JS computation before shader execution)
     if (this.scriptAPI && this.project.script?.onFrame && this.scriptErrorCount < App.MAX_SCRIPT_ERRORS) {
@@ -583,6 +624,9 @@ export class App {
 
       this.mouse[2] = x;
       this.mouse[3] = y;
+
+      // Initialize media inputs on first user gesture (browser policy)
+      this.initMediaOnGesture();
     };
 
     this.canvas.addEventListener('mousemove', updateMouse);

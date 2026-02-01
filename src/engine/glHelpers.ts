@@ -408,6 +408,123 @@ export function createTextureFromImage(
 }
 
 // =============================================================================
+// Audio Texture
+// =============================================================================
+
+/**
+ * Create a 512x2 audio texture (Shadertoy-compatible).
+ * Row 0: frequency spectrum (FFT), Row 1: waveform.
+ * Uses R8 format — data is in the red channel, sampled with texture().x
+ */
+export function createAudioTexture(gl: WebGL2RenderingContext): WebGLTexture {
+  const tex = gl.createTexture();
+  if (!tex) throw new Error('Failed to create audio texture');
+
+  gl.bindTexture(gl.TEXTURE_2D, tex);
+
+  const width = 512;
+  const height = 2;
+  const data = new Uint8Array(width * height); // R8, all zeros
+
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, width, height, 0, gl.RED, gl.UNSIGNED_BYTE, data);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.bindTexture(gl.TEXTURE_2D, null);
+
+  return tex;
+}
+
+/**
+ * Update audio texture with frequency and waveform data.
+ */
+export function updateAudioTextureData(
+  gl: WebGL2RenderingContext,
+  texture: WebGLTexture,
+  frequencyData: Uint8Array,
+  waveformData: Uint8Array,
+): void {
+  gl.bindTexture(gl.TEXTURE_2D, texture);
+  // Row 0: frequency
+  gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 512, 1, gl.RED, gl.UNSIGNED_BYTE, frequencyData);
+  // Row 1: waveform
+  gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 1, 512, 1, gl.RED, gl.UNSIGNED_BYTE, waveformData);
+  gl.bindTexture(gl.TEXTURE_2D, null);
+}
+
+// =============================================================================
+// Video/Webcam Texture
+// =============================================================================
+
+/**
+ * Create a placeholder texture for video/webcam (1x1 black, RGBA).
+ * Updated each frame with actual video data once ready.
+ */
+export function createVideoPlaceholderTexture(gl: WebGL2RenderingContext): WebGLTexture {
+  const tex = gl.createTexture();
+  if (!tex) throw new Error('Failed to create video texture');
+
+  gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 255]));
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.bindTexture(gl.TEXTURE_2D, null);
+
+  return tex;
+}
+
+/**
+ * Upload a video frame to a texture.
+ */
+export function updateVideoTexture(
+  gl: WebGL2RenderingContext,
+  texture: WebGLTexture,
+  video: HTMLVideoElement,
+): void {
+  gl.bindTexture(gl.TEXTURE_2D, texture);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
+  gl.bindTexture(gl.TEXTURE_2D, null);
+}
+
+// =============================================================================
+// Script-Uploaded Texture
+// =============================================================================
+
+/**
+ * Create or update a script-uploaded texture.
+ * Detects data type: Uint8Array → RGBA8, Float32Array → RGBA32F.
+ */
+export function createOrUpdateScriptTexture(
+  gl: WebGL2RenderingContext,
+  existing: WebGLTexture | null,
+  width: number,
+  height: number,
+  data: Uint8Array | Float32Array,
+): WebGLTexture {
+  const tex = existing ?? gl.createTexture();
+  if (!tex) throw new Error('Failed to create script texture');
+
+  gl.bindTexture(gl.TEXTURE_2D, tex);
+
+  if (data instanceof Float32Array) {
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, width, height, 0, gl.RGBA, gl.FLOAT, data);
+  } else {
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, data);
+  }
+
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.bindTexture(gl.TEXTURE_2D, null);
+
+  return tex;
+}
+
+// =============================================================================
 // Helper Utilities
 // =============================================================================
 
