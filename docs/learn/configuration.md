@@ -6,9 +6,7 @@ Complete reference for configuring your shader projects.
 
 Every shader project needs either:
 - **Simple**: Just an `image.glsl` file (auto-configured)
-- **Advanced**: A config file + shader files
-
-**Config file**: `config.json` in your project folder.
+- **Advanced**: A `config.json` file + shader files
 
 ## File Structure
 
@@ -21,223 +19,219 @@ shaders/my-shader/
 
 That's it! The system will auto-generate a config for you.
 
-### Multi-Pass Shader
+### Full Project
 
 ```
 shaders/my-shader/
-├── config.json
-├── common.glsl          (optional - shared code)
-├── bufferA.glsl
+├── config.json          # Configuration
+├── common.glsl          # Optional shared code
+├── bufferA.glsl         # Optional buffer passes
 ├── bufferB.glsl
-├── image.glsl
-└── photo.jpg            (optional - textures)
+├── image.glsl           # Required — final output
+├── script.js            # Optional JavaScript hooks
+├── photo.jpg            # Optional textures
+└── clip.mp4             # Optional video files
 ```
 
-## Configuration File Format
+## Config File Format
 
-`config.json` is a JSON file that describes your shader's structure.
+`config.json` uses a flat format. Passes are defined at the top level by name. Channels are defined directly on each pass.
 
 ### Minimal Example
 
 ```json
-{
-  "passes": {
-    "Image": {}
-  }
-}
+{}
 ```
 
-This is the absolute minimum - just an Image pass with no special configuration.
+An empty config (or no config at all) works for a single `image.glsl` with no inputs.
 
 ### Complete Example
 
 ```json
 {
-  "meta": {
-    "title": "My Amazing Shader",
-    "author": "Your Name",
-    "description": "Does cool things with colors"
-  },
+  "title": "My Shader",
+  "author": "Your Name",
+  "description": "Feedback trail effect with texture",
   "layout": "default",
+  "theme": "dark",
   "controls": true,
-  "passes": {
-    "BufferA": {
-      "channels": {
-        "iChannel0": {
-          "buffer": "BufferA",
-          "previous": true
-        },
-        "iChannel1": {
-          "texture": "photo.jpg",
-          "filter": "linear",
-          "wrap": "repeat"
-        }
-      }
-    },
-    "Image": {
-      "channels": {
-        "iChannel0": { "buffer": "BufferA" },
-        "iChannel1": { "keyboard": true }
-      }
-    }
+  "startPaused": false,
+  "pixelRatio": 1.0,
+  "common": "common.glsl",
+  "uniforms": {
+    "uSpeed": { "type": "float", "value": 1.0, "min": 0.0, "max": 5.0, "label": "Speed" }
+  },
+  "BufferA": {
+    "iChannel0": "BufferA",
+    "iChannel1": { "texture": "photo.jpg", "filter": "linear", "wrap": "repeat" }
+  },
+  "Image": {
+    "iChannel0": "BufferA",
+    "iChannel1": "keyboard"
   }
 }
 ```
 
 ## Top-Level Options
 
-### `meta` (optional)
+### `title`, `author`, `description` (optional)
 
-Project metadata for documentation.
+Project metadata. All at the top level (not nested).
 
 ```json
-"meta": {
+{
   "title": "Shader Name",
   "author": "Your Name",
   "description": "What this shader does"
 }
 ```
 
-All fields are optional. If omitted:
-- `title` defaults to the folder name (capitalized)
-- `author` defaults to `null`
-- `description` defaults to `null`
+If `title` is omitted, defaults to the folder name (capitalized).
 
 ### `layout` (optional)
 
-Controls how the shader is displayed.
+Controls how the shader is displayed. Default: `"default"`.
 
-```json
-"layout": "default"
-```
+| Value | Description | Use for |
+|-------|-------------|---------|
+| `"fullscreen"` | Canvas fills entire screen | Immersive art, games |
+| `"default"` | Centered canvas with max-width | Most shaders |
+| `"split"` | Side-by-side shader and code editor | Teaching, debugging |
+| `"tabbed"` | Tabs to switch between pass code | Complex multi-pass shaders |
 
-**Options**:
-- `"fullscreen"` - Canvas fills entire screen
-- `"default"` (default) - Canvas is centered with max-width
-- `"split"` - Split view with shader code on the right
-- `"tabbed"` - Tabs to switch between viewing each pass's code
+### `theme` (optional)
 
-**When to use each**:
-- Fullscreen: Immersive art pieces, games
-- Centered: Most shaders (default is usually fine)
-- Split: When teaching/debugging to see code live
-- Tabbed: For complex multi-pass shaders where you want to browse all the code
+Color theme for the UI. Default: `"light"`.
+
+| Value | Description |
+|-------|-------------|
+| `"light"` | Light theme |
+| `"dark"` | Dark theme |
+| `"system"` | Follow OS preference |
 
 ### `controls` (optional)
 
-Enable playback control buttons.
+Show playback control buttons. Default: `false`.
+
+When `true`, displays play/pause, reset, and screenshot buttons. Keyboard shortcuts (Space, R, S) work regardless of this setting.
+
+### `startPaused` (optional)
+
+Start paused on the first frame. Default: `false`.
+
+Useful for shaders where you want to inspect the initial state before animation begins.
+
+### `pixelRatio` (optional)
+
+Override the pixel ratio for resolution scaling. Default: `null` (uses `window.devicePixelRatio`).
+
+Use values less than 1 for lower resolution (better performance on high-DPI screens):
 
 ```json
-"controls": true
-```
-
-**Options**:
-- `true` - Show play/pause, reset, and screenshot buttons
-- `false` (default) - No controls visible
-
-**What you get**:
-- Play/Pause button (also **Space** key)
-- Reset button (also **R** key)
-- Screenshot button (also **S** key)
-
-Even with `controls: false`, the **S** key for screenshots always works!
-
-### `passes` (required)
-
-Defines which shader passes to run and their configuration.
-
-```json
-"passes": {
-  "BufferA": { /* config */ },
-  "BufferB": { /* config */ },
-  "Image": { /* config */ }
+{
+  "pixelRatio": 0.5
 }
 ```
 
-**Available passes** (all optional except Image):
-- `BufferA`, `BufferB`, `BufferC`, `BufferD` - Intermediate render targets
-- `Image` - Final output (required, must always be present)
+### `common` (optional)
 
-**Execution order**: BufferA → BufferB → BufferC → BufferD → Image
-
-## Pass Configuration
-
-Each pass can have a `channels` object defining its inputs.
-
-### Basic Pass (No Inputs)
+Path to a shared GLSL file that's prepended to all passes. Default: `"common.glsl"` if the file exists.
 
 ```json
-"Image": {}
+{
+  "common": "shared/utils.glsl"
+}
 ```
 
-No channels bound - all `iChannel0-3` will be black.
+## Passes
 
-### Pass with Channels
+Passes are defined at the top level by name:
 
 ```json
-"BufferA": {
-  "channels": {
-    "iChannel0": { /* source */ },
-    "iChannel1": { /* source */ },
-    "iChannel2": { /* source */ },
-    "iChannel3": { /* source */ }
+{
+  "BufferA": { ... },
+  "BufferB": { ... },
+  "Image": { ... }
+}
+```
+
+**Available passes:**
+- `BufferA`, `BufferB`, `BufferC`, `BufferD` — intermediate render targets (all optional)
+- `Image` — final output (always present, auto-created if not specified)
+
+**Execution order:** BufferA → BufferB → BufferC → BufferD → Image
+
+Each pass looks for its shader code in a matching file: `bufferA.glsl`, `image.glsl`, etc. You can override this with the `source` key:
+
+```json
+{
+  "BufferA": {
+    "source": "simulation.glsl"
   }
 }
 ```
 
-You can bind 0-4 channels. Unbound channels read as black.
+### Pass Channel Bindings
+
+Channels are bound directly on the pass object as `iChannel0` through `iChannel3`:
+
+```json
+{
+  "BufferA": {
+    "iChannel0": "BufferA",
+    "iChannel1": "photo.jpg"
+  }
+}
+```
+
+Unbound channels read as black (vec4(0)).
 
 ## Channel Types
 
-### 1. Buffer Reference
+Channels can be specified as a string shorthand or a full object.
+
+### Buffer Reference
 
 Read from another pass's render target.
 
-**Current frame** (default):
+**String shorthand** (reads previous frame by default):
 ```json
-"iChannel0": {
-  "buffer": "BufferA"
-}
+"iChannel0": "BufferA"
 ```
 
-Reads BufferA's **current frame**. Works because BufferA runs before this pass.
-
-**Previous frame**:
+**Object form with options:**
 ```json
-"iChannel0": {
-  "buffer": "BufferA",
-  "previous": true
-}
+"iChannel0": { "buffer": "BufferA" }
 ```
 
-Reads BufferA's **previous frame**. Enables feedback loops!
-
-**Self-reference** (feedback):
+**Current frame** (read from a buffer that already ran this frame):
 ```json
-"BufferA": {
-  "channels": {
-    "iChannel0": {
-      "buffer": "BufferA",
-      "previous": true
-    }
+"iChannel0": { "buffer": "BufferA", "current": true }
+```
+
+By default, buffer references read the **previous frame**. This is always safe and enables feedback loops. Use `"current": true` only when reading from a buffer that runs earlier in the pipeline (e.g., Image reading from BufferA).
+
+**Self-reference (feedback loop):**
+```json
+{
+  "BufferA": {
+    "iChannel0": "BufferA"
   }
 }
 ```
 
-BufferA reads its own previous frame. The engine automatically creates ping-pong textures.
+BufferA reads its own previous frame. The engine handles ping-pong textures automatically.
 
-### 2. Texture (Image File)
+### Texture (Image File)
 
-Load an external image file.
+Load an external image as a texture.
 
-**Basic**:
+**String shorthand** (any string with a file extension):
 ```json
-"iChannel0": {
-  "texture": "photo.jpg"
-}
+"iChannel0": "photo.jpg"
 ```
 
-**With options**:
+**Object form with options:**
 ```json
 "iChannel0": {
   "texture": "noise.png",
@@ -246,96 +240,445 @@ Load an external image file.
 }
 ```
 
-**Options**:
+**Options:**
 
-`filter` - How pixels are sampled:
-- `"linear"` (default) - Smooth interpolation
-- `"nearest"` - Sharp, pixelated
+| Option | Values | Default | Description |
+|--------|--------|---------|-------------|
+| `filter` | `"linear"`, `"nearest"` | `"linear"` | Smooth vs pixelated sampling |
+| `wrap` | `"repeat"`, `"clamp"` | `"repeat"` | Tiling vs edge-stretch |
+| `type` | `"2d"`, `"cubemap"` | `"2d"` | Cubemap uses equirectangular projection |
 
-`wrap` - What happens at UV edges:
-- `"repeat"` (default) - Texture tiles
-- `"clamp"` - Edge pixels stretch
+**Supported formats:** `.jpg`, `.png`, `.webp`
 
-**Supported formats**: `.jpg`, `.png`, `.webp`
+Place files in the same folder as your config.
 
-**Where to put files**: In the same folder as your config file.
-
-### 3. Keyboard
+### Keyboard
 
 Read keyboard input as a texture.
 
 ```json
-"iChannel0": {
-  "keyboard": true
+"iChannel0": "keyboard"
+```
+
+Or:
+```json
+"iChannel0": { "keyboard": true }
+```
+
+See [Buffers and Channels — Keyboard Input](buffers-and-channels.md#keyboard-input) for texture layout details.
+
+### Audio (Microphone)
+
+Capture microphone input as a 512x2 texture.
+
+```json
+"iChannel0": "audio"
+```
+
+Or:
+```json
+"iChannel0": { "audio": true }
+```
+
+**Texture layout (512x2, single channel R8):**
+- **Row 0** (y ≈ 0.25): FFT frequency spectrum (512 bins, 0–255 → 0.0–1.0)
+- **Row 1** (y ≈ 0.75): Time-domain waveform (512 samples)
+
+**Shader usage:**
+```glsl
+float spectrum = texture(iChannel0, vec2(freq, 0.25)).r;  // frequency bin
+float waveform = texture(iChannel0, vec2(x, 0.75)).r;     // waveform sample
+```
+
+Audio requires a user gesture (click/tap) to initialize due to browser permissions. The texture is black until the microphone is granted.
+
+### Webcam
+
+Capture live webcam video as a texture.
+
+```json
+"iChannel0": "webcam"
+```
+
+Or:
+```json
+"iChannel0": { "webcam": true }
+```
+
+Like audio, webcam requires a user gesture to initialize. The texture updates every frame with the latest video frame.
+
+### Video File
+
+Play a video file as a texture.
+
+```json
+"iChannel0": { "video": "clip.mp4" }
+```
+
+The video auto-plays (muted) and loops. The texture updates every frame.
+
+### Script Texture
+
+Bind a texture that's created and updated from JavaScript via `script.js`.
+
+```json
+"iChannel0": { "script": "myData" }
+```
+
+The texture doesn't exist until your script creates it:
+
+**script.js:**
+```js
+export function setup(engine) {
+  const data = new Uint8Array(256 * 256 * 4);  // RGBA
+  // ... fill data ...
+  engine.updateTexture('myData', 256, 256, data);
 }
 ```
 
-See [Buffers and Channels - Keyboard Input](buffers-and-channels.md#keyboard-input) for usage details.
+Use `Uint8Array` for RGBA8 textures or `Float32Array` for RGBA32F (floating point) textures.
+
+## Custom Uniforms
+
+Define interactive controls that generate UI sliders, toggles, and color pickers. Uniforms declared in config are **auto-injected** into your GLSL — you don't need to declare them in your shader code.
+
+### `uniforms` (optional)
+
+```json
+{
+  "uniforms": {
+    "uniformName": { ... definition ... }
+  }
+}
+```
+
+### Float
+
+Slider control for a floating-point value.
+
+```json
+"uSpeed": {
+  "type": "float",
+  "value": 1.0,
+  "min": 0.0,
+  "max": 5.0,
+  "step": 0.1,
+  "label": "Animation Speed"
+}
+```
+
+| Field | Default | Description |
+|-------|---------|-------------|
+| `value` | required | Initial value |
+| `min` | `0` | Minimum |
+| `max` | `1` | Maximum |
+| `step` | `0.01` | Step increment |
+| `label` | uniform name | Display label |
+
+GLSL type: `uniform float uSpeed;`
+
+### Int
+
+Discrete slider for integer values.
+
+```json
+"uCount": {
+  "type": "int",
+  "value": 6,
+  "min": 1,
+  "max": 20,
+  "step": 1,
+  "label": "Count"
+}
+```
+
+| Field | Default | Description |
+|-------|---------|-------------|
+| `value` | required | Initial value |
+| `min` | `0` | Minimum |
+| `max` | `10` | Maximum |
+| `step` | `1` | Step increment |
+
+GLSL type: `uniform int uCount;`
+
+### Bool
+
+Toggle switch.
+
+```json
+"uAnimate": {
+  "type": "bool",
+  "value": true,
+  "label": "Animate"
+}
+```
+
+GLSL type: `uniform bool uAnimate;`
+
+### Vec2
+
+2D position picker (XY pad).
+
+```json
+"uOffset": {
+  "type": "vec2",
+  "value": [0.5, 0.5],
+  "min": [0.0, 0.0],
+  "max": [1.0, 1.0],
+  "label": "Center Position"
+}
+```
+
+GLSL type: `uniform vec2 uOffset;`
+
+### Vec3
+
+Three sliders, or a color picker with `"color": true`.
+
+**As color:**
+```json
+"uColor": {
+  "type": "vec3",
+  "value": [1.0, 0.5, 0.2],
+  "color": true,
+  "label": "Base Color"
+}
+```
+
+**As 3 sliders:**
+```json
+"uParams": {
+  "type": "vec3",
+  "value": [0.5, 1.0, 0.0],
+  "min": [-1.0, -1.0, -1.0],
+  "max": [1.0, 1.0, 1.0],
+  "step": [0.01, 0.01, 0.01],
+  "label": "Parameters"
+}
+```
+
+`min`, `max`, and `step` are per-component arrays. Default range: [0, 0, 0] to [1, 1, 1].
+
+GLSL type: `uniform vec3 uColor;`
+
+### Vec4
+
+Four sliders, or a color picker with alpha with `"color": true`.
+
+```json
+"uTint": {
+  "type": "vec4",
+  "value": [1.0, 1.0, 1.0, 0.5],
+  "color": true,
+  "label": "Tint Color"
+}
+```
+
+Per-component `min`, `max`, `step` work the same as vec3. Default range: [0, 0, 0, 0] to [1, 1, 1, 1].
+
+GLSL type: `uniform vec4 uTint;`
+
+### Array Uniforms (UBOs)
+
+For large arrays of data (particle positions, bone matrices, etc.), use array uniforms backed by Uniform Buffer Objects. These are set from JavaScript via `script.js`, not from UI controls.
+
+```json
+"uniforms": {
+  "positions": {
+    "type": "vec4",
+    "count": 32
+  }
+}
+```
+
+The `count` field makes it an array uniform. Supported types: `float`, `vec2`, `vec3`, `vec4`, `mat3`, `mat4`.
+
+The engine auto-injects the UBO declaration into your shader using std140 layout:
+
+```glsl
+// Auto-generated:
+layout(std140) uniform positions_ubo {
+    vec4 positions[32];
+};
+```
+
+**Set from script.js:**
+```js
+export function onFrame(engine, time) {
+  const data = new Float32Array(32 * 4);  // 32 vec4s
+  // ... fill data ...
+  engine.setUniformValue('positions', data);
+}
+```
+
+## Scripting API
+
+Add a `script.js` file to your shader folder to run JavaScript code alongside your shader. Scripts can set uniforms, upload textures, and read pixels from buffers.
+
+### Hooks
+
+```js
+// Called once after engine init, before the first frame
+export function setup(engine) { ... }
+
+// Called every frame before shader execution
+export function onFrame(engine, time, deltaTime, frame) { ... }
+```
+
+Both are optional — export whichever you need.
+
+### Engine API
+
+| Method | Description |
+|--------|-------------|
+| `engine.setUniformValue(name, value)` | Set a uniform value (number, boolean, number[], or Float32Array) |
+| `engine.getUniformValue(name)` | Get current uniform value |
+| `engine.updateTexture(name, w, h, data)` | Create/update a named texture (Uint8Array → RGBA8, Float32Array → RGBA32F) |
+| `engine.readPixels(pass, x, y, w, h)` | Read RGBA pixels from a buffer's previous frame. Returns Uint8Array |
+| `engine.width` | Canvas width in pixels |
+| `engine.height` | Canvas height in pixels |
+
+### Example: GPU Readback
+
+Read pixel data from a buffer pass and use it in JavaScript:
+
+```js
+export function onFrame(engine) {
+  // Read a single pixel from center of BufferA
+  const cx = Math.floor(engine.width / 2);
+  const cy = Math.floor(engine.height / 2);
+  const pixel = engine.readPixels('BufferA', cx, cy, 1, 1);
+  // pixel is Uint8Array [r, g, b, a] with values 0-255
+
+  const brightness = (pixel[0] + pixel[1] + pixel[2]) / (3 * 255);
+  engine.setUniformValue('uBrightness', brightness);
+}
+```
+
+### Example: Script Texture
+
+Upload computed data as a texture:
+
+```js
+export function setup(engine) {
+  // Create a 256x256 noise texture
+  const size = 256;
+  const data = new Uint8Array(size * size * 4);
+  for (let i = 0; i < size * size; i++) {
+    const v = Math.random() * 255;
+    data[i * 4 + 0] = v;
+    data[i * 4 + 1] = v;
+    data[i * 4 + 2] = v;
+    data[i * 4 + 3] = 255;
+  }
+  engine.updateTexture('noise', size, size, data);
+}
+```
+
+Bind it in config:
+```json
+{
+  "Image": {
+    "iChannel0": { "script": "noise" }
+  }
+}
+```
+
+## Common GLSL File
+
+### `common.glsl` (optional)
+
+Shared code prepended to all passes before compilation.
+
+```glsl
+// common.glsl
+#define PI 3.14159265359
+
+float hash(vec2 p) {
+    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+}
+```
+
+All passes can use these functions without re-declaring them.
 
 ## Complete Examples
 
 ### Simple Gradient
 
-```json
-{
-  "meta": {
-    "title": "Rainbow Gradient"
-  },
-  "passes": {
-    "Image": {}
-  }
-}
-```
+No config needed — just `image.glsl`.
 
 ### Feedback Loop
 
 ```json
 {
-  "meta": {
-    "title": "Trails Effect"
-  },
+  "title": "Trails Effect",
   "controls": true,
-  "passes": {
-    "BufferA": {
-      "channels": {
-        "iChannel0": {
-          "buffer": "BufferA",
-          "previous": true
-        }
-      }
-    },
-    "Image": {
-      "channels": {
-        "iChannel0": { "buffer": "BufferA" }
-      }
-    }
+  "BufferA": {
+    "iChannel0": "BufferA"
+  },
+  "Image": {
+    "iChannel0": "BufferA"
   }
 }
 ```
 
-### With Texture and Keyboard
+### Interactive with Uniforms
 
 ```json
 {
-  "meta": {
-    "title": "Interactive Photo Effect",
-    "author": "Me"
-  },
-  "layout": "default",
+  "title": "Uniform Controls Demo",
+  "layout": "split",
   "controls": true,
-  "passes": {
-    "Image": {
-      "channels": {
-        "iChannel0": {
-          "texture": "photo.jpg",
-          "filter": "linear"
-        },
-        "iChannel1": {
-          "keyboard": true
-        }
-      }
-    }
+  "uniforms": {
+    "uSpeed": { "type": "float", "value": 1.0, "min": 0.0, "max": 5.0, "label": "Speed" },
+    "uRings": { "type": "int", "value": 6, "min": 1, "max": 20, "label": "Rings" },
+    "uAnimate": { "type": "bool", "value": true, "label": "Animate" },
+    "uColor": { "type": "vec3", "value": [1.0, 0.5, 0.2], "color": true, "label": "Color" },
+    "uOffset": { "type": "vec2", "value": [0.5, 0.5], "label": "Center" }
+  },
+  "Image": {}
+}
+```
+
+### Audio Reactive
+
+```json
+{
+  "title": "Audio Visualizer",
+  "layout": "fullscreen",
+  "Image": {
+    "iChannel0": "audio"
   }
+}
+```
+
+### Scripted Particles (UBO)
+
+**config.json:**
+```json
+{
+  "title": "Particle System",
+  "uniforms": {
+    "positions": { "type": "vec4", "count": 32 }
+  },
+  "Image": {}
+}
+```
+
+**script.js:**
+```js
+const COUNT = 32;
+
+export function onFrame(engine, time) {
+  const data = new Float32Array(COUNT * 4);
+  for (let i = 0; i < COUNT; i++) {
+    const phase = (i / COUNT) * Math.PI * 2.0;
+    data[i * 4 + 0] = 0.5 + Math.cos(time + phase) * 0.3;
+    data[i * 4 + 1] = 0.5 + Math.sin(time + phase) * 0.3;
+    data[i * 4 + 2] = 0.02;
+    data[i * 4 + 3] = i / COUNT;
+  }
+  engine.setUniformValue('positions', data);
 }
 ```
 
@@ -343,63 +686,19 @@ See [Buffers and Channels - Keyboard Input](buffers-and-channels.md#keyboard-inp
 
 ```json
 {
-  "meta": {
-    "title": "Complex Pipeline"
+  "title": "Complex Pipeline",
+  "BufferA": {},
+  "BufferB": {
+    "iChannel0": "BufferA"
   },
-  "passes": {
-    "BufferA": {},
-    "BufferB": {
-      "channels": {
-        "iChannel0": { "buffer": "BufferA" }
-      }
-    },
-    "BufferC": {
-      "channels": {
-        "iChannel0": { "buffer": "BufferB" }
-      }
-    },
-    "Image": {
-      "channels": {
-        "iChannel0": { "buffer": "BufferC" }
-      }
-    }
+  "BufferC": {
+    "iChannel0": "BufferB"
+  },
+  "Image": {
+    "iChannel0": "BufferC"
   }
 }
 ```
-
-## Common Shader Files
-
-### `common.glsl` (Optional)
-
-Shared code included in all passes.
-
-```glsl
-// common.glsl - shared by all passes
-
-#define PI 3.14159265359
-
-float hash(vec2 p) {
-    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
-}
-
-vec3 palette(float t) {
-    vec3 a = vec3(0.5);
-    vec3 b = vec3(0.5);
-    vec3 c = vec3(1.0);
-    vec3 d = vec3(0.0, 0.33, 0.67);
-    return a + b * cos(6.28318 * (c * t + d));
-}
-```
-
-All passes can use these functions without re-declaring them.
-
-### Pass Files
-
-Each pass needs a `.glsl` file:
-- `bufferA.glsl`, `bufferB.glsl`, `bufferC.glsl`, `bufferD.glsl`
-- `image.glsl` (always required)
-
-File names must match pass names (case-insensitive).
 
 ## Keyboard Shortcuts
 
@@ -409,138 +708,35 @@ File names must match pass names (case-insensitive).
 |-----|--------|
 | **S** | Save screenshot as PNG |
 
-Screenshots are saved as: `shadertoy-{folder-name}-{timestamp}.png`
-
-Example: `shadertoy-my-shader-20241117-143022.png`
-
 ### When `controls: true`
 
 | Key | Action |
 |-----|--------|
-| **Space** | Play / Pause animation |
-| **R** | Reset (restart from frame 0) |
-
-These work even if you hide the control buttons!
-
-## Loading Your Shader
-
-Use the npm script with your folder name:
-
-```bash
-shader dev my-shader
-```
-
-That's it!
+| **Space** | Play / Pause |
+| **R** | Reset (frame 0) |
 
 ## Troubleshooting
 
 ### "Image pass is required"
 
-You must always have an `Image` pass in your config:
-
-```json
-{
-  "passes": {
-    "Image": {}
-  }
-}
-```
+You need at least an `image.glsl` file. The Image pass is always required.
 
 ### "Texture not found: photo.jpg"
 
-Make sure:
-1. File is in the same folder as your config
-2. Filename matches exactly (case-sensitive!)
-3. Path is relative (just the filename, no `./` or folders)
+- File must be in the same folder as your config
+- Filename is case-sensitive
+- Use just the filename, no path prefix
 
-### "Buffer 'BufferX' not found"
+### Audio/webcam not working
 
-You referenced a buffer that isn't defined:
+These require a user gesture (click or tap on the canvas) before the browser will grant permission. The texture will be black until the permission is granted.
 
-```json
-{
-  "passes": {
-    "Image": {
-      "channels": {
-        "iChannel0": { "buffer": "BufferA" }  // But no BufferA defined!
-      }
-    }
-  }
-}
-```
+### Uniforms not showing up in shader
 
-Add the buffer to `passes`:
-
-```json
-{
-  "passes": {
-    "BufferA": {},
-    "Image": {
-      "channels": {
-        "iChannel0": { "buffer": "BufferA" }
-      }
-    }
-  }
-}
-```
-
-### Controls not showing
-
-Make sure you set:
-
-```json
-{
-  "controls": true
-}
-```
-
-At the top level of your config, not inside `passes`.
-
-## Best Practices
-
-### Start Simple
-
-Begin with just `image.glsl`, add complexity as needed:
-
-1. Start: Just `image.glsl`
-2. Add config: `config.json` with metadata
-3. Add buffers: Multi-pass rendering
-4. Add textures: External images
-5. Add keyboard: Interactivity
-
-### Organize Complex Shaders
-
-For big projects:
-
-```
-shaders/my-complex-shader/
-├── config.json
-├── common.glsl              # Shared functions
-├── bufferA.glsl            # Simulation
-├── bufferB.glsl            # Post-process
-├── image.glsl              # Final composite
-├── textures/
-│   ├── noise.png
-│   └── environment.jpg
-└── README.md               # Your notes
-```
-
-### Use Comments
-
-JSON doesn't support comments, but you can add a description:
-
-```json
-{
-  "meta": {
-    "description": "BufferA: physics sim, BufferB: blur, Image: composite"
-  }
-}
-```
+Custom uniforms from config are auto-injected. Don't declare them manually in your GLSL — you'll get a duplicate declaration error. Just use them directly.
 
 ## Next Steps
 
 - See [Getting Started](getting-started.md) for shader basics
 - See [Buffers and Channels](buffers-and-channels.md) for multi-pass details
-- Check out the example demos for inspiration!
-
-Happy configuring! ⚙️
+- Check out the example demos for inspiration

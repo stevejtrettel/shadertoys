@@ -35,6 +35,8 @@ export type UniformType = 'float' | 'int' | 'bool' | 'vec2' | 'vec3' | 'vec4';
 interface UniformDefinitionBase {
   /** Display label (defaults to uniform name if not provided) */
   label?: string;
+  /** If true, uniform is declared but has no UI control (for script-only uniforms) */
+  hidden?: boolean;
 }
 
 /**
@@ -130,6 +132,14 @@ export interface ArrayUniformDefinition extends UniformDefinitionBase {
  */
 export function isArrayUniform(def: UniformDefinition): def is ArrayUniformDefinition {
   return 'count' in def && typeof (def as any).count === 'number';
+}
+
+/**
+ * Returns true if a uniform should have a UI control.
+ * Excludes array uniforms (UBOs) and hidden uniforms (script-only).
+ */
+export function hasUIControl(def: UniformDefinition): boolean {
+  return !isArrayUniform(def) && !def.hidden;
 }
 
 /**

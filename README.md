@@ -5,13 +5,20 @@ A lightweight, Shadertoy-compatible GLSL shader development environment. Copy sh
 ## Features
 
 - **Shadertoy Compatibility** - Copy/paste shaders directly from Shadertoy
-- **Full Shadertoy Uniforms** - `iTime`, `iResolution`, `iFrame`, `iMouse`, `iTimeDelta`, `iChannel0-3`
+- **Full Shadertoy Uniforms** - `iTime`, `iResolution`, `iFrame`, `iMouse`, `iTimeDelta`, `iDate`, `iFrameRate`, `iChannel0-3`
 - **Multi-Buffer Rendering** - BufferA-D passes with correct ping-pong semantics
-- **Texture Support** - Load images with configurable filtering and wrapping
+- **Texture Support** - Load images (including cubemaps) with configurable filtering and wrapping
 - **Keyboard Input** - Full keyboard state via Shadertoy-compatible texture
+- **Audio Input** - Microphone FFT spectrum and waveform as a texture
+- **Webcam & Video** - Live webcam or video files as channel inputs
+- **Custom Uniforms** - Float, int, bool, vec2, vec3, vec4 sliders and color pickers via config
+- **UBO Array Uniforms** - Large data arrays (positions, colors, matrices) via Uniform Buffer Objects
+- **Scripting API** - JavaScript hooks for per-frame computation, texture upload, and GPU readback
+- **Touch Support** - Multi-touch, pinch, and gesture uniforms for mobile
 - **Live Code Editing** - Edit shaders in the browser with instant recompilation
 - **Multiple Layouts** - Fullscreen, split-view, or tabbed code display
 - **Playback Controls** - Play/pause, reset, and screenshot capture
+- **Themes** - Light, dark, or system-following theme
 
 ## Quick Start
 
@@ -131,7 +138,6 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
 Place an image in your shader folder and reference it in config:
 
-**shaders/my-shader/config.json:**
 ```json
 {
   "Image": {
@@ -140,30 +146,91 @@ Place an image in your shader folder and reference it in config:
 }
 ```
 
-**shaders/my-shader/image.glsl:**
-```glsl
-void mainImage(out vec4 fragColor, in vec2 fragCoord) {
-    vec2 uv = fragCoord / iResolution.xy;
-    vec4 img = texture(iChannel0, uv);
-    fragColor = img;
-}
-```
-
-Texture options:
+With options:
 ```json
 {
   "Image": {
     "iChannel0": {
       "texture": "photo.jpg",
-      "filter": "linear",
-      "wrap": "repeat"
+      "filter": "nearest",
+      "wrap": "clamp"
     }
   }
 }
 ```
 
-- `filter`: `"linear"` (smooth) or `"nearest"` (pixelated)
-- `wrap`: `"repeat"` (tile) or `"clamp"` (stretch edges)
+### Custom Uniforms (Slider Controls)
+
+Add interactive controls to your shader by defining uniforms in config:
+
+```json
+{
+  "controls": true,
+  "uniforms": {
+    "uSpeed": { "type": "float", "value": 1.0, "min": 0.0, "max": 5.0, "label": "Speed" },
+    "uColor": { "type": "vec3", "value": [1.0, 0.5, 0.2], "color": true, "label": "Color" },
+    "uAnimate": { "type": "bool", "value": true, "label": "Animate" }
+  },
+  "Image": {}
+}
+```
+
+Uniforms declared in config are **auto-injected** into your shader code — just use them directly:
+
+```glsl
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+    vec2 uv = fragCoord / iResolution.xy;
+    float t = uAnimate ? iTime * uSpeed : 0.0;
+    vec3 col = uColor * (0.5 + 0.5 * sin(uv.x * 10.0 - t));
+    fragColor = vec4(col, 1.0);
+}
+```
+
+See the [Configuration Reference](docs/learn/configuration.md) for all uniform types.
+
+### Scripting (JavaScript Hooks)
+
+For computed data that changes every frame, add a `script.js` to your shader folder:
+
+**shaders/my-shader/script.js:**
+```js
+const COUNT = 32;
+
+export function onFrame(engine, time) {
+  const data = new Float32Array(COUNT * 4);
+  for (let i = 0; i < COUNT; i++) {
+    const phase = (i / COUNT) * Math.PI * 2.0;
+    data[i * 4 + 0] = 0.5 + Math.cos(time + phase) * 0.3;  // x
+    data[i * 4 + 1] = 0.5 + Math.sin(time + phase) * 0.3;  // y
+    data[i * 4 + 2] = 0.02;                                  // radius
+    data[i * 4 + 3] = i / COUNT;                              // hue
+  }
+  engine.setUniformValue('positions', data);
+}
+```
+
+Scripts can export `setup(engine)` (called once) and/or `onFrame(engine, time, deltaTime, frame)` (called every frame).
+
+The script API provides:
+- `engine.setUniformValue(name, value)` — set any uniform
+- `engine.getUniformValue(name)` — read current value
+- `engine.updateTexture(name, width, height, data)` — upload a texture from JS
+- `engine.readPixels(passName, x, y, w, h)` — read pixels from a buffer (GPU readback)
+- `engine.width` / `engine.height` — canvas dimensions
+
+## Channel Types
+
+Channels can be bound using string shortcuts or full objects:
+
+| Shorthand | Object Form | Description |
+|-----------|-------------|-------------|
+| `"BufferA"` | `{ "buffer": "BufferA" }` | Buffer pass output |
+| `"photo.jpg"` | `{ "texture": "photo.jpg" }` | Image texture |
+| `"keyboard"` | `{ "keyboard": true }` | Keyboard state |
+| `"audio"` | `{ "audio": true }` | Microphone FFT + waveform |
+| `"webcam"` | `{ "webcam": true }` | Live webcam feed |
+| — | `{ "video": "clip.mp4" }` | Video file |
+| — | `{ "script": "myData" }` | Script-uploaded texture |
 
 ## Layouts
 
@@ -182,14 +249,6 @@ Control how the shader is displayed in `config.json`:
 | `tabbed` | Tabs to switch between shader and code |
 | `split` | Side-by-side shader and code editor |
 
-## Keyboard Shortcuts
-
-| Key | Action |
-|-----|--------|
-| **S** | Save screenshot (PNG) |
-| **Space** | Play/Pause |
-| **R** | Reset to frame 0 |
-
 ## Shadertoy Uniforms
 
 All standard Shadertoy uniforms are supported:
@@ -200,10 +259,29 @@ All standard Shadertoy uniforms are supported:
 | `iTime` | `float` | Elapsed time in seconds |
 | `iTimeDelta` | `float` | Time since last frame |
 | `iFrame` | `int` | Frame counter |
+| `iFrameRate` | `float` | Frames per second |
 | `iMouse` | `vec4` | Mouse position and click state |
 | `iChannel0-3` | `sampler2D` | Input textures/buffers |
 | `iChannelResolution[4]` | `vec3[]` | Resolution of each channel |
 | `iDate` | `vec4` | Year, month, day, time in seconds |
+
+### Touch Uniforms (Mobile / Multi-touch)
+
+| Uniform | Type | Description |
+|---------|------|-------------|
+| `iTouchCount` | `int` | Number of active touches |
+| `iTouch0-2` | `vec4` | Per-touch position and state |
+| `iPinch` | `float` | Current pinch distance |
+| `iPinchDelta` | `float` | Change in pinch distance |
+| `iPinchCenter` | `vec2` | Center point between pinch fingers |
+
+## Keyboard Shortcuts
+
+| Key | Action |
+|-----|--------|
+| **S** | Save screenshot (PNG) |
+| **Space** | Play/Pause |
+| **R** | Reset to frame 0 |
 
 ## Building for Production
 

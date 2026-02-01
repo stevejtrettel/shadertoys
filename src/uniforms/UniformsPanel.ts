@@ -7,7 +7,7 @@
 
 import './uniforms-panel.css';
 
-import { UniformDefinitions, UniformValue, UniformValues } from '../project/types';
+import { UniformDefinitions, UniformValue, UniformValues, hasUIControl } from '../project/types';
 import { UniformControls } from './UniformControls';
 
 export interface UniformsPanelOptions {
@@ -61,8 +61,9 @@ export class UniformsPanel {
     this.panel = document.createElement('div');
     this.panel.className = 'uniforms-panel';
 
-    // Only create content if there are uniforms
-    if (Object.keys(opts.uniforms).length === 0) {
+    // Only create content if there are visible uniforms
+    const hasVisible = Object.values(opts.uniforms).some(def => hasUIControl(def));
+    if (!hasVisible) {
       this.wrapper.style.display = 'none';
       opts.container.appendChild(this.wrapper);
       return;
